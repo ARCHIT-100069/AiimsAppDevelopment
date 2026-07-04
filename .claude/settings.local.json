@@ -27,7 +27,15 @@
       "Bash(DOCKER_HOST=\"unix:///Users/architgosain/.colima/default/docker.sock\" pnpm test:isolation)",
       "Bash(python3 -)",
       "Bash(export DOCKER_HOST=\"unix:///Users/architgosain/.colima/default/docker.sock\" TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock)",
-      "Bash(pnpm --filter @aiims/testing test:isolation)"
+      "Bash(pnpm --filter @aiims/testing test:isolation)",
+      "Bash(pnpm --filter @aiims/api add -D @nestjs/testing@^11.1.0)",
+      "Bash(pnpm --filter @aiims/api test)",
+      "Bash(git mv *)",
+      "Bash(npx vitest *)",
+      "Read(//Users/architgosain/Projects/**)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"require\\('@nestjs/testing'\\); console.log\\('nestjs/testing loads'\\)\")",
+      "Bash(git commit -q -m 'feat\\(api\\): NestJS walking skeleton — pipeline, OIDC auth, RBAC PEP, outbox+audit, adapters, note proof *)"
     ]
   }
 }

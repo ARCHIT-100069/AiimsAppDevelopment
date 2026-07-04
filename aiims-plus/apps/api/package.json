@@ -9,18 +9,22 @@
     "test": "node --test dist-test/**/*.test.js"
   },
   "dependencies": {
+    "@aiims/api-contracts": "workspace:*",
+    "@aiims/authz": "workspace:*",
+    "@aiims/config": "workspace:*",
+    "@aiims/db": "workspace:*",
+    "@aiims/domain-types": "workspace:*",
+    "@aiims/event-schemas": "workspace:*",
     "@nestjs/common": "^10.4.0",
     "@nestjs/core": "^10.4.0",
     "@nestjs/platform-fastify": "^10.4.0",
     "postgres": "^3.4.4",
     "uuidv7": "^1.0.2",
-    "zod": "^3.23.8",
-    "@aiims/db": "workspace:*",
-    "@aiims/config": "workspace:*",
-    "@aiims/authz": "workspace:*",
-    "@aiims/api-contracts": "workspace:*",
-    "@aiims/event-schemas": "workspace:*",
-    "@aiims/domain-types": "workspace:*"
+    "zod": "^3.23.8"
   },
-  "devDependencies": { "typescript": "^5.6.0", "@types/node": "^22.7.0" }
+  "devDependencies": {
+    "@nestjs/testing": "^11.1.27",
+    "@types/node": "^22.7.0",
+    "typescript": "^5.6.0"
+  }
 }

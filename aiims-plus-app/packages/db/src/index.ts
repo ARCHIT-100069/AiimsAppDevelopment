@@ -10,3 +10,4 @@ export { withTenantContext, type TenantContext, type TenantDb } from "./tenant-c
 export { migrate } from "./migrate";
 export { seed, SEED } from "./seed";
 export { checkRlsPolicies } from "./check-rls-policies";
+export * from "./queries";

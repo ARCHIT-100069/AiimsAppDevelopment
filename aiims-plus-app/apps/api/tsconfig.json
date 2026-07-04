@@ -1,0 +1,5 @@
+{
+  "extends": "@aiims/typescript-config/nest.json",
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
+}

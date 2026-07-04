@@ -1,0 +1,38 @@
+{
+  "name": "@aiims/api",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AIIMS+ NestJS modular monolith (ADR-0001) — Stage 0 walking skeleton",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "dev": "pnpm build && node dist/main.js",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@aiims/api-contracts": "workspace:*",
+    "@aiims/authz": "workspace:*",
+    "@aiims/config": "workspace:*",
+    "@aiims/db": "workspace:*",
+    "@aiims/domain-types": "workspace:*",
+    "@aiims/event-schemas": "workspace:*",
+    "@nestjs/common": "^11.1.0",
+    "@nestjs/core": "^11.1.0",
+    "@nestjs/platform-express": "^11.1.0",
+    "bullmq": "^5.79.0",
+    "jose": "^6.2.0",
+    "pino": "^10.3.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.0",
+    "zod": "^4.4.0"
+  },
+  "devDependencies": {
+    "@aiims/typescript-config": "workspace:*",
+    "@nestjs/testing": "^11.1.27",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.20.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.0"
+  }
+}

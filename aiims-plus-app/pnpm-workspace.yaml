@@ -8,6 +8,7 @@ packages:
 allowBuilds:
   cpu-features: true
   esbuild: true
+  msgpackr-extract: true # bullmq native codec
   protobufjs: true
   ssh2: true
   unrs-resolver: true
