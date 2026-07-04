@@ -1,0 +1,12 @@
+/**
+ * @aiims/db — the ONLY package that sees Drizzle or the pg driver
+ * (ADR-0011, BDR-0003). Everything else depends on the helpers and the
+ * schema's inferred row types; ORM internals do not leave this package.
+ */
+export * as schema from "./schema";
+export { newId } from "./ids";
+export { createAppPool } from "./client";
+export { withTenantContext, type TenantContext, type TenantDb } from "./tenant-context";
+export { migrate } from "./migrate";
+export { seed, SEED } from "./seed";
+export { checkRlsPolicies } from "./check-rls-policies";

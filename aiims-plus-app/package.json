@@ -10,7 +10,7 @@
   "scripts": {
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
-    "lint": "turbo run lint",
+    "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "turbo run test",
@@ -25,9 +25,11 @@
     "@commitlint/cli": "^20.4.0",
     "@commitlint/config-conventional": "^20.4.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.5.0",
+    "lint-staged": "^17.0.0",
     "prettier": "^3.9.0",
-    "turbo": "^2.10.0"
+    "turbo": "^2.10.0",
+    "eslint": "^10.0.0",
+    "@aiims/eslint-config": "workspace:*"
   },
   "lint-staged": {
     "*.{ts,tsx,mjs,js}": [

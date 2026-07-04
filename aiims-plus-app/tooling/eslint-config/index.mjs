@@ -17,11 +17,24 @@ import boundaries from "eslint-plugin-boundaries";
 /** Layers inside an apps/api bounded-context module (BDR-0001). */
 const moduleLayerElements = [
   { type: "module-api", pattern: "apps/api/src/modules/*/api/**", capture: ["module"] },
-  { type: "module-application", pattern: "apps/api/src/modules/*/application/**", capture: ["module"] },
+  {
+    type: "module-application",
+    pattern: "apps/api/src/modules/*/application/**",
+    capture: ["module"],
+  },
   { type: "module-domain", pattern: "apps/api/src/modules/*/domain/**", capture: ["module"] },
   { type: "module-ports", pattern: "apps/api/src/modules/*/ports/**", capture: ["module"] },
-  { type: "module-infrastructure", pattern: "apps/api/src/modules/*/infrastructure/**", capture: ["module"] },
-  { type: "module-root", mode: "file", pattern: "apps/api/src/modules/*/*.ts", capture: ["module"] },
+  {
+    type: "module-infrastructure",
+    pattern: "apps/api/src/modules/*/infrastructure/**",
+    capture: ["module"],
+  },
+  {
+    type: "module-root",
+    mode: "file",
+    pattern: "apps/api/src/modules/*/*.ts",
+    capture: ["module"],
+  },
 ];
 
 const sameModule = (allowedType) => [allowedType, { module: "${from.module}" }];
@@ -40,19 +53,27 @@ export default tseslint.config(
   },
   {
     // ADR-0011 guardrail: the ORM and driver are confined to packages/db.
+    // packages/testing is the ONE exception: the isolation gate (DB Arch §17)
+    // must probe raw access patterns as aiims_app, below the repository layer.
     files: ["**/*.ts", "**/*.tsx", "**/*.mts"],
-    ignores: ["packages/db/**"],
+    ignores: ["packages/db/**", "packages/testing/**"],
     rules: {
       "no-restricted-imports": [
         "error",
         {
           paths: [
-            { name: "drizzle-orm", message: "Drizzle is confined to packages/db (ADR-0011, BDR-0003)." },
+            {
+              name: "drizzle-orm",
+              message: "Drizzle is confined to packages/db (ADR-0011, BDR-0003).",
+            },
             { name: "drizzle-kit", message: "drizzle-kit is confined to packages/db (DDR-0011)." },
             { name: "pg", message: "The pg driver is confined to packages/db (BDR-0003)." },
           ],
           patterns: [
-            { group: ["drizzle-orm/*", "drizzle-kit/*", "pg/*"], message: "ORM/driver internals are confined to packages/db (ADR-0011)." },
+            {
+              group: ["drizzle-orm/*", "drizzle-kit/*", "pg/*"],
+              message: "ORM/driver internals are confined to packages/db (ADR-0011).",
+            },
           ],
         },
       ],
@@ -67,9 +88,18 @@ export default tseslint.config(
         {
           patterns: [
             { group: ["@nestjs/*"], message: "The domain layer is framework-free (BDR-0001)." },
-            { group: ["drizzle-orm", "drizzle-orm/*", "pg", "pg/*"], message: "The domain layer never sees the ORM (BDR-0003)." },
-            { group: ["node:http*", "express", "fastify", "axios", "undici"], message: "The domain layer performs no IO (BDR-0001)." },
-            { group: ["ioredis", "bullmq"], message: "The domain layer performs no IO (BDR-0001)." },
+            {
+              group: ["drizzle-orm", "drizzle-orm/*", "pg", "pg/*"],
+              message: "The domain layer never sees the ORM (BDR-0003).",
+            },
+            {
+              group: ["node:http*", "express", "fastify", "axios", "undici"],
+              message: "The domain layer performs no IO (BDR-0001).",
+            },
+            {
+              group: ["ioredis", "bullmq"],
+              message: "The domain layer performs no IO (BDR-0001).",
+            },
           ],
         },
       ],
@@ -99,26 +129,68 @@ export default tseslint.config(
             "${file.type} may not import ${dependency.type} — dependency direction is enforced by BDR-0013/BDR-0002.",
           rules: [
             // Controllers call one application service; they may see domain types and ports.
-            { from: ["module-api"], allow: [sameModule("module-application"), sameModule("module-domain"), sameModule("module-ports"), "platform", "common"] },
+            {
+              from: ["module-api"],
+              allow: [
+                sameModule("module-application"),
+                sameModule("module-domain"),
+                sameModule("module-ports"),
+                "platform",
+                "common",
+              ],
+            },
             // Application services orchestrate domain + ports (never infrastructure directly).
-            { from: ["module-application"], allow: [sameModule("module-domain"), sameModule("module-ports"), "platform", "common"] },
+            {
+              from: ["module-application"],
+              allow: [
+                sameModule("module-domain"),
+                sameModule("module-ports"),
+                "platform",
+                "common",
+              ],
+            },
             // The domain depends on nothing outward. (Same-module domain files only.)
             { from: ["module-domain"], allow: [sameModule("module-domain")] },
             // Ports are domain-owned interfaces.
-            { from: ["module-ports"], allow: [sameModule("module-domain"), sameModule("module-ports")] },
+            {
+              from: ["module-ports"],
+              allow: [sameModule("module-domain"), sameModule("module-ports")],
+            },
             // Infrastructure implements ports and maps rows → domain objects.
-            { from: ["module-infrastructure"], allow: [sameModule("module-domain"), sameModule("module-ports"), "platform", "common"] },
+            {
+              from: ["module-infrastructure"],
+              allow: [
+                sameModule("module-domain"),
+                sameModule("module-ports"),
+                "platform",
+                "common",
+              ],
+            },
             // The module definition file wires all of its own layers.
-            { from: ["module-root"], allow: [sameModule("module-api"), sameModule("module-application"), sameModule("module-domain"), sameModule("module-ports"), sameModule("module-infrastructure"), "platform", "common"] },
+            {
+              from: ["module-root"],
+              allow: [
+                sameModule("module-api"),
+                sameModule("module-application"),
+                sameModule("module-domain"),
+                sameModule("module-ports"),
+                sameModule("module-infrastructure"),
+                "platform",
+                "common",
+              ],
+            },
             // Platform/cross-cutting and adapters may use each other and common.
             { from: ["platform"], allow: ["platform", "common"] },
             { from: ["adapters"], allow: ["adapters", "platform", "common"] },
             { from: ["common"], allow: ["common"] },
             // Composition root (main.ts / app.module.ts) wires everything.
-            { from: ["app-root"], allow: ["module-root", "module-api", "platform", "adapters", "common", "app-root"] },
+            {
+              from: ["app-root"],
+              allow: ["module-root", "module-api", "platform", "adapters", "common", "app-root"],
+            },
           ],
         },
       ],
     },
-  }
+  },
 );

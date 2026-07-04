@@ -13,7 +13,21 @@
       "Bash(pnpm --version)",
       "Bash(npm view *)",
       "Bash(git add *)",
-      "Bash(git commit -q -m 'chore\\(tooling\\): monorepo foundation — pnpm workspace, Turborepo, strict TS, boundary ESLint, Prettier, Husky *)"
+      "Bash(git commit -q -m 'chore\\(tooling\\): monorepo foundation — pnpm workspace, Turborepo, strict TS, boundary ESLint, Prettier, Husky *)",
+      "Bash(docker version *)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm build *)",
+      "Bash(pnpm --filter @aiims/config build)",
+      "Bash(pnpm --filter @aiims/db build)",
+      "Bash(pnpm --filter @aiims/config --filter @aiims/db --filter @aiims/testing --filter @aiims/api-contracts add -D @types/node@^22)",
+      "Bash(pnpm test *)",
+      "Bash(pnpm lint *)",
+      "Bash(pnpm test:isolation)",
+      "Bash(DOCKER_HOST=\"unix:///Users/architgosain/.colima/default/docker.sock\" TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock pnpm test:isolation)",
+      "Bash(DOCKER_HOST=\"unix:///Users/architgosain/.colima/default/docker.sock\" pnpm test:isolation)",
+      "Bash(python3 -)",
+      "Bash(export DOCKER_HOST=\"unix:///Users/architgosain/.colima/default/docker.sock\" TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock)",
+      "Bash(pnpm --filter @aiims/testing test:isolation)"
     ]
   }
 }

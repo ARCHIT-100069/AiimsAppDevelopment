@@ -2,3 +2,12 @@ packages:
   - "apps/*"
   - "packages/*"
   - "tooling/*"
+# Native build scripts vetted for the toolchain: esbuild (vitest),
+# cpu-features/ssh2 (testcontainers), protobufjs (testcontainers),
+# unrs-resolver (eslint-import-resolver-typescript).
+allowBuilds:
+  cpu-features: true
+  esbuild: true
+  protobufjs: true
+  ssh2: true
+  unrs-resolver: true

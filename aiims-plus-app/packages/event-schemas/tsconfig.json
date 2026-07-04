@@ -1,0 +1,6 @@
+{
+  "extends": "@aiims/typescript-config/library.json",
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"],
+  "references": [{ "path": "../domain-types" }]
+}

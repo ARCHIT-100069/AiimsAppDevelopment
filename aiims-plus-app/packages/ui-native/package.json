@@ -1,0 +1,21 @@
+{
+  "name": "@aiims/ui-native",
+  "version": "0.0.0",
+  "private": true,
+  "description": "React Native design-system components over @aiims/design-tokens (FEDR-0002/0003). Stage 0 scaffold; built out with the mobile app",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@aiims/design-tokens": "workspace:*"
+  },
+  "devDependencies": {
+    "@aiims/typescript-config": "workspace:*",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.0"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@aiims/ui-web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Web design-system components — Tailwind + shadcn/ui over @aiims/design-tokens (FEDR-0003/0004). Stage 0 scaffold; built out in the frontend stage",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@aiims/design-tokens": "workspace:*"
+  },
+  "devDependencies": {
+    "@aiims/typescript-config": "workspace:*",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.0"
+  }
+}

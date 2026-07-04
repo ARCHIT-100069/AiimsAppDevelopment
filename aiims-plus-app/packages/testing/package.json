@@ -1,0 +1,27 @@
+{
+  "name": "@aiims/testing",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Test utilities + THE cross-tenant isolation gate (TDR-0006, DB Arch §17) — the merge-blocking backstop, run against real Postgres as aiims_app",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:isolation": "vitest run --config vitest.isolation.config.ts"
+  },
+  "dependencies": {
+    "@aiims/db": "workspace:*",
+    "@aiims/domain-types": "workspace:*",
+    "pg": "^8.22.0",
+    "testcontainers": "^12.0.0"
+  },
+  "devDependencies": {
+    "@aiims/typescript-config": "workspace:*",
+    "@types/node": "^22.20.0",
+    "@types/pg": "^8.15.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.0"
+  }
+}

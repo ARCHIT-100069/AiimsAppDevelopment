@@ -1,0 +1,21 @@
+{
+  "name": "@aiims/authz",
+  "version": "0.0.0",
+  "private": true,
+  "description": "RBAC policy decision point — RBAC now, ABAC-ready (SDR-0002). Consumed by NestJS guards (the PEPs).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@aiims/domain-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@aiims/typescript-config": "workspace:*",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.0"
+  }
+}

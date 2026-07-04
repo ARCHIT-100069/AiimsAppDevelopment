@@ -8,7 +8,7 @@
     "experimentalDecorators": true,
     "declaration": false,
     "declarationMap": false,
-    "outDir": "dist",
+    "outDir": "${configDir}/dist",
     "exactOptionalPropertyTypes": false
   }
 }

@@ -1,0 +1,5 @@
+{
+  "extends": "@aiims/typescript-config/library.json",
+  "include": ["src"],
+  "references": [{ "path": "../db" }, { "path": "../domain-types" }]
+}

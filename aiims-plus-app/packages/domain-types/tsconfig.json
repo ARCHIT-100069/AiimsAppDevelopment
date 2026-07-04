@@ -1,0 +1,4 @@
+{
+  "extends": "@aiims/typescript-config/library.json",
+  "include": ["src"]
+}

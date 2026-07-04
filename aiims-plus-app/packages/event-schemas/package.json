@@ -1,0 +1,22 @@
+{
+  "name": "@aiims/event-schemas",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Versioned domain-event contracts for outbox payloads (DDR-0007, BDR-0005) — no raw PHI in payloads",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@aiims/domain-types": "workspace:*",
+    "zod": "^4.4.0"
+  },
+  "devDependencies": {
+    "@aiims/typescript-config": "workspace:*",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.0"
+  }
+}

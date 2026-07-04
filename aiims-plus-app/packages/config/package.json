@@ -1,0 +1,22 @@
+{
+  "name": "@aiims/config",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Typed, Zod-validated configuration — fail-fast at boot (BDR-0011); secrets are injected, never committed (SDR-0006)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.4.0"
+  },
+  "devDependencies": {
+    "@aiims/typescript-config": "workspace:*",
+    "@types/node": "^22.20.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.0"
+  }
+}
