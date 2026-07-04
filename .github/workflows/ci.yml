@@ -1,0 +1,137 @@
+# AIIMS+ CI — gate order per TDR-0012 / IDR-0011. Every job is MERGE-BLOCKING.
+#
+#   static (lint+typecheck+build+unit) ─┬─▶ isolation-gate (TDR-0006, THE gate)
+#                                       ├─▶ security-scans (SDR-0012)
+#                                       └─▶ docker-build ──▶ [deploy: gated on AWS]
+#
+# Deploy to ap-south-1 dev (IDR-0011) activates when the AWS dev account is
+# bootstrapped (OIDC federation — no long-lived keys, SDR-0006).
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+defaults:
+  run:
+    working-directory: aiims-plus-app
+
+jobs:
+  static:
+    name: lint · typecheck · build · unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint # includes BDR-0013 boundary rules — violations fail CI
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm test # unit tests (domain, contracts, PDP, adapters-resolve)
+
+  isolation-gate:
+    name: "cross-tenant isolation gate (TDR-0006) — BLOCKING"
+    runs-on: ubuntu-latest
+    needs: static
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: aiims
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d aiims"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      ISOLATION_DATABASE_URL: postgres://postgres:postgres@localhost:5432/aiims
+      DATABASE_URL_MIGRATOR: postgres://postgres:postgres@localhost:5432/aiims
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      # The single most important test in the repository (DB Arch §17):
+      # runs as aiims_app against real Postgres with FORCE RLS.
+      - run: pnpm --filter @aiims/testing test:isolation
+      # DDR-0011 guardrail: fail on any RLS policy removal / un-FORCE.
+      - run: pnpm --filter @aiims/db check:rls
+
+  security-scans:
+    name: security scans (SDR-0012)
+    runs-on: ubuntu-latest
+    needs: static
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Secret scanning — blocks committed secrets (SDR-0006).
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable pnpm
+      - run: pnpm install --frozen-lockfile
+      # Dependency vulnerability scan (blocking at high severity).
+      - run: pnpm audit --prod --audit-level=high
+      # Container + IaC misconfiguration scanning (Dockerfile, Terraform).
+      - name: trivy config scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: aiims-plus-app
+          exit-code: "1"
+          severity: HIGH,CRITICAL
+
+  docker-build:
+    name: build api image (IDR-0005)
+    runs-on: ubuntu-latest
+    needs: [isolation-gate, security-scans]
+    steps:
+      - uses: actions/checkout@v4
+      - name: build immutable image tagged by git SHA
+        run: docker build -f apps/api/Dockerfile -t aiims-api:${{ github.sha }} .
+
+  terraform-validate:
+    name: terraform fmt + validate (IDR-0012)
+    runs-on: ubuntu-latest
+    needs: static
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive infra
+      - run: terraform -chdir=infra/envs/dev init -backend=false
+      - run: terraform -chdir=infra/envs/dev validate
+
+  # ---------------------------------------------------------------------------
+  # deploy-dev (ap-south-1, IDR-0011/0015) — GATED: activates when the AWS dev
+  # account exists. Uses OIDC-federated short-lived credentials; requires the
+  # AWS_DEPLOY_ROLE_ARN repository variable to be configured.
+  # ---------------------------------------------------------------------------
+  deploy-dev:
+    name: deploy to dev (ap-south-1) — awaiting AWS account
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/main' && vars.AWS_DEPLOY_ROLE_ARN != ''
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-south-1
+      - run: echo "terraform apply + ECR push + ECS deploy land here once the dev account is bootstrapped (IDR-0001/0012)"
