@@ -1,0 +1,6 @@
+{
+  "name": "@aiims/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AIIMS+ mobile app — React Native + Expo (FEDR-0002). Directory scaffold only: Master Plan §4 scaffolds mobile lazily at the frontend build-out; Expo dependencies are added then (kept out now to keep installs lean)."
+}

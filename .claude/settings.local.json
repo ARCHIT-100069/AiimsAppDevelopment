@@ -35,7 +35,11 @@
       "Read(//Users/architgosain/Projects/**)",
       "Bash(node -e ' *)",
       "Bash(node -e \"require\\('@nestjs/testing'\\); console.log\\('nestjs/testing loads'\\)\")",
-      "Bash(git commit -q -m 'feat\\(api\\): NestJS walking skeleton — pipeline, OIDC auth, RBAC PEP, outbox+audit, adapters, note proof *)"
+      "Bash(git commit -q -m 'feat\\(api\\): NestJS walking skeleton — pipeline, OIDC auth, RBAC PEP, outbox+audit, adapters, note proof *)",
+      "Bash(git commit -q -m 'feat\\(api\\): walking-skeleton nestjs api with audited tenant-scoped write *)",
+      "Bash(python3 -c ' *)",
+      "Bash(git commit -q -m 'feat\\(apps\\): web/mobile/ai scaffolds + docker-compose local dev environment *)",
+      "Bash(docker compose *)"
     ]
   }
 }

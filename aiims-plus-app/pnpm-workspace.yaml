@@ -10,5 +10,6 @@ allowBuilds:
   esbuild: true
   msgpackr-extract: true # bullmq native codec
   protobufjs: true
+  sharp: true # next.js image optimization
   ssh2: true
   unrs-resolver: true

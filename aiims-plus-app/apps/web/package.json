@@ -1,0 +1,23 @@
+{
+  "name": "@aiims/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AIIMS+ web app — Next.js App Router + BFF (FEDR-0001). Stage 0 scaffold; the clinical UI lands with the frontend build-out",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "next": "^16.2.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "@types/react": "^19.2.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.0"
+  }
+}

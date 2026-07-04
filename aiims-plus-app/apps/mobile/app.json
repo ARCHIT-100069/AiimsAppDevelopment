@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "AIIMS+",
+    "slug": "aiims-plus",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "platforms": ["ios", "android"],
+    "_comment": "Expo config scaffold (FEDR-0002). Filled in at the mobile build-out: EAS build profiles, secure storage, PKCE auth (FEDR-0007), encrypted offline store (FEDR-0010 — gated on Security sign-off)."
+  }
+}

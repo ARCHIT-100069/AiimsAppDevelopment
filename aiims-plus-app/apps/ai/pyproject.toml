@@ -1,0 +1,16 @@
+# AIIMS+ AI plane — isolated Python FastAPI service (AIDR-0003).
+# Stage 0 STUB: the plane is optional infrastructure, feature-flagged and off
+# the critical path of care (AIDR-0014). It is reached ONLY via the core's
+# AiGateway port; it activates in Stage 7 behind evals + HITL gates.
+[project]
+name = "aiims-ai"
+version = "0.0.0"
+description = "AIIMS+ operational-only AI plane (Constitution-bound; never diagnosis/treatment)"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn>=0.30",
+]
+
+[project.optional-dependencies]
+dev = ["mypy>=1.10", "pytest>=8"]
