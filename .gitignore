@@ -1,0 +1,42 @@
+# OS
+.DS_Store
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# Environment — secrets never committed (SDR-0006)
+.env
+.env.*
+!.env.example
+
+# Logs & coverage
+*.log
+coverage/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform.lock.hcl
+
+# Python (apps/ai)
+__pycache__/
+*.pyc
+.venv/
+
+# Expo / mobile
+.expo/
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json

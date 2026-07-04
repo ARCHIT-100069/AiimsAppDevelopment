@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(corepack --version)",
+      "Bash(brew --version)",
+      "Read(//Applications/**)",
+      "Bash(brew list *)",
+      "Bash(brew install *)",
+      "Bash(colima start *)",
+      "Bash(docker info *)",
+      "Bash(corepack enable *)",
+      "Bash(corepack prepare *)",
+      "Bash(pnpm --version)",
+      "Bash(npm view *)"
+    ]
+  }
+}

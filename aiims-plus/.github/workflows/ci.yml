@@ -1,0 +1,36 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: aiims }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint            # includes import-boundary rules (BDR-0013)
+      - run: pnpm typecheck
+      - run: pnpm build
+      - name: migrate (as owner)
+        run: pnpm --filter @aiims/db migrate
+        env: { DATABASE_URL_OWNER: "postgres://postgres:postgres@localhost:5432/aiims" }
+      - name: "GATE: cross-tenant isolation (as aiims_app)"   # TDR-0006 — MUST pass
+        run: pnpm --filter @aiims/db test:isolation
+        env: { DATABASE_URL_APP: "postgres://aiims_app@localhost:5432/aiims" }
+      - run: pnpm test
+  security-scans:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: secret scan
+        uses: gitleaks/gitleaks-action@v2
+      # dependency + container + IaC scans wired here (SDR-0012): trivy / npm audit / tfsec.
