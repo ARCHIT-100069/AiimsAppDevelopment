@@ -11,7 +11,9 @@
       "Bash(corepack enable *)",
       "Bash(corepack prepare *)",
       "Bash(pnpm --version)",
-      "Bash(npm view *)"
+      "Bash(npm view *)",
+      "Bash(git add *)",
+      "Bash(git commit -q -m 'chore\\(tooling\\): monorepo foundation — pnpm workspace, Turborepo, strict TS, boundary ESLint, Prettier, Husky *)"
     ]
   }
 }

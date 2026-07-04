@@ -1,0 +1,9 @@
+dist/
+.next/
+.turbo/
+node_modules/
+coverage/
+pnpm-lock.yaml
+apps/ai/
+infra/
+*.sql

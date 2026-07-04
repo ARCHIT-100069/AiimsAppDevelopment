@@ -1,0 +1,18 @@
+{
+  "name": "@aiims/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared ESLint flat config enforcing BDR-0013 import boundaries and ADR-0011 Drizzle confinement",
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "dependencies": {
+    "eslint-import-resolver-typescript": "^4.4.0",
+    "eslint-plugin-boundaries": "^5.0.1",
+    "typescript-eslint": "^8.46.0"
+  },
+  "peerDependencies": {
+    "eslint": ">=9.0.0"
+  }
+}

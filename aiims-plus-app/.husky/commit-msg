@@ -1,0 +1,1 @@
+cd aiims-plus-app && pnpm commitlint --edit "../$1"

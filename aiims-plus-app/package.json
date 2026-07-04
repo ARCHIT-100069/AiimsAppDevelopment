@@ -1,0 +1,41 @@
+{
+  "name": "aiims-plus",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AIIMS+ — India-first, multi-tenant Hospital Operating System (Stage 0 walking skeleton)",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "turbo run test",
+    "test:integration": "turbo run test:integration",
+    "test:isolation": "pnpm --filter @aiims/db test:isolation",
+    "db:migrate": "pnpm --filter @aiims/db migrate",
+    "db:seed": "pnpm --filter @aiims/db seed",
+    "dev": "pnpm --filter @aiims/api dev",
+    "prepare": "cd .. && husky aiims-plus-app/.husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.4.0",
+    "@commitlint/config-conventional": "^20.4.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.5.0",
+    "prettier": "^3.9.0",
+    "turbo": "^2.10.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,mjs,js}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}
