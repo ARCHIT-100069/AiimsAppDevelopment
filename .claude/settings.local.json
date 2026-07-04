@@ -39,7 +39,20 @@
       "Bash(git commit -q -m 'feat\\(api\\): walking-skeleton nestjs api with audited tenant-scoped write *)",
       "Bash(python3 -c ' *)",
       "Bash(git commit -q -m 'feat\\(apps\\): web/mobile/ai scaffolds + docker-compose local dev environment *)",
-      "Bash(docker compose *)"
+      "Bash(docker compose *)",
+      "Bash(docker-compose version *)",
+      "Read(//Users/architgosain/.docker/**)",
+      "Read(//opt/homebrew/Cellar/docker-compose/5.3.0/lib/docker/cli-plugins/**)",
+      "Bash(curl -sf http://localhost:8080/realms/aiims)",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s -o /dev/null -w '%{http_code}\\\\n' localhost:3000/v1/notes)",
+      "Read(//private/tmp/**)",
+      "Bash(curl -s -X POST localhost:3000/v1/notes -H \"Authorization: Bearer $\\(cat /tmp/tok_doctor_a\\)\" -H 'content-type: application/json' -d '{\"body\":\"\"}' -o /dev/null -w '%{http_code}\\\\n')",
+      "Bash(python3 -c 'import sys,json *)",
+      "Bash(nc -z localhost 6379)",
+      "Bash(curl -s -X POST localhost:3000/v1/notes -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'content-type: application/json' -d '{\"body\":\"second note to verify chain linkage\"}' -o /dev/null -w 'POST #2: %{http_code}\\\\n')",
+      "Bash(pkill -f \"node apps/api/dist/main.js\")",
+      "Bash(git commit -q -m 'fix\\(db\\): match outbox dispatch update on event id only *)"
     ]
   }
 }

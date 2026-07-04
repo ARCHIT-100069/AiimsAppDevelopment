@@ -127,15 +127,17 @@ export async function claimPendingOutboxEvents(
     .for("update", { skipLocked: true });
 }
 
-export async function markOutboxDispatched(
-  db: TenantDb,
-  eventId: string,
-  occurredAt: Date,
-): Promise<void> {
+/**
+ * Matches on id alone: the PK includes occurred_at only for partitioning, and
+ * a JS Date (ms precision) can never equal Postgres's microsecond timestamp —
+ * an equality predicate there silently updates 0 rows. UUIDv7 ids are unique
+ * by generation; the partition scan is fine at Stage 0 volumes.
+ */
+export async function markOutboxDispatched(db: TenantDb, eventId: string): Promise<void> {
   await db
     .update(s.outbox)
     .set({ dispatchedAt: sql`now()`, dispatchAttempts: sql`${s.outbox.dispatchAttempts} + 1` })
-    .where(and(eq(s.outbox.id, eventId), eq(s.outbox.occurredAt, occurredAt)));
+    .where(eq(s.outbox.id, eventId));
 }
 
 /* ------------------------------- audit ---------------------------------- */

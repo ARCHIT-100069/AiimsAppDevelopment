@@ -98,7 +98,7 @@ export class OutboxDispatcher implements OnApplicationBootstrap, OnApplicationSh
             removeOnComplete: 1000,
           });
         }
-        await markOutboxDispatched(db, row.id, row.occurredAt);
+        await markOutboxDispatched(db, row.id);
       }
       return events.length;
     });
