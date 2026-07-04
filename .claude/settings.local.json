@@ -52,7 +52,12 @@
       "Bash(nc -z localhost 6379)",
       "Bash(curl -s -X POST localhost:3000/v1/notes -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'content-type: application/json' -d '{\"body\":\"second note to verify chain linkage\"}' -o /dev/null -w 'POST #2: %{http_code}\\\\n')",
       "Bash(pkill -f \"node apps/api/dist/main.js\")",
-      "Bash(git commit -q -m 'fix\\(db\\): match outbox dispatch update on event id only *)"
+      "Bash(git commit -q -m 'fix\\(db\\): match outbox dispatch update on event id only *)",
+      "Bash(pnpm format:check)",
+      "Bash(pnpm format *)",
+      "Bash(pnpm typecheck *)",
+      "Bash(git commit -q -m 'ci\\(pipeline\\): gated github actions + terraform dev skeleton *)",
+      "Bash(git commit -q -m 'docs\\(stage-0\\): readmes, IDR-0016 local dev environment, status report *)"
     ]
   }
 }

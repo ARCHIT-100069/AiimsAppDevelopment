@@ -21,6 +21,7 @@
 | 0013 | Observability + monitoring/alerting | SDR 0010, Blueprint §22 | Accepted | High | Medium |
 | 0014 | DR + backup/restore + **RPO/RTO targets** | ADR 0007 | Accepted (RTO business sign-off) | Med-High | Medium |
 | 0015 | Release (blue/green + canary) + autoscaling + cost | Blueprint §26, ADR 0010 | Accepted | High | Medium |
+| 0016 | Local development environment (Docker Compose parity substrate) | IDR 0002/0006/0007/0008, TDR 0013 | Accepted | High | High |
 
 Template: Context · Decision · Alternatives · Trade-offs · Consequences · Dependencies · Confidence ·
 Reversibility · Phase Classification · Related Documents · Review Trigger (GOVERNANCE §3).

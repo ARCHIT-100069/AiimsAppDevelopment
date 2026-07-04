@@ -219,6 +219,7 @@ Deployment substrate for the frozen phases; contradict none; **resolves the RPO/
 | 0013 | Observability + monitoring/alerting | SDR 0010, Blueprint §22 | Accepted | High |
 | 0014 | DR + backup/restore + **RPO/RTO targets** | ADR 0007 | Accepted (RTO sign-off) | Med-High |
 | 0015 | Release (blue/green+canary) + autoscaling + cost | Blueprint §26, ADR 0010 | Accepted | High |
+| 0016 | Local dev environment: Docker Compose parity substrate (PG/Redis/Keycloak/MinIO) | IDR 0002/0006/0007/0008, TDR 0013 | Accepted (2026-07-05, Stage 0) | High |
 
 ---
 
