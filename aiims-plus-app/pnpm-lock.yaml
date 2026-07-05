@@ -308,6 +308,9 @@ importers:
 
   packages/testing:
     dependencies:
+      '@aiims/crypto':
+        specifier: workspace:*
+        version: link:../crypto
       '@aiims/db':
         specifier: workspace:*
         version: link:../db

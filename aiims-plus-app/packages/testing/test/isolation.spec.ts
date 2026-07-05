@@ -30,11 +30,18 @@ import {
   SEED,
   withTenantContext,
 } from "@aiims/db";
+import { computeBlindIndex, FieldCipher, LocalKeyProvider } from "@aiims/crypto";
+import { insertPatient, issueMrn } from "@aiims/db";
 import { setupIsolationEnv, type IsolationEnv } from "../src/index";
 
 let env: IsolationEnv;
 let appPool: Pool;
 let deptB: string;
+let patientB: string;
+
+const kp = new LocalKeyProvider("3".repeat(64), "4".repeat(64), "test");
+const patientCipher = new FieldCipher(kp);
+const SHARED_PHONE = "+919999900000"; // deliberately identical in A and B
 
 const A = { tenantId: SEED.tenantA, actorId: SEED.tenantA };
 const B = { tenantId: SEED.tenantB, actorId: SEED.tenantB };
@@ -71,7 +78,34 @@ beforeAll(async () => {
   appPool = createAppPool(env.appUrl);
   await buildHierarchy(A, "tenant-a (synthetic)"); // A-side fixtures for list/leak probes
   deptB = await buildHierarchy(B, "tenant-b-secret (synthetic)");
+  await seedPatient(A, "Asha");
+  patientB = await seedPatient(B, "Tenant-B-Secret-Patient");
 }, 180_000);
+
+/** Patient with an ENCRYPTED phone — same value in both tenants on purpose. */
+async function seedPatient(ctx: typeof A, nameGiven: string): Promise<string> {
+  const id = newId();
+  await withTenantContext(appPool, ctx, async (db) => {
+    const mrn = await issueMrn(db, ctx.tenantId);
+    const { keyRef, values } = await patientCipher.encryptRecord(
+      { phone: SHARED_PHONE },
+      { tenantId: ctx.tenantId, recordId: id },
+    );
+    await insertPatient(db, {
+      id,
+      tenantId: ctx.tenantId,
+      mrn,
+      nameGiven,
+      nameFamily: "Synthetic",
+      gender: "other",
+      birthDate: "1985-05-05",
+      phoneEnc: values.phone,
+      phoneBidx: computeBlindIndex(kp.indexKey(), ctx.tenantId, "phone", SHARED_PHONE),
+      encKeyRef: keyRef,
+    });
+  });
+  return id;
+}
 
 afterAll(async () => {
   await appPool?.end();
@@ -227,6 +261,42 @@ describe("cross-tenant isolation gate (TDR-0006) — runs as aiims_app under FOR
           "INSERT INTO reference.code (system, code, display) VALUES ('icd-10', 'X99', 'nope')",
         ),
       ).rejects.toThrow(/permission denied/);
+    } finally {
+      client.release();
+    }
+  });
+
+  it("PATIENT: A cannot reach B's patient by id, name search, or blind index", async () => {
+    expect(await underA("SELECT id FROM clinical.patient WHERE id = $1", [patientB])).toHaveLength(
+      0,
+    );
+    expect(
+      await underA("SELECT id FROM clinical.patient WHERE name_given ILIKE '%tenant-b-secret%'"),
+    ).toHaveLength(0);
+    // Even holding B's exact digest (B's tenant salt), RLS returns nothing under A...
+    const bDigest = computeBlindIndex(kp.indexKey(), SEED.tenantB, "phone", SHARED_PHONE);
+    expect(
+      await underA("SELECT id FROM clinical.patient WHERE phone_bidx = $1", [bDigest]),
+    ).toHaveLength(0);
+    // ...and A's own salt over the SAME phone produces a DIFFERENT digest (S2-f),
+    // so no cross-tenant equality correlation exists even without RLS.
+    const aDigest = computeBlindIndex(kp.indexKey(), SEED.tenantA, "phone", SHARED_PHONE);
+    expect(aDigest.equals(bDigest)).toBe(false);
+  });
+
+  it("PATIENT: writing B's tenant_id under A is rejected (WITH CHECK)", async () => {
+    const client = await appPool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT set_config('app.tenant_id', $1, true)", [SEED.tenantA]);
+      await expect(
+        client.query(
+          `INSERT INTO clinical.patient (id, tenant_id, mrn, name_given, name_family, gender, birth_date)
+           VALUES ($1, $2, 'MRN-FORGED', 'X', 'Y', 'other', '1990-01-01')`,
+          [newId(), SEED.tenantB],
+        ),
+      ).rejects.toThrow(/row-level security/);
+      await client.query("ROLLBACK");
     } finally {
       client.release();
     }
