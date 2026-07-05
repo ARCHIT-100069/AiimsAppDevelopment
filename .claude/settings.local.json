@@ -71,7 +71,17 @@
       "Bash(pnpm --filter @aiims/web test)",
       "Bash(curl -sf http://localhost:3000/readyz)",
       "Bash(grep -o '[0-9a-f]*$')",
-      "Bash(bc)"
+      "Bash(bc)",
+      "Bash(PORT=3001 pnpm dev)",
+      "Bash(curl -sf http://localhost:3001/api/healthz)",
+      "Bash(curl -s localhost:3001/api/healthz)",
+      "Bash(echo \"WEB up on :3001 \\($\\(curl -s localhost:3001/api/healthz\\)\\)\")",
+      "Bash(curl -s http://localhost:3001/login)",
+      "Bash(curl -s -o /dev/null -w \" /api/auth/login -> %{http_code} -> %{redirect_url}\\\\n\" http://localhost:3001/api/auth/login)",
+      "Bash(lsof -nP -iTCP:3000 -iTCP:3001 -iTCP:8080 -sTCP:LISTEN)",
+      "Bash(awk 'NR>1{print \"  \"$1\" on \"$9}')",
+      "Bash(grep -E \"error|Tasks|\\\\\\\\$\")",
+      "Bash(pnpm --filter @aiims/web exec tsc -p tsconfig.json --noEmit)"
     ]
   }
 }

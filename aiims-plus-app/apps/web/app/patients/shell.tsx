@@ -1,34 +1,104 @@
 import type { ReactNode } from "react";
+import {
+  Avatar,
+  Badge,
+  IconBilling,
+  IconCalendar,
+  IconClipboard,
+  IconCross,
+  IconLogout,
+  IconPatients,
+} from "@aiims/ui-web";
 import { readSession } from "../lib/session";
 
-/** Authenticated shell (FEDR-0005): tenant/user context + capability-aware nav. */
+const NAV = [
+  { label: "Patients", href: "/patients", icon: IconPatients, active: true },
+  { label: "Appointments", href: "#", icon: IconCalendar, soon: true },
+  { label: "Encounters", href: "#", icon: IconClipboard, soon: true },
+  { label: "Billing", href: "#", icon: IconBilling, soon: true },
+];
+
+/** Authenticated shell (FEDR-0005): sidebar nav + top bar with user context. */
 export async function AppShell({ children }: { children: ReactNode }) {
   const session = await readSession();
+  const role = session?.roles.find((r) => ["admin", "doctor", "nurse", "front_desk"].includes(r));
+
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
-          <a href="/patients" className="font-bold text-sky-800">
-            AIIMS+
-          </a>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="text-slate-600">{session?.displayName}</span>
+    <div className="app-bg flex min-h-screen">
+      {/* Sidebar */}
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200/70 bg-white/70 backdrop-blur md:flex">
+        <div className="flex items-center gap-2 px-6 py-5 text-teal-700">
+          <IconCross width={24} height={24} />
+          <span className="text-lg font-bold tracking-tight">AIIMS+</span>
+        </div>
+        <nav className="flex-1 space-y-1 px-3 py-2">
+          {NAV.map(({ label, href, icon: Icon, active, soon }) => (
+            <a
+              key={label}
+              href={soon ? undefined : href}
+              aria-current={active ? "page" : undefined}
+              aria-disabled={soon}
+              className={[
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
+                active
+                  ? "bg-teal-50 text-teal-700"
+                  : soon
+                    ? "cursor-default text-slate-400"
+                    : "text-slate-600 hover:bg-slate-100",
+              ].join(" ")}
+            >
+              <Icon width={18} height={18} />
+              <span className="flex-1">{label}</span>
+              {soon ? (
+                <span className="text-[10px] uppercase tracking-wide text-slate-300">Soon</span>
+              ) : null}
+            </a>
+          ))}
+        </nav>
+        <div className="border-t border-slate-100 p-4 text-xs text-slate-400">
+          Demo environment · synthetic data
+        </div>
+      </aside>
+
+      {/* Main column */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/70 bg-white/80 px-6 py-3 backdrop-blur">
+          <div className="flex items-center gap-2 text-teal-700 md:hidden">
+            <IconCross width={20} height={20} />
+            <span className="font-bold">AIIMS+</span>
+          </div>
+          <div className="ml-auto flex items-center gap-4">
+            <div className="hidden text-right sm:block">
+              <div className="text-sm font-medium text-slate-800">{session?.displayName}</div>
+              <div className="text-xs text-slate-400">{prettyRole(role)}</div>
+            </div>
+            <Avatar name={session?.displayName ?? "User"} size="sm" />
             <form action="/api/auth/logout" method="post">
-              <button className="text-sky-800 hover:underline" type="submit">
-                Sign out
+              <button
+                type="submit"
+                title="Sign out"
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+              >
+                <IconLogout width={18} height={18} />
+                <span className="sr-only">Sign out</span>
               </button>
             </form>
           </div>
-        </div>
-      </header>
-      <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+        </header>
+        <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">{children}</main>
+      </div>
     </div>
   );
 }
 
+function prettyRole(role?: string): string {
+  return role ? role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "Staff";
+}
+
+export { Badge };
+
 /** Server-authoritative capability check for UI affordances (FEDR-0008). */
 export async function canRegisterPatients(): Promise<boolean> {
   const session = await readSession();
-  // Mirrors the S2-d matrix; the API PEP remains the real gate.
   return session?.roles.some((r) => r === "front_desk") ?? false;
 }

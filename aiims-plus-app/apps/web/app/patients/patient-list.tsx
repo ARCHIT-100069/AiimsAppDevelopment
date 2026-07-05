@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 import type { PatientResponse } from "@aiims/api-contracts";
-import { Button, DataTable, TextInput } from "@aiims/ui-web";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  DataTable,
+  IconPatients,
+  IconPlus,
+  IconSearch,
+} from "@aiims/ui-web";
 
 /** Client worklist: search + table. PHI lives only in component state, never
  *  persisted (FEDR-0013); a fresh fetch replaces it each search. */
@@ -28,53 +37,93 @@ export function PatientList({
 
   return (
     <section aria-labelledby="worklist-heading">
-      <div className="flex items-center justify-between">
-        <h1 id="worklist-heading" className="text-xl font-bold">
-          Patients
-        </h1>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 id="worklist-heading" className="text-2xl font-bold text-slate-900">
+            Patients
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {rows.length} {rows.length === 1 ? "record" : "records"} · outpatient registry
+          </p>
+        </div>
         {canCreate ? (
           <a href="/patients/new">
-            <Button>Register patient</Button>
+            <Button>
+              <IconPlus width={18} height={18} /> Register patient
+            </Button>
           </a>
         ) : null}
       </div>
 
-      <form onSubmit={runSearch} className="mt-4 flex gap-2" role="search">
-        <label htmlFor="q" className="sr-only">
-          Search by name or MRN
-        </label>
-        <TextInput
-          id="q"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search by name or MRN"
-        />
-        <Button type="submit" disabled={loading}>
-          {loading ? "Searching…" : "Search"}
-        </Button>
-      </form>
+      <Card className="mt-6 overflow-hidden">
+        <form
+          onSubmit={runSearch}
+          role="search"
+          className="flex gap-2 border-b border-slate-100 p-4"
+        >
+          <label htmlFor="q" className="sr-only">
+            Search by name or MRN
+          </label>
+          <div className="relative flex-1">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+              <IconSearch width={18} height={18} />
+            </span>
+            <input
+              id="q"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search by name or MRN…"
+              className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm shadow-sm focus:border-teal-500"
+            />
+          </div>
+          <Button type="submit" variant="secondary" disabled={loading}>
+            {loading ? "Searching…" : "Search"}
+          </Button>
+        </form>
 
-      <div className="mt-6 rounded-lg border border-slate-200 bg-white p-2">
         <DataTable
           rows={rows}
           rowKey={(p) => p.id}
-          empty="No patients found"
+          empty={
+            <div className="flex flex-col items-center gap-2 text-slate-400">
+              <IconPatients width={32} height={32} />
+              <p className="text-sm text-slate-500">No patients found</p>
+              {canCreate ? (
+                <p className="text-xs">Use “Register patient” to add the first record.</p>
+              ) : null}
+            </div>
+          }
           columns={[
-            { header: "MRN", cell: (p) => p.mrn },
             {
-              header: "Name",
+              header: "Patient",
               cell: (p) => (
-                <a className="text-sky-800 hover:underline" href={`/patients/${p.id}`}>
-                  {p.nameGiven} {p.nameFamily}
+                <a href={`/patients/${p.id}`} className="flex items-center gap-3 group">
+                  <Avatar name={`${p.nameGiven} ${p.nameFamily}`} size="sm" />
+                  <div>
+                    <div className="font-medium text-slate-900 group-hover:text-teal-700">
+                      {p.nameGiven} {p.nameFamily}
+                    </div>
+                    <div className="text-xs text-slate-400">{p.birthDate}</div>
+                  </div>
                 </a>
               ),
             },
-            { header: "Gender", cell: (p) => p.gender },
-            { header: "Birth date", cell: (p) => p.birthDate },
-            { header: "ABHA", cell: (p) => p.abhaAddress ?? "—" },
+            {
+              header: "MRN",
+              cell: (p) => <span className="font-mono text-xs text-slate-600">{p.mrn}</span>,
+            },
+            {
+              header: "Gender",
+              cell: (p) => <Badge tone="slate">{p.gender}</Badge>,
+            },
+            {
+              header: "ABHA",
+              cell: (p) =>
+                p.abhaAddress ? <Badge tone="green">Linked</Badge> : <Badge tone="slate">—</Badge>,
+            },
           ]}
         />
-      </div>
+      </Card>
     </section>
   );
 }

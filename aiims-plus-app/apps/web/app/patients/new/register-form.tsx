@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { createPatientRequestSchema, type CreatePatientRequest } from "@aiims/api-contracts";
-import { Button, Field, Select, TextInput } from "@aiims/ui-web";
+import { Button, Card, Field, Select, TextInput } from "@aiims/ui-web";
 
 /** Registration form: RHF + the SAME Zod schema the API validates with
  *  (FEDR-0011). Client validation is UX only — the server is authoritative. */
@@ -41,51 +41,76 @@ export function RegisterForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="max-w-xl space-y-4" noValidate>
-      {serverError ? (
-        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          {serverError}
-        </p>
-      ) : null}
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="Given name" error={errors.nameGiven?.message}>
-          <TextInput {...register("nameGiven", { required: "Required" })} />
-        </Field>
-        <Field label="Family name" error={errors.nameFamily?.message}>
-          <TextInput {...register("nameFamily", { required: "Required" })} />
-        </Field>
-        <Field label="Gender" error={errors.gender?.message}>
-          <Select {...register("gender")}>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
-            <option value="unknown">Unknown</option>
-          </Select>
-        </Field>
-        <Field label="Birth date" error={errors.birthDate?.message}>
-          <TextInput type="date" {...register("birthDate", { required: "Required" })} />
-        </Field>
-        <Field label="Phone" error={errors.phone?.message}>
-          <TextInput type="tel" {...register("phone")} placeholder="+91…" />
-        </Field>
-        <Field label="Email" error={errors.email?.message}>
-          <TextInput type="email" {...register("email")} />
-        </Field>
-      </div>
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" {...register("requestAbha")} />
-        Create a (mock) ABHA number for this patient
-      </label>
-      <div className="flex gap-3">
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Registering…" : "Register patient"}
-        </Button>
-        <a href="/patients">
-          <Button variant="ghost" type="button">
-            Cancel
+    <Card className="max-w-2xl p-6 sm:p-8">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
+        {serverError ? (
+          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {serverError}
+          </p>
+        ) : null}
+
+        <fieldset className="space-y-4">
+          <legend className="text-sm font-semibold text-slate-800">Demographics</legend>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Given name" error={errors.nameGiven?.message}>
+              <TextInput {...register("nameGiven", { required: "Required" })} autoComplete="off" />
+            </Field>
+            <Field label="Family name" error={errors.nameFamily?.message}>
+              <TextInput {...register("nameFamily", { required: "Required" })} autoComplete="off" />
+            </Field>
+            <Field label="Gender" error={errors.gender?.message}>
+              <Select {...register("gender")}>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+                <option value="unknown">Unknown</option>
+              </Select>
+            </Field>
+            <Field label="Date of birth" error={errors.birthDate?.message}>
+              <TextInput type="date" {...register("birthDate", { required: "Required" })} />
+            </Field>
+          </div>
+        </fieldset>
+
+        <fieldset className="space-y-4">
+          <legend className="text-sm font-semibold text-slate-800">
+            Contact (encrypted at rest)
+          </legend>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Phone"
+              hint="Stored encrypted; searchable by exact match"
+              error={errors.phone?.message}
+            >
+              <TextInput type="tel" {...register("phone")} placeholder="+91…" autoComplete="off" />
+            </Field>
+            <Field label="Email" error={errors.email?.message}>
+              <TextInput type="email" {...register("email")} autoComplete="off" />
+            </Field>
+          </div>
+        </fieldset>
+
+        <label className="flex items-center gap-2.5 rounded-lg bg-teal-50/60 px-3 py-2.5 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-slate-300 text-teal-600"
+            {...register("requestAbha")}
+          />
+          Create an ABHA number for this patient{" "}
+          <span className="text-xs text-slate-400">(mock)</span>
+        </label>
+
+        <div className="flex gap-3 pt-2">
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Registering…" : "Register patient"}
           </Button>
-        </a>
-      </div>
-    </form>
+          <a href="/patients">
+            <Button variant="ghost" type="button">
+              Cancel
+            </Button>
+          </a>
+        </div>
+      </form>
+    </Card>
   );
 }

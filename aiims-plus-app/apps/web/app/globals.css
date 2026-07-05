@@ -1,3 +1,65 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --brand-50: #eef7f6;
+  --brand-100: #d5ece9;
+  --brand-500: #0d9488;
+  --brand-600: #0b8177;
+  --brand-700: #0f766e;
+  --ink: #0f172a;
+  --muted: #64748b;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizelegibility;
+}
+
+body {
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--ink);
+}
+
+/* Calm clinical page backdrop */
+.app-bg {
+  background:
+    radial-gradient(1200px 600px at 100% -10%, rgba(13, 148, 136, 0.06), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(2, 132, 199, 0.05), transparent 55%), #f7f9fc;
+}
+
+.auth-panel {
+  background:
+    radial-gradient(600px 300px at 20% 10%, rgba(255, 255, 255, 0.12), transparent 50%),
+    linear-gradient(160deg, #0f766e 0%, #0d9488 45%, #0891b2 100%);
+}
+
+/* Subtle card elevation used across the app */
+.card {
+  background: #fff;
+  border: 1px solid #eef2f7;
+  border-radius: 16px;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+/* Accessible focus ring everywhere */
+*:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #dbe2ea;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}

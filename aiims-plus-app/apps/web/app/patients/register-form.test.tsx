@@ -9,7 +9,7 @@ describe("RegisterForm (a11y)", () => {
     const { container } = render(<RegisterForm />);
     expect(screen.getByLabelText("Given name")).toBeInTheDocument();
     expect(screen.getByLabelText("Family name")).toBeInTheDocument();
-    expect(screen.getByLabelText("Birth date")).toBeInTheDocument();
+    expect(screen.getByLabelText("Date of birth")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /register patient/i })).toBeInTheDocument();
     const results = await axe(container);
     expect(results.violations).toEqual([]);
