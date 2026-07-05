@@ -1,8 +1,8 @@
 # AIIMS+ — Application Monorepo
 
-**Stage 0 — Walking Skeleton** of the AIIMS+ Hospital Operating System, implemented strictly
+**Stages 0–1 (Walking Skeleton + Core Platform)** of the AIIMS+ Hospital Operating System, implemented strictly
 against the frozen architecture in the repository root (`../architecture/`, `../DECISION-REGISTRY.md`,
-`../IMPLEMENTATION-MASTER-PLAN.md` §10). **No Stage 1 code.**
+`../IMPLEMENTATION-MASTER-PLAN.md` §10–§11). **No Stage 2 code.**
 
 > **Constitution (non-negotiable):** no clinical AI, no diagnosis, no medicine recommendations;
 > doctors make all clinical decisions; security, privacy, and audit are mandatory.
@@ -20,7 +20,7 @@ against the frozen architecture in the repository root (`../architecture/`, `../
 | Audit              | **Hash-chained, append-only** `audit.audit_log`, written atomically in the business transaction; `UPDATE/DELETE` revoked (ADR-0005)                                                                                                                      |
 | Flags & adapters   | DB-backed feature flags; five integration ports (ABDM/consent/payment/notification/AI) with mock defaults (BDR-0008/ADR-0010)                                                                                                                            |
 | API conventions    | Contract-first Zod + generated OpenAPI 3.1; RFC 9457 Problem Details; correlation ids (APDR-0003/0014)                                                                                                                                                   |
-| Proof of life      | `POST /v1/notes` — one tenant-scoped write = note + outbox event + audit row, atomic (removed at Stage 1)                                                                                                                                                |
+| Core Platform (S1) | `/v1/tenants` (platform operators, idempotent), `/v1/organizations                                                                                                                                                                                       | facilities | departments`, `/v1/users`+ role assignment,`/v1/reference/*` — every write = row + outbox + audit, atomic; duplicate-safe natural keys |
 | Scaffolds          | `apps/web` (Next.js), `apps/mobile` (lazy, per Master Plan §4), `apps/ai` (FastAPI stub)                                                                                                                                                                 |
 | CI                 | `.github/workflows/ci.yml` — TDR-0012 gate order; isolation gate + RLS policy-diff blocking; scans; Docker build; deploy job gated on AWS                                                                                                                |
 | Infra              | `infra/` Terraform skeleton (`ap-south-1`); **apply deferred** until the AWS dev account exists                                                                                                                                                          |
@@ -53,12 +53,23 @@ TOKEN=$(curl -s -X POST http://localhost:8080/realms/aiims/protocol/openid-conne
   -d grant_type=password -d client_id=aiims-cli -d username=doctor.a -d password=doctor \
   | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
 
-# Audited, tenant-scoped write (note + outbox event + audit row in ONE transaction)
-curl -s -X POST localhost:3000/v1/notes -H "Authorization: Bearer $TOKEN" \
-  -H 'content-type: application/json' -d '{"body":"hello (synthetic)"}'
+# Tenant-scoped, audited read of the directory (writes need the admin role)
+curl -s localhost:3000/v1/organizations -H "Authorization: Bearer $TOKEN"
+curl -s "localhost:3000/v1/reference/codes?system=icd-10&limit=5" -H "Authorization: Bearer $TOKEN"
 
 # Cross-tenant proof: doctor.b (tenant B) sees nothing
 # RBAC proof: frontdesk.a gets 403 on POST
+```
+
+Stage 1 demo (platform operator → tenant bootstrap → directory):
+
+```bash
+PA=$(curl -s -X POST http://localhost:8080/realms/aiims/protocol/openid-connect/token \
+  -d grant_type=password -d client_id=aiims-cli -d username=platform.admin -d password=platform \
+  | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+curl -s -X POST localhost:3000/v1/tenants -H "Authorization: Bearer $PA" \
+  -H 'content-type: application/json' -d '{"slug":"my-clinic","name":"My Clinic"}'
+# then log in as the tenant admin and build org → facility → departments → users
 ```
 
 ## Gates
@@ -90,4 +101,4 @@ docker/     Keycloak dev realm
 - No PHI in logs, events, errors, or any non-prod data — synthetic fixtures only (TDR-0013).
 - Conventional Commits enforced; trunk-based; small PRs (Master Plan §26).
 
-Status & verification evidence: see [STAGE-0-STATUS.md](./STAGE-0-STATUS.md).
+Status & verification evidence: [STAGE-0-STATUS.md](./STAGE-0-STATUS.md) · [STAGE-1-STATUS.md](./STAGE-1-STATUS.md).

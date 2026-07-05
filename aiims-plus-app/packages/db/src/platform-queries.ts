@@ -7,7 +7,7 @@
  * UNIQUE constraints + ON CONFLICT idempotency where replays are legal, and
  * typed violation detection where they are client errors (409).
  */
-import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lt, or } from "drizzle-orm";
 import type { Pool } from "pg";
 import { newId } from "./ids";
 import * as s from "./schema";
@@ -162,7 +162,7 @@ export async function roleCodesForUsers(
     .select({ userId: s.userRole.userId, code: s.role.code })
     .from(s.userRole)
     .innerJoin(s.role, eq(s.userRole.roleId, s.role.id))
-    .where(sql`${s.userRole.userId} = ANY(${userIds})`);
+    .where(inArray(s.userRole.userId, userIds));
   const map = new Map<string, string[]>();
   for (const r of rows) map.set(r.userId, [...(map.get(r.userId) ?? []), r.code]);
   return map;
