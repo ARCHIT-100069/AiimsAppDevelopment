@@ -6,6 +6,9 @@
     { "schema": "platform", "table": "user_role", "policy": "tenant_isolation" },
     { "schema": "platform", "table": "feature_flag", "policy": "tenant_isolation" },
     { "schema": "platform", "table": "outbox", "policy": "tenant_isolation" },
+    { "schema": "platform", "table": "organization", "policy": "tenant_isolation" },
+    { "schema": "platform", "table": "facility", "policy": "tenant_isolation" },
+    { "schema": "platform", "table": "department", "policy": "tenant_isolation" },
     { "schema": "platform", "table": "note", "policy": "tenant_isolation" },
     { "schema": "audit", "table": "audit_log", "policy": "tenant_isolation" }
   ]

@@ -12,6 +12,7 @@
  */
 import { Client } from "pg";
 import { newId } from "./ids";
+import { seedReference } from "./seed-reference";
 
 /** Fixed fixture ids — shared with the Keycloak realm export and tests. */
 export const SEED = {
@@ -107,6 +108,9 @@ export async function seed(databaseUrl: string): Promise<void> {
     await seedTenant(client, SEED.tenantB, "demo-clinic-b", "Demo Clinic B (synthetic)", [
       { keycloakSub: SEED.keycloak.doctorB, displayName: "Dr. Bala Demo", roleCode: "doctor" },
     ]);
+
+    // Reference code systems: minimal dev set, replaceable by real imports (DDR-0012).
+    await seedReference(client);
 
     // Global feature flags: every adapter defaults to MOCK (ADR-0010).
     for (const key of ADAPTER_FLAGS) {

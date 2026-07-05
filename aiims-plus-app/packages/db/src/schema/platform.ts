@@ -44,6 +44,46 @@ export const userRole = platform.table("user_role", {
   tenantId: uuid("tenant_id").notNull(),
   userId: uuid("user_id").notNull(),
   roleId: uuid("role_id").notNull(),
+  /** Optional department scoping (DB Arch §5); added in migration 0002. */
+  departmentId: uuid("department_id"),
+});
+
+/* ------------------- Stage 1: org structure (DB Arch §5) ------------------ */
+
+export const organization = platform.table("organization", {
+  id: uuid("id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  name: text("name").notNull(),
+  type: text("type").$type<"hospital" | "clinic" | "chain">().notNull(),
+  version: integer("version").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+});
+
+export const facility = platform.table("facility", {
+  id: uuid("id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  organizationId: uuid("organization_id").notNull(),
+  name: text("name").notNull(),
+  address: jsonb("address"),
+  timezone: text("timezone").notNull().default("Asia/Kolkata"),
+  version: integer("version").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+});
+
+export const department = platform.table("department", {
+  id: uuid("id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  facilityId: uuid("facility_id").notNull(),
+  name: text("name").notNull(),
+  code: text("code").notNull(),
+  version: integer("version").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 
 /** NULL tenant_id = global default; a tenant row overrides it (DB Arch §5). */

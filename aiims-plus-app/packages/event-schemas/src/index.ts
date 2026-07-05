@@ -39,9 +39,14 @@ export const noteCreatedV1PayloadSchema = z.object({
 });
 export type NoteCreatedV1Payload = z.infer<typeof noteCreatedV1PayloadSchema>;
 
+import { PLATFORM_EVENT_SCHEMAS } from "./platform-events";
+
+export * from "./platform-events";
+
 /** Registry mapping event type → payload schema; consumers validate against this. */
 export const EVENT_PAYLOAD_SCHEMAS: Record<string, z.ZodType> = {
   [NOTE_CREATED_V1]: noteCreatedV1PayloadSchema,
+  ...PLATFORM_EVENT_SCHEMAS,
 };
 
 /** Validate a full envelope including its type-specific payload. */

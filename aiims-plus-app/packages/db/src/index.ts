@@ -11,3 +11,4 @@ export { migrate } from "./migrate";
 export { seed, SEED } from "./seed";
 export { checkRlsPolicies } from "./check-rls-policies";
 export * from "./queries";
+export * from "./platform-queries";
