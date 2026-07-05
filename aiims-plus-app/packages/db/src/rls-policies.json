@@ -1,14 +1,65 @@
 {
   "$comment": "Manifest of REQUIRED RLS state (DDR-0011 guardrail). check-rls-policies fails CI if any entry is missing, not forced, or its policy was dropped. Changing this file requires security review.",
   "policies": [
-    { "schema": "platform", "table": "app_user", "policy": "tenant_isolation" },
-    { "schema": "platform", "table": "role", "policy": "tenant_isolation" },
-    { "schema": "platform", "table": "user_role", "policy": "tenant_isolation" },
-    { "schema": "platform", "table": "feature_flag", "policy": "tenant_isolation" },
-    { "schema": "platform", "table": "outbox", "policy": "tenant_isolation" },
-    { "schema": "platform", "table": "organization", "policy": "tenant_isolation" },
-    { "schema": "platform", "table": "facility", "policy": "tenant_isolation" },
-    { "schema": "platform", "table": "department", "policy": "tenant_isolation" },
-    { "schema": "audit", "table": "audit_log", "policy": "tenant_isolation" }
+    {
+      "schema": "platform",
+      "table": "app_user",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "platform",
+      "table": "role",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "platform",
+      "table": "user_role",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "platform",
+      "table": "feature_flag",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "platform",
+      "table": "outbox",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "platform",
+      "table": "organization",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "platform",
+      "table": "facility",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "platform",
+      "table": "department",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "audit",
+      "table": "audit_log",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "clinical",
+      "table": "patient",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "clinical",
+      "table": "mrn_counter",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "platform",
+      "table": "idempotency_key",
+      "policy": "tenant_isolation"
+    }
   ]
 }

@@ -113,6 +113,18 @@ export const outbox = platform.table("outbox", {
   dispatchAttempts: integer("dispatch_attempts").notNull().default(0),
 });
 
+/**
+ * Idempotency-Key persistence (APDR-0006, decision S2-e): written in the SAME
+ * transaction as the resource it protects; replay returns the original.
+ */
+export const idempotencyKey = platform.table("idempotency_key", {
+  tenantId: uuid("tenant_id").notNull(),
+  endpoint: text("endpoint").notNull(),
+  key: text("key").notNull(),
+  resourceId: uuid("resource_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 /** Bookkeeping for the SQL migration runner (not managed by drizzle-kit). */
 export const schemaMigrations = platform.table("schema_migrations", {
   name: text("name").primaryKey(),
