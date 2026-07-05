@@ -1,0 +1,20 @@
+{
+  "name": "@aiims/crypto",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Field-level PHI encryption (DDR-0006/SDR-0004): AES-256-GCM envelope with per-record data keys behind a KeyProvider seam, plus tenant-salted HMAC blind indexes. Pure node:crypto — no runtime deps. CRITICAL module: 90% coverage gate (TDR-0012).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@aiims/typescript-config": "workspace:*",
+    "@types/node": "^22.20.0",
+    "@vitest/coverage-v8": "^4.1.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.0"
+  }
+}

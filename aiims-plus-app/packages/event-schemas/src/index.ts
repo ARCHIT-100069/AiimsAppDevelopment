@@ -27,12 +27,15 @@ export const eventEnvelopeSchema = z.object({
 export type EventEnvelope = z.infer<typeof eventEnvelopeSchema>;
 
 import { PLATFORM_EVENT_SCHEMAS } from "./platform-events";
+import { PATIENT_EVENT_SCHEMAS } from "./patient-events";
 
 export * from "./platform-events";
+export * from "./patient-events";
 
 /** Registry mapping event type → payload schema; consumers validate against this. */
 export const EVENT_PAYLOAD_SCHEMAS: Record<string, z.ZodType> = {
   ...PLATFORM_EVENT_SCHEMAS,
+  ...PATIENT_EVENT_SCHEMAS,
 };
 
 /** Validate a full envelope including its type-specific payload. */

@@ -62,7 +62,9 @@
       "Bash(curl -sf http://localhost:9000/minio/health/live -o /dev/null)",
       "Bash(python3 -c \"import sys,json;print\\('keycloak realm:', json.load\\(sys.stdin\\)['realm']\\)\")",
       "Bash(git rm *)",
-      "Bash(pnpm audit *)"
+      "Bash(pnpm audit *)",
+      "Bash(pnpm --filter @aiims/crypto build)",
+      "Bash(pnpm --filter @aiims/crypto test)"
     ]
   }
 }
