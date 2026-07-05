@@ -6,6 +6,7 @@
 import { Global, Module } from "@nestjs/common";
 import { loadConfig } from "@aiims/config";
 import { AuditService } from "./audit.service";
+import { CryptoService } from "./crypto.provider";
 import { CONFIG } from "./config.provider";
 import { UnitOfWork } from "./db.provider";
 import { EventBus } from "./event-bus";
@@ -27,7 +28,8 @@ import { OutboxDispatcher } from "./outbox.dispatcher";
     OutboxDispatcher,
     AuditService,
     FeatureFlagService,
+    CryptoService,
   ],
-  exports: [CONFIG, LOGGER, UnitOfWork, EventBus, AuditService, FeatureFlagService],
+  exports: [CONFIG, LOGGER, UnitOfWork, EventBus, AuditService, FeatureFlagService, CryptoService],
 })
 export class PlatformModule {}

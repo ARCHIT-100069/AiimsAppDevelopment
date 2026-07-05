@@ -56,6 +56,30 @@ describe("Stage 1 permission matrix (separation of duties, SDR-0002)", () => {
     }
   });
 
+  it("patient permissions follow the S2-d matrix (admin has NONE)", () => {
+    expect(
+      decide({ principal: { roles: ["front_desk"] }, permission: "patient:create" }).allowed,
+    ).toBe(true);
+    expect(decide({ principal: { roles: ["doctor"] }, permission: "patient:update" }).allowed).toBe(
+      true,
+    );
+    expect(decide({ principal: { roles: ["nurse"] }, permission: "patient:read" }).allowed).toBe(
+      true,
+    );
+    expect(decide({ principal: { roles: ["nurse"] }, permission: "patient:update" }).allowed).toBe(
+      false,
+    );
+    expect(decide({ principal: { roles: ["doctor"] }, permission: "patient:create" }).allowed).toBe(
+      false,
+    );
+    for (const perm of ["patient:create", "patient:read", "patient:update"] as const) {
+      expect(decide({ principal: { roles: ["admin"] }, permission: perm }).allowed).toBe(false);
+      expect(decide({ principal: { roles: ["platform_admin"] }, permission: perm }).allowed).toBe(
+        false,
+      );
+    }
+  });
+
   it("no tenant role can manage the tenant registry", () => {
     for (const role of ["admin", "doctor", "nurse", "front_desk"]) {
       expect(

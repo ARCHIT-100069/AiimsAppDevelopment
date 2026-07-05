@@ -121,6 +121,15 @@ export async function seed(databaseUrl: string): Promise<void> {
         [newId(), key],
       );
     }
+
+    // FHIR read endpoint: implemented but DISABLED by default (founder
+    // decision, Stage 2) — flips on per tenant when the FHIR stage needs it.
+    await client.query(
+      `INSERT INTO platform.feature_flag (id, tenant_id, key, enabled)
+       VALUES ($1, NULL, 'fhir.read', false)
+       ON CONFLICT (tenant_id, key) DO NOTHING`,
+      [newId()],
+    );
   } finally {
     await client.end();
   }

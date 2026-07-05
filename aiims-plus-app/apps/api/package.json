@@ -2,7 +2,7 @@
   "name": "@aiims/api",
   "version": "0.0.0",
   "private": true,
-  "description": "AIIMS+ NestJS modular monolith (ADR-0001) — Stage 0 walking skeleton",
+  "description": "AIIMS+ NestJS modular monolith (ADR-0001) \u2014 Stage 0 walking skeleton",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -30,7 +30,8 @@
     "pino": "^10.3.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.0",
-    "zod": "^4.4.0"
+    "zod": "^4.4.0",
+    "@aiims/crypto": "workspace:*"
   },
   "devDependencies": {
     "@aiims/typescript-config": "workspace:*",

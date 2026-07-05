@@ -18,6 +18,16 @@ export class MockAbdmGateway implements AbdmGateway {
     // Mock M1: any syntactically plausible address verifies.
     return { verified: abhaAddress.includes("@"), reference: `mock-abdm-${Date.now()}` };
   }
+
+  async createAbha(): Promise<{ abhaNumber: string; abhaAddress: string; reference: string }> {
+    // Clearly-synthetic 14-digit ABHA in the mock 99-prefix range (TDR-0013).
+    const digits = `99${String(Math.floor(Math.random() * 1e12)).padStart(12, "0")}`;
+    return {
+      abhaNumber: digits,
+      abhaAddress: `synthetic.${digits.slice(-6)}@abdm-mock`,
+      reference: `mock-abdm-create-${Date.now()}`,
+    };
+  }
 }
 
 @Injectable()

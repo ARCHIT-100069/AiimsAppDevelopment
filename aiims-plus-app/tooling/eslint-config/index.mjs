@@ -139,13 +139,16 @@ export default tseslint.config(
                 "common",
               ],
             },
-            // Application services orchestrate domain + ports (never infrastructure directly).
+            // Application services orchestrate domain + ports (never infrastructure
+            // directly). "adapters" is allowed: its ports.ts IS the sanctioned
+            // integration seam every module consumes (BDR-0008, Blueprint §7).
             {
               from: ["module-application"],
               allow: [
                 sameModule("module-domain"),
                 sameModule("module-ports"),
                 "platform",
+                "adapters",
                 "common",
               ],
             },
@@ -156,13 +159,15 @@ export default tseslint.config(
               from: ["module-ports"],
               allow: [sameModule("module-domain"), sameModule("module-ports")],
             },
-            // Infrastructure implements ports and maps rows → domain objects.
+            // Infrastructure implements ports and maps rows → domain objects;
+            // may consume adapter ports (BDR-0008 impls live at this layer).
             {
               from: ["module-infrastructure"],
               allow: [
                 sameModule("module-domain"),
                 sameModule("module-ports"),
                 "platform",
+                "adapters",
                 "common",
               ],
             },

@@ -19,6 +19,10 @@ export const PERMISSIONS = [
   "user:manage", // app users + role assignment
   "user:read",
   "reference:read", // global code systems
+  // Stage 2 — Patient Module (decision S2-d: admin holds NO clinical perms)
+  "patient:create",
+  "patient:read",
+  "patient:update",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -29,10 +33,12 @@ export type Permission = (typeof PERMISSIONS)[number];
  */
 const ROLE_PERMISSIONS: Record<RoleCode | typeof PLATFORM_ADMIN_ROLE, readonly Permission[]> = {
   [PLATFORM_ADMIN_ROLE]: ["platform:tenant:manage"],
+  // Separation of duties (SDR-0002): admin administers, clinicians treat,
+  // front desk registers — admin deliberately holds NO patient permission.
   admin: ["org:manage", "org:read", "user:manage", "user:read", "reference:read"],
-  doctor: ["org:read", "user:read", "reference:read"],
-  nurse: ["org:read", "reference:read"],
-  front_desk: ["org:read", "reference:read"],
+  doctor: ["org:read", "user:read", "reference:read", "patient:read", "patient:update"],
+  nurse: ["org:read", "reference:read", "patient:read"],
+  front_desk: ["org:read", "reference:read", "patient:create", "patient:read", "patient:update"],
 };
 
 export interface Decision {

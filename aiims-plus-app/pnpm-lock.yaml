@@ -49,6 +49,9 @@ importers:
       '@aiims/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@aiims/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
       '@aiims/db':
         specifier: workspace:*
         version: link:../../packages/db

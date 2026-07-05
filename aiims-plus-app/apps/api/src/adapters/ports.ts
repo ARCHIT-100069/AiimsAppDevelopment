@@ -12,6 +12,8 @@
 export interface AbdmGateway {
   /** Mock M1: verify an ABHA address exists/matches. */
   verifyAbha(abhaAddress: string): Promise<{ verified: boolean; reference: string }>;
+  /** Mock M1: create an ABHA for a new patient (real flow is Stage 8). */
+  createAbha(): Promise<{ abhaNumber: string; abhaAddress: string; reference: string }>;
 }
 
 /** ADR-0004 — regime-agnostic consent authority. */

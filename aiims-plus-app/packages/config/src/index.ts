@@ -42,6 +42,21 @@ export const envSchema = z.object({
   ADAPTER_NOTIFICATION: adapterModeSchema,
   ADAPTER_AI: adapterModeSchema,
 
+  /**
+   * Field-encryption key provider (DDR-0006/SDR-0005 via the KeyProvider
+   * seam): "local" (dev-only) now; "aws-kms" activates at AWS bootstrap.
+   */
+  KEY_PROVIDER: z.enum(["local", "aws-kms"]).default("local"),
+  /** 32-byte hex keys for the LOCAL provider (dev/compose only — SDR-0006). */
+  AIIMS_FIELD_MASTER_KEY: z
+    .string()
+    .regex(/^[0-9a-f]{64}$/i)
+    .optional(),
+  AIIMS_BLIND_INDEX_KEY: z
+    .string()
+    .regex(/^[0-9a-f]{64}$/i)
+    .optional(),
+
   /** OTel OTLP endpoint (IDR-0013); tracing activates only when set. */
   OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
 
