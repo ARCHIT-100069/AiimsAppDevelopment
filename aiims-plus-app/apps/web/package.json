@@ -2,22 +2,37 @@
   "name": "@aiims/web",
   "version": "0.0.0",
   "private": true,
-  "description": "AIIMS+ web app — Next.js App Router + BFF (FEDR-0001). Stage 0 scaffold; the clinical UI lands with the frontend build-out",
+  "description": "AIIMS+ web app \u2014 Next.js App Router + BFF (FEDR-0001). Stage 0 scaffold; the clinical UI lands with the frontend build-out",
   "scripts": {
     "build": "next build",
     "dev": "next dev",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "dependencies": {
     "next": "^16.2.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "@aiims/api-contracts": "workspace:*",
+    "@aiims/ui-web": "workspace:*",
+    "@tanstack/react-query": "^5.62.0",
+    "react-hook-form": "^7.54.0",
+    "zod": "^4.4.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.0",
     "@types/react": "^19.2.0",
     "typescript": "^5.9.0",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.0",
+    "@aiims/eslint-config": "workspace:*",
+    "tailwindcss": "^3.4.0",
+    "postcss": "^8.5.10",
+    "autoprefixer": "^10.4.0",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/jest-dom": "^6.6.0",
+    "jsdom": "^25.0.0",
+    "jest-axe": "^9.0.0",
+    "@types/jest-axe": "^3.5.9",
+    "@vitejs/plugin-react": "^4.3.0"
   }
 }

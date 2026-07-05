@@ -2,7 +2,7 @@
   "name": "@aiims/ui-web",
   "version": "0.0.0",
   "private": true,
-  "description": "Web design-system components — Tailwind + shadcn/ui over @aiims/design-tokens (FEDR-0003/0004). Stage 0 scaffold; built out in the frontend stage",
+  "description": "Web design-system components — Tailwind + shadcn/ui over @aiims/design-tokens (FEDR-0003/0004)",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -13,8 +13,13 @@
   "dependencies": {
     "@aiims/design-tokens": "workspace:*"
   },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
   "devDependencies": {
     "@aiims/typescript-config": "workspace:*",
+    "@types/react": "^19.2.0",
+    "react": "^19.2.0",
     "typescript": "^5.9.0",
     "vitest": "^4.1.0"
   }
