@@ -34,6 +34,9 @@ jobs:
       - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm test # unit tests (domain, contracts, PDP, adapters-resolve)
+      # Coverage gate for security-critical packages (TDR-0012, decision S2-i):
+      # @aiims/crypto enforces >=90% via its own vitest config; fails the job.
+      - run: pnpm --filter @aiims/crypto test
 
   isolation-gate:
     name: "cross-tenant isolation gate (TDR-0006) — BLOCKING"
