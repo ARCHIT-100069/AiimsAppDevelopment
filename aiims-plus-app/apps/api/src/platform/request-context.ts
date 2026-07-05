@@ -5,12 +5,12 @@
  */
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
-import type { Principal } from "@aiims/domain-types";
+import type { AuthenticatedParty } from "@aiims/domain-types";
 import type { NextFunction, Request, Response } from "express";
 
 export interface RequestContext {
   correlationId: string;
-  principal?: Principal;
+  principal?: AuthenticatedParty;
 }
 
 const storage = new AsyncLocalStorage<RequestContext>();
@@ -25,11 +25,11 @@ export function currentContext(): RequestContext {
   return storage.getStore() ?? { correlationId: "no-request-context" };
 }
 
-export function setPrincipal(principal: Principal): void {
+export function setPrincipal(principal: AuthenticatedParty): void {
   const ctx = storage.getStore();
   if (ctx) ctx.principal = principal;
 }
 
-export function currentPrincipal(): Principal | undefined {
+export function currentPrincipal(): AuthenticatedParty | undefined {
   return storage.getStore()?.principal;
 }

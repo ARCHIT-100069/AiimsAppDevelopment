@@ -47,7 +47,7 @@ export class AuthzGuard implements CanActivate {
         {
           securitySignal: "authz_denial",
           correlationId: currentContext().correlationId,
-          tenantId: principal.tenantId,
+          tenantId: principal.kind === "tenant" ? principal.tenantId : "(platform)",
           actorId: principal.actorId,
           permission,
           reason: decision.reason,

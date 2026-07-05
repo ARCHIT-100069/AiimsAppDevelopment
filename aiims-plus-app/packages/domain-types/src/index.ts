@@ -27,6 +27,7 @@ export const isoTimestampSchema = z.iso.datetime({ offset: true });
  * Set once per request; drives RLS tenant context and audit actor identity.
  */
 export interface Principal {
+  readonly kind: "tenant";
   /** `platform.app_user.id` resolved from the Keycloak subject. */
   readonly actorId: UserId;
   /** Tenant the token is scoped to — becomes `app.tenant_id` (DDR-0002). */
@@ -35,6 +36,23 @@ export interface Principal {
   readonly roles: readonly string[];
 }
 
-/** Role codes shipped in Stage 0 (platform.role seed). */
+/**
+ * Platform operator (Stage 1): authorized by the Keycloak realm role
+ * `platform_admin`, outside any tenant's RLS scope. May ONLY perform tenant
+ * registry operations — least privilege; no access to tenant data.
+ */
+export interface PlatformPrincipal {
+  readonly kind: "platform";
+  /** Keycloak subject (uuid) — the audit actor for registry operations. */
+  readonly actorId: string;
+  readonly roles: readonly string[];
+}
+
+export type AuthenticatedParty = Principal | PlatformPrincipal;
+
+/** Keycloak REALM role marking a platform operator (Stage 1 decision). */
+export const PLATFORM_ADMIN_ROLE = "platform_admin" as const;
+
+/** Tenant role codes (platform.role seed). */
 export const ROLE_CODES = ["admin", "doctor", "nurse", "front_desk"] as const;
 export type RoleCode = (typeof ROLE_CODES)[number];

@@ -3,26 +3,47 @@
  *
  * RBAC now (user/role/department/organization/resource per Blueprint §11),
  * shaped to accept ABAC/ReBAC/consent-aware policies later without a rewrite:
- * `Decision` takes a full context object, so richer attributes (department,
+ * the decision input is a context object, so richer attributes (department,
  * relationship, consent artifact) slot in as new policy inputs, not new APIs.
  *
  * Enforcement (PEP) lives in NestJS guards; this package only decides.
  */
-import type { Principal, RoleCode } from "@aiims/domain-types";
+import { PLATFORM_ADMIN_ROLE, type RoleCode } from "@aiims/domain-types";
 
-/** Stage 0 permission vocabulary — grows with each module (never ad hoc strings). */
-export const PERMISSIONS = ["note:create", "note:read"] as const;
+/** Permission vocabulary — grows per stage, never ad hoc strings. */
+export const PERMISSIONS = [
+  // Stage 0 proof (removed with the note module at the end of Stage 1)
+  "note:create",
+  "note:read",
+  // Stage 1 — Core Platform
+  "platform:tenant:manage", // platform operators only
+  "org:manage", // organizations, facilities, departments
+  "org:read",
+  "user:manage", // app users + role assignment
+  "user:read",
+  "reference:read", // global code systems
+] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
 /**
- * Role → permission policy. Data-driven so it can move to `platform.role`
- * configuration in Stage 1 without changing the decision API.
+ * Role → permission policy. Data-driven; separation of duties per SDR-0002:
+ * platform_admin administers the tenant REGISTRY only and holds no tenant
+ * data permission; clinical roles read the directory, never manage it.
  */
-const ROLE_PERMISSIONS: Record<RoleCode, readonly Permission[]> = {
-  admin: ["note:create", "note:read"],
-  doctor: ["note:create", "note:read"],
-  nurse: ["note:read"],
-  front_desk: ["note:read"],
+const ROLE_PERMISSIONS: Record<RoleCode | typeof PLATFORM_ADMIN_ROLE, readonly Permission[]> = {
+  [PLATFORM_ADMIN_ROLE]: ["platform:tenant:manage"],
+  admin: [
+    "org:manage",
+    "org:read",
+    "user:manage",
+    "user:read",
+    "reference:read",
+    "note:create",
+    "note:read",
+  ],
+  doctor: ["org:read", "user:read", "reference:read", "note:create", "note:read"],
+  nurse: ["org:read", "reference:read", "note:read"],
+  front_desk: ["org:read", "reference:read", "note:read"],
 };
 
 export interface Decision {
@@ -31,15 +52,15 @@ export interface Decision {
   readonly reason: string;
 }
 
-/** ABAC-ready decision context; Stage 0 uses only the principal's roles. */
+/** ABAC-ready decision context; Stage 1 uses roles (+ department later). */
 export interface AuthzInput {
-  readonly principal: Pick<Principal, "roles">;
+  readonly principal: { readonly roles: readonly string[] };
   readonly permission: Permission;
 }
 
 export function decide({ principal, permission }: AuthzInput): Decision {
   for (const role of principal.roles) {
-    const grants = ROLE_PERMISSIONS[role as RoleCode];
+    const grants = ROLE_PERMISSIONS[role as keyof typeof ROLE_PERMISSIONS];
     if (grants?.includes(permission)) {
       return { allowed: true, reason: `role "${role}" grants "${permission}"` };
     }

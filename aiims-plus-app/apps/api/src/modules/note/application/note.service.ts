@@ -58,13 +58,17 @@ export class NoteService {
           payload: { noteId: note.props.id, authorId: principal.actorId },
         });
 
-        await this.audit.append(db, principal, {
-          eventId,
-          action: "note.create",
-          resourceType: "note",
-          resourceId: note.props.id,
-          occurredAt,
-        });
+        await this.audit.append(
+          db,
+          { tenantId: principal.tenantId, actorId: principal.actorId },
+          {
+            eventId,
+            action: "note.create",
+            resourceType: "note",
+            resourceId: note.props.id,
+            occurredAt,
+          },
+        );
       },
     );
 

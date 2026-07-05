@@ -11,7 +11,12 @@ import { Reflector } from "@nestjs/core";
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
 import type { AppConfig } from "@aiims/config";
 import { findActiveUserByKeycloakSub, roleCodesForUser } from "@aiims/db";
-import type { Principal, TenantId, UserId } from "@aiims/domain-types";
+import {
+  PLATFORM_ADMIN_ROLE,
+  type Principal,
+  type TenantId,
+  type UserId,
+} from "@aiims/domain-types";
 import type { Request } from "express";
 import { UnauthenticatedError } from "../common/errors";
 import { CONFIG } from "./config.provider";
@@ -21,6 +26,7 @@ import { setPrincipal } from "./request-context";
 
 interface AiimsClaims extends JWTPayload {
   tenant_id?: string;
+  realm_access?: { roles?: string[] };
 }
 
 @Injectable()
@@ -64,9 +70,21 @@ export class AuthGuard implements CanActivate {
     }
 
     const keycloakSub = claims.sub;
+    if (!keycloakSub) {
+      throw new UnauthenticatedError("Token lacks a subject");
+    }
+
+    // Platform operators (Stage 1): the Keycloak REALM role `platform_admin`
+    // authorizes tenant-REGISTRY operations only — no tenant context, no
+    // tenant-data permissions (least privilege, SDR-0002).
+    if (claims.realm_access?.roles?.includes(PLATFORM_ADMIN_ROLE)) {
+      setPrincipal({ kind: "platform", actorId: keycloakSub, roles: [PLATFORM_ADMIN_ROLE] });
+      return true;
+    }
+
     const tenantId = claims.tenant_id;
-    if (!keycloakSub || !tenantId) {
-      throw new UnauthenticatedError("Token lacks subject or tenant claim");
+    if (!tenantId) {
+      throw new UnauthenticatedError("Token lacks a tenant claim");
     }
 
     // Resolve the platform identity under the claimed tenant's RLS context.
@@ -76,7 +94,12 @@ export class AuthGuard implements CanActivate {
         const user = await findActiveUserByKeycloakSub(db, keycloakSub);
         if (!user) return undefined;
         const roles = await roleCodesForUser(db, user.id);
-        return { actorId: user.id as UserId, tenantId: tenantId as TenantId, roles };
+        return {
+          kind: "tenant",
+          actorId: user.id as UserId,
+          tenantId: tenantId as TenantId,
+          roles,
+        };
       },
     );
     if (!principal) {

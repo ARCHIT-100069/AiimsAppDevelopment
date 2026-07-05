@@ -8,7 +8,6 @@
  */
 import { Injectable } from "@nestjs/common";
 import { appendAuditRow, type TenantDb } from "@aiims/db";
-import type { Principal } from "@aiims/domain-types";
 import { currentContext } from "./request-context";
 
 export interface AuditEntry {
@@ -21,13 +20,20 @@ export interface AuditEntry {
   consentRef?: string;
 }
 
+export interface AuditActor {
+  /** Tenant whose chain the row joins (= the RLS context of the transaction). */
+  tenantId: string;
+  /** app_user.id for tenant actors; Keycloak sub for platform operators. */
+  actorId: string;
+}
+
 @Injectable()
 export class AuditService {
-  async append(db: TenantDb, principal: Principal, entry: AuditEntry): Promise<void> {
+  async append(db: TenantDb, actor: AuditActor, entry: AuditEntry): Promise<void> {
     await appendAuditRow(db, {
       id: entry.eventId,
-      tenantId: principal.tenantId,
-      actorId: principal.actorId,
+      tenantId: actor.tenantId,
+      actorId: actor.actorId,
       action: entry.action,
       resourceType: entry.resourceType,
       resourceId: entry.resourceId,
