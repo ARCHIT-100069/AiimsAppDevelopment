@@ -1,8 +1,8 @@
 # AIIMS+ — Application Monorepo
 
-**Stages 0–1 (Walking Skeleton + Core Platform)** of the AIIMS+ Hospital Operating System, implemented strictly
+**Stages 0–2 (Walking Skeleton, Core Platform, Patient Module)** of the AIIMS+ Hospital Operating System, implemented strictly
 against the frozen architecture in the repository root (`../architecture/`, `../DECISION-REGISTRY.md`,
-`../IMPLEMENTATION-MASTER-PLAN.md` §10–§11). **No Stage 2 code.**
+`../IMPLEMENTATION-MASTER-PLAN.md` §10–§12). **No Stage 3 code.**
 
 > **Constitution (non-negotiable):** no clinical AI, no diagnosis, no medicine recommendations;
 > doctors make all clinical decisions; security, privacy, and audit are mandatory.
@@ -101,4 +101,4 @@ docker/     Keycloak dev realm
 - No PHI in logs, events, errors, or any non-prod data — synthetic fixtures only (TDR-0013).
 - Conventional Commits enforced; trunk-based; small PRs (Master Plan §26).
 
-Status & verification evidence: [STAGE-0-STATUS.md](./STAGE-0-STATUS.md) · [STAGE-1-STATUS.md](./STAGE-1-STATUS.md).
+Status & verification evidence: [STAGE-0-STATUS.md](./STAGE-0-STATUS.md) · [STAGE-1-STATUS.md](./STAGE-1-STATUS.md) · [STAGE-2-STATUS.md](./STAGE-2-STATUS.md).

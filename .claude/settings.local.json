@@ -68,7 +68,10 @@
       "Bash(git commit -q -m 'ci: run crypto coverage gate in static job \\(TDR-0012, decision S2-i\\) *)",
       "Bash(pnpm --filter @aiims/ui-web build)",
       "Bash(rm -f apps/web/.env.local)",
-      "Bash(pnpm --filter @aiims/web test)"
+      "Bash(pnpm --filter @aiims/web test)",
+      "Bash(curl -sf http://localhost:3000/readyz)",
+      "Bash(grep -o '[0-9a-f]*$')",
+      "Bash(bc)"
     ]
   }
 }
