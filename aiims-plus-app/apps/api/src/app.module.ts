@@ -10,12 +10,22 @@ import { AdaptersModule } from "./adapters/adapters.module";
 import { HealthController } from "./platform/health.controller";
 import { ProblemFilter } from "./platform/problem.filter";
 import { NoteModule } from "./modules/note/note.module";
+import { OrganizationModule } from "./modules/organization/organization.module";
+import { ReferenceModule } from "./modules/reference/reference.module";
+import { TenancyModule } from "./modules/tenancy/tenancy.module";
 import { AuthGuard } from "./platform/auth.guard";
 import { AuthzGuard } from "./platform/authz.guard";
 import { PlatformModule } from "./platform/platform.module";
 
 @Module({
-  imports: [PlatformModule, AdaptersModule, NoteModule],
+  imports: [
+    PlatformModule,
+    AdaptersModule,
+    NoteModule,
+    TenancyModule,
+    OrganizationModule,
+    ReferenceModule,
+  ],
   controllers: [HealthController],
   providers: [
     { provide: APP_GUARD, useClass: AuthGuard }, // 1. AuthN (SDR-0001)
