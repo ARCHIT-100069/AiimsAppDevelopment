@@ -58,7 +58,11 @@
       "Bash(pnpm typecheck *)",
       "Bash(git commit -q -m 'ci\\(pipeline\\): gated github actions + terraform dev skeleton *)",
       "Bash(git commit -q -m 'docs\\(stage-0\\): readmes, IDR-0016 local dev environment, status report *)",
-      "Bash(pnpm --filter @aiims/testing test:integration)"
+      "Bash(pnpm --filter @aiims/testing test:integration)",
+      "Bash(curl -sf http://localhost:9000/minio/health/live -o /dev/null)",
+      "Bash(python3 -c \"import sys,json;print\\('keycloak realm:', json.load\\(sys.stdin\\)['realm']\\)\")",
+      "Bash(git rm *)",
+      "Bash(pnpm audit *)"
     ]
   }
 }

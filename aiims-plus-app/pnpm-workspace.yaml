@@ -13,3 +13,12 @@ allowBuilds:
   sharp: true # next.js image optimization
   ssh2: true
   unrs-resolver: true
+
+# Security overrides (SDR-0012): force patched transitive versions.
+# handlebars: GHSA JS-injection/DoS fixes (via eslint-plugin-boundaries)
+# multer: DoS fixes (via @nestjs/platform-express)
+# postcss: XSS fix (via next)
+overrides:
+  handlebars: ">=4.7.9"
+  multer: ">=2.2.0"
+  postcss: ">=8.5.10"

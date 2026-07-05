@@ -7,12 +7,12 @@
   "exports": {
     ".": "./index.mjs"
   },
-  "dependencies": {
+  "peerDependencies": {
+    "eslint": ">=9.0.0"
+  },
+  "devDependencies": {
     "eslint-import-resolver-typescript": "^4.4.0",
     "eslint-plugin-boundaries": "^5.0.1",
     "typescript-eslint": "^8.46.0"
-  },
-  "peerDependencies": {
-    "eslint": ">=9.0.0"
   }
 }
