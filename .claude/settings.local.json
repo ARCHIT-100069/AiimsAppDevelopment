@@ -57,7 +57,8 @@
       "Bash(pnpm format *)",
       "Bash(pnpm typecheck *)",
       "Bash(git commit -q -m 'ci\\(pipeline\\): gated github actions + terraform dev skeleton *)",
-      "Bash(git commit -q -m 'docs\\(stage-0\\): readmes, IDR-0016 local dev environment, status report *)"
+      "Bash(git commit -q -m 'docs\\(stage-0\\): readmes, IDR-0016 local dev environment, status report *)",
+      "Bash(pnpm --filter @aiims/testing test:integration)"
     ]
   }
 }

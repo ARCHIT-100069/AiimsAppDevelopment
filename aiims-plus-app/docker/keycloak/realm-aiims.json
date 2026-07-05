@@ -7,7 +7,7 @@
   "clients": [
     {
       "clientId": "aiims-cli",
-      "name": "AIIMS+ dev CLI (password grant for LOCAL DEV ONLY — SDR-0001 mandates PKCE for real clients)",
+      "name": "AIIMS+ dev CLI (password grant for LOCAL DEV ONLY \u2014 SDR-0001 mandates PKCE for real clients)",
       "enabled": true,
       "publicClient": true,
       "directAccessGrantsEnabled": true,
@@ -31,7 +31,7 @@
     },
     {
       "clientId": "aiims-web",
-      "name": "AIIMS+ web BFF (Authorization Code + PKCE — SDR-0001)",
+      "name": "AIIMS+ web BFF (Authorization Code + PKCE \u2014 SDR-0001)",
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": true,
@@ -39,7 +39,9 @@
       "redirectUris": ["http://localhost:3001/*"],
       "webOrigins": ["http://localhost:3001"],
       "protocol": "openid-connect",
-      "attributes": { "pkce.code.challenge.method": "S256" },
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
       "protocolMappers": [
         {
           "name": "tenant_id",
@@ -65,8 +67,16 @@
       "emailVerified": true,
       "firstName": "Asha",
       "lastName": "Demo",
-      "credentials": [{ "type": "password", "value": "doctor", "temporary": false }],
-      "attributes": { "tenant_id": ["0197a000-0000-7000-8000-00000000000a"] }
+      "credentials": [
+        {
+          "type": "password",
+          "value": "doctor",
+          "temporary": false
+        }
+      ],
+      "attributes": {
+        "tenant_id": ["0197a000-0000-7000-8000-00000000000a"]
+      }
     },
     {
       "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2",
@@ -76,8 +86,16 @@
       "emailVerified": true,
       "firstName": "Admin",
       "lastName": "Demo",
-      "credentials": [{ "type": "password", "value": "admin", "temporary": false }],
-      "attributes": { "tenant_id": ["0197a000-0000-7000-8000-00000000000a"] }
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "attributes": {
+        "tenant_id": ["0197a000-0000-7000-8000-00000000000a"]
+      }
     },
     {
       "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3",
@@ -87,8 +105,16 @@
       "emailVerified": true,
       "firstName": "Frontdesk",
       "lastName": "Demo",
-      "credentials": [{ "type": "password", "value": "frontdesk", "temporary": false }],
-      "attributes": { "tenant_id": ["0197a000-0000-7000-8000-00000000000a"] }
+      "credentials": [
+        {
+          "type": "password",
+          "value": "frontdesk",
+          "temporary": false
+        }
+      ],
+      "attributes": {
+        "tenant_id": ["0197a000-0000-7000-8000-00000000000a"]
+      }
     },
     {
       "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1",
@@ -98,8 +124,60 @@
       "emailVerified": true,
       "firstName": "Bala",
       "lastName": "Demo",
-      "credentials": [{ "type": "password", "value": "doctor", "temporary": false }],
-      "attributes": { "tenant_id": ["0197a000-0000-7000-8000-00000000000b"] }
+      "credentials": [
+        {
+          "type": "password",
+          "value": "doctor",
+          "temporary": false
+        }
+      ],
+      "attributes": {
+        "tenant_id": ["0197a000-0000-7000-8000-00000000000b"]
+      }
+    },
+    {
+      "id": "dddddddd-dddd-4ddd-8ddd-ddddddddddd1",
+      "username": "platform.admin",
+      "enabled": true,
+      "email": "platform.admin@synthetic.aiims.dev",
+      "emailVerified": true,
+      "firstName": "Platform",
+      "lastName": "Operator",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "platform",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["platform_admin"]
+    },
+    {
+      "id": "cccccccc-cccc-4ccc-8ccc-ccccccccccc1",
+      "username": "admin.c",
+      "enabled": true,
+      "email": "admin.c@synthetic.aiims.dev",
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "TenantC",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "attributes": {
+        "tenant_id": ["0197a000-0000-7000-8000-00000000000c"]
+      }
     }
-  ]
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "platform_admin",
+        "description": "AIIMS+ platform operator \u2014 tenant registry operations only (Stage 1)"
+      }
+    ]
+  }
 }

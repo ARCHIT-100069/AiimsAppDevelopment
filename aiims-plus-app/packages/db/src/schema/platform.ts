@@ -113,21 +113,6 @@ export const outbox = platform.table("outbox", {
   dispatchAttempts: integer("dispatch_attempts").notNull().default(0),
 });
 
-/**
- * Stage 0 walking-skeleton proof table (NOT a clinical feature; removed in
- * Stage 1). Carries the standard tenant + base mixins (DB Arch §4).
- */
-export const note = platform.table("note", {
-  id: uuid("id").primaryKey(),
-  tenantId: uuid("tenant_id").notNull(),
-  authorId: uuid("author_id").notNull(),
-  body: text("body").notNull(),
-  version: integer("version").notNull().default(0),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  deletedAt: timestamp("deleted_at", { withTimezone: true }),
-});
-
 /** Bookkeeping for the SQL migration runner (not managed by drizzle-kit). */
 export const schemaMigrations = platform.table("schema_migrations", {
   name: text("name").primaryKey(),

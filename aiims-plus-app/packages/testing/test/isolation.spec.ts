@@ -2,6 +2,8 @@
  * THE CROSS-TENANT ISOLATION GATE — TDR-0006 / DATABASE-ARCHITECTURE §17.
  *
  * "The single most important test in the repository." Merge-blocking.
+ * Stage 1: probes target the Core Platform tables (organization/facility/
+ * department) — the note proof table is retired.
  *
  * Runs as the `aiims_app` role against a REAL PostgreSQL so FORCE RLS is
  * exercised exactly as in production:
@@ -17,66 +19,58 @@
  */
 import { Client, Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { checkRlsPolicies, createAppPool, newId, SEED, withTenantContext } from "@aiims/db";
+import {
+  checkRlsPolicies,
+  createAppPool,
+  insertDepartment,
+  insertFacility,
+  insertOrganization,
+  insertOutboxEvent,
+  newId,
+  SEED,
+  withTenantContext,
+} from "@aiims/db";
 import { setupIsolationEnv, type IsolationEnv } from "../src/index";
 
 let env: IsolationEnv;
 let appPool: Pool;
-let userA: string; // app_user.id of doctor in tenant A
-let userB: string;
-let noteA: string;
-let noteB: string;
+let deptB: string;
 
-const A = { tenantId: SEED.tenantA, actorId: "" };
-const B = { tenantId: SEED.tenantB, actorId: "" };
+const A = { tenantId: SEED.tenantA, actorId: SEED.tenantA };
+const B = { tenantId: SEED.tenantB, actorId: SEED.tenantB };
+
+/** Build org → facility → department under one tenant's own context. */
+async function buildHierarchy(ctx: typeof A, marker: string): Promise<string> {
+  return withTenantContext(appPool, ctx, async (db) => {
+    const org = await insertOrganization(db, {
+      id: newId(),
+      tenantId: ctx.tenantId,
+      name: `Hospital ${marker}`,
+      type: "hospital",
+    });
+    const fac = await insertFacility(db, {
+      id: newId(),
+      tenantId: ctx.tenantId,
+      organizationId: org.id,
+      name: `Campus ${marker}`,
+      timezone: "Asia/Kolkata",
+    });
+    const dept = await insertDepartment(db, {
+      id: newId(),
+      tenantId: ctx.tenantId,
+      facilityId: fac.id,
+      name: `OPD ${marker}`,
+      code: "OPD-GEN",
+    });
+    return dept.id;
+  });
+}
 
 beforeAll(async () => {
   env = await setupIsolationEnv();
   appPool = createAppPool(env.appUrl);
-
-  // Resolve seeded users under each tenant's own context (as the app would).
-  userA = await withTenantContext(
-    appPool,
-    { tenantId: SEED.tenantA, actorId: SEED.tenantA },
-    async (db) => {
-      const rows = await db.query.appUser.findMany();
-      const doctor = rows.find((r) => r.keycloakSub === SEED.keycloak.doctorA);
-      if (!doctor) throw new Error("seed missing doctor A");
-      return doctor.id;
-    },
-  );
-  userB = await withTenantContext(
-    appPool,
-    { tenantId: SEED.tenantB, actorId: SEED.tenantB },
-    async (db) => {
-      const rows = await db.query.appUser.findMany();
-      const doctor = rows.find((r) => r.keycloakSub === SEED.keycloak.doctorB);
-      if (!doctor) throw new Error("seed missing doctor B");
-      return doctor.id;
-    },
-  );
-  A.actorId = userA;
-  B.actorId = userB;
-
-  // Fixture notes, written by each tenant under its own context.
-  noteA = newId();
-  await withTenantContext(appPool, A, async (db) => {
-    await db.insert((await import("@aiims/db")).schema.note).values({
-      id: noteA,
-      tenantId: SEED.tenantA,
-      authorId: userA,
-      body: "note for tenant-a only (synthetic)",
-    });
-  });
-  noteB = newId();
-  await withTenantContext(appPool, B, async (db) => {
-    await db.insert((await import("@aiims/db")).schema.note).values({
-      id: noteB,
-      tenantId: SEED.tenantB,
-      authorId: userB,
-      body: "note for tenant-b only (synthetic)",
-    });
-  });
+  await buildHierarchy(A, "tenant-a (synthetic)"); // A-side fixtures for list/leak probes
+  deptB = await buildHierarchy(B, "tenant-b-secret (synthetic)");
 }, 180_000);
 
 afterAll(async () => {
@@ -84,14 +78,14 @@ afterAll(async () => {
   await env?.stop();
 });
 
-/** Raw leak probe used by several tests: how many of B's notes can A see? */
-async function countBNotesVisibleUnderA(): Promise<number> {
+/** Raw leak probe: how many of B's departments can A see? */
+async function countBDepartmentsVisibleUnderA(): Promise<number> {
   const client = await appPool.connect();
   try {
     await client.query("BEGIN");
     await client.query("SELECT set_config('app.tenant_id', $1, true)", [SEED.tenantA]);
     const { rows } = await client.query<{ n: string }>(
-      "SELECT count(*) AS n FROM platform.note WHERE tenant_id = $1",
+      "SELECT count(*) AS n FROM platform.department WHERE tenant_id = $1",
       [SEED.tenantB],
     );
     await client.query("COMMIT");
@@ -101,34 +95,41 @@ async function countBNotesVisibleUnderA(): Promise<number> {
   }
 }
 
+async function underA<T>(query: string, params: unknown[] = []): Promise<T[]> {
+  const client = await appPool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [SEED.tenantA]);
+    const { rows } = await client.query(query, params);
+    await client.query("COMMIT");
+    return rows as T[];
+  } finally {
+    client.release();
+  }
+}
+
 describe("cross-tenant isolation gate (TDR-0006) — runs as aiims_app under FORCE RLS", () => {
-  it("direct id lookup: A cannot read B's note", async () => {
-    const client = await appPool.connect();
-    try {
-      await client.query("BEGIN");
-      await client.query("SELECT set_config('app.tenant_id', $1, true)", [SEED.tenantA]);
-      const { rows } = await client.query("SELECT id FROM platform.note WHERE id = $1", [noteB]);
-      await client.query("COMMIT");
-      expect(rows).toHaveLength(0);
-    } finally {
-      client.release();
-    }
+  it("direct id lookup: A cannot read B's department", async () => {
+    expect(await underA("SELECT id FROM platform.department WHERE id = $1", [deptB])).toHaveLength(
+      0,
+    );
   });
 
-  it("list scan: A sees only A's notes", async () => {
-    const rows = await withTenantContext(appPool, A, async (db) => db.query.note.findMany());
+  it("list scan: A sees only A's organizations", async () => {
+    const rows = await withTenantContext(appPool, A, (db) => db.query.organization.findMany());
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.every((r) => r.tenantId === SEED.tenantA)).toBe(true);
   });
 
-  it("UPDATE: A cannot modify B's note (0 rows affected)", async () => {
+  it("UPDATE: A cannot modify B's department (0 rows affected)", async () => {
     const client = await appPool.connect();
     try {
       await client.query("BEGIN");
       await client.query("SELECT set_config('app.tenant_id', $1, true)", [SEED.tenantA]);
-      const res = await client.query("UPDATE platform.note SET body = 'hijacked' WHERE id = $1", [
-        noteB,
-      ]);
+      const res = await client.query(
+        "UPDATE platform.department SET name = 'hijacked' WHERE id = $1",
+        [deptB],
+      );
       await client.query("ROLLBACK");
       expect(res.rowCount).toBe(0);
     } finally {
@@ -136,64 +137,37 @@ describe("cross-tenant isolation gate (TDR-0006) — runs as aiims_app under FOR
     }
   });
 
-  it("JOIN: A cannot reach B's rows through app_user joins", async () => {
-    const client = await appPool.connect();
-    try {
-      await client.query("BEGIN");
-      await client.query("SELECT set_config('app.tenant_id', $1, true)", [SEED.tenantA]);
-      const { rows } = await client.query(
-        `SELECT n.id FROM platform.note n
-           JOIN platform.app_user u ON u.id = n.author_id
-          WHERE u.keycloak_sub = $1`,
-        [SEED.keycloak.doctorB],
-      );
-      await client.query("COMMIT");
-      expect(rows).toHaveLength(0);
-    } finally {
-      client.release();
-    }
+  it("JOIN: A cannot reach B's rows through facility→organization joins", async () => {
+    const rows = await underA(
+      `SELECT d.id FROM platform.department d
+         JOIN platform.facility f ON f.id = d.facility_id
+         JOIN platform.organization o ON o.id = f.organization_id
+        WHERE o.name ILIKE '%tenant-b%'`,
+    );
+    expect(rows).toHaveLength(0);
   });
 
   it("jsonb path: A cannot read B's outbox payloads", async () => {
-    // Write an outbox row for B under B's context first.
     await withTenantContext(appPool, B, async (db) => {
-      const { outbox } = (await import("@aiims/db")).schema;
-      await db.insert(outbox).values({
+      await insertOutboxEvent(db, {
         id: newId(),
         tenantId: SEED.tenantB,
-        aggregateType: "note",
-        aggregateId: noteB,
-        eventType: "note.created.v1",
-        payload: { noteId: noteB, marker: "tenant-b-payload" },
+        aggregateType: "department",
+        aggregateId: deptB,
+        eventType: "department.created.v1",
+        payload: { departmentId: deptB, marker: "tenant-b-payload" },
       });
     });
-    const client = await appPool.connect();
-    try {
-      await client.query("BEGIN");
-      await client.query("SELECT set_config('app.tenant_id', $1, true)", [SEED.tenantA]);
-      const { rows } = await client.query(
-        "SELECT id FROM platform.outbox WHERE payload->>'marker' = 'tenant-b-payload'",
-      );
-      await client.query("COMMIT");
-      expect(rows).toHaveLength(0);
-    } finally {
-      client.release();
-    }
+    const rows = await underA(
+      "SELECT id FROM platform.outbox WHERE payload->>'marker' = 'tenant-b-payload'",
+    );
+    expect(rows).toHaveLength(0);
   });
 
-  it("text search: A cannot find B's note by content", async () => {
-    const client = await appPool.connect();
-    try {
-      await client.query("BEGIN");
-      await client.query("SELECT set_config('app.tenant_id', $1, true)", [SEED.tenantA]);
-      const { rows } = await client.query(
-        "SELECT id FROM platform.note WHERE body ILIKE '%tenant-b%'",
-      );
-      await client.query("COMMIT");
-      expect(rows).toHaveLength(0);
-    } finally {
-      client.release();
-    }
+  it("text search: A cannot find B's department by name", async () => {
+    expect(
+      await underA("SELECT id FROM platform.department WHERE name ILIKE '%tenant-b-secret%'"),
+    ).toHaveLength(0);
   });
 
   it("WITH CHECK: writing B's tenant_id under A's context is rejected", async () => {
@@ -203,8 +177,8 @@ describe("cross-tenant isolation gate (TDR-0006) — runs as aiims_app under FOR
       await client.query("SELECT set_config('app.tenant_id', $1, true)", [SEED.tenantA]);
       await expect(
         client.query(
-          "INSERT INTO platform.note (id, tenant_id, author_id, body) VALUES ($1, $2, $3, $4)",
-          [newId(), SEED.tenantB /* forged tenant id */, userB, "cross-tenant forgery attempt"],
+          "INSERT INTO platform.organization (id, tenant_id, name, type) VALUES ($1, $2, $3, 'clinic')",
+          [newId(), SEED.tenantB /* forged tenant id */, "cross-tenant forgery attempt"],
         ),
       ).rejects.toThrow(/row-level security/);
       await client.query("ROLLBACK");
@@ -216,7 +190,7 @@ describe("cross-tenant isolation gate (TDR-0006) — runs as aiims_app under FOR
   it("fail-closed: unset tenant context sees zero rows", async () => {
     const client = await appPool.connect();
     try {
-      const { rows } = await client.query("SELECT count(*) AS n FROM platform.note");
+      const { rows } = await client.query("SELECT count(*) AS n FROM platform.department");
       expect(Number((rows[0] as { n: string }).n)).toBe(0);
     } finally {
       client.release();
@@ -243,6 +217,21 @@ describe("cross-tenant isolation gate (TDR-0006) — runs as aiims_app under FOR
     }
   });
 
+  it("reference data is read-only for the app role (DDR-0012)", async () => {
+    const client = await appPool.connect();
+    try {
+      const { rows } = await client.query("SELECT count(*) AS n FROM reference.code");
+      expect(Number((rows[0] as { n: string }).n)).toBeGreaterThan(0); // globally readable
+      await expect(
+        client.query(
+          "INSERT INTO reference.code (system, code, display) VALUES ('icd-10', 'X99', 'nope')",
+        ),
+      ).rejects.toThrow(/permission denied/);
+    } finally {
+      client.release();
+    }
+  });
+
   it("policy manifest is clean on a freshly migrated database (DDR-0011 gate)", async () => {
     expect(await checkRlsPolicies(env.migratorUrl)).toEqual([]);
   });
@@ -251,26 +240,21 @@ describe("cross-tenant isolation gate (TDR-0006) — runs as aiims_app under FOR
     const admin = new Client({ connectionString: env.migratorUrl });
     await admin.connect();
     try {
-      // Baseline: isolated.
-      expect(await countBNotesVisibleUnderA()).toBe(0);
+      expect(await countBDepartmentsVisibleUnderA()).toBe(0);
 
       // Simulate the drizzle-kit footgun: RLS enforcement silently removed.
-      await admin.query("ALTER TABLE platform.note NO FORCE ROW LEVEL SECURITY");
-      await admin.query("ALTER TABLE platform.note DISABLE ROW LEVEL SECURITY");
+      await admin.query("ALTER TABLE platform.department NO FORCE ROW LEVEL SECURITY");
+      await admin.query("ALTER TABLE platform.department DISABLE ROW LEVEL SECURITY");
 
-      // The leak detector must OBSERVE the breach (this is what makes the
-      // gate meaningful: a policy drop cannot pass silently)...
-      expect(await countBNotesVisibleUnderA()).toBeGreaterThan(0);
-      // ...and the policy-diff check must report the regression.
+      expect(await countBDepartmentsVisibleUnderA()).toBeGreaterThan(0); // leak observed
       const problems = await checkRlsPolicies(env.migratorUrl);
-      expect(problems.some((p) => p.includes("platform.note"))).toBe(true);
+      expect(problems.some((p) => p.includes("platform.department"))).toBe(true);
     } finally {
-      // Restore enforcement and prove isolation again.
-      await admin.query("ALTER TABLE platform.note ENABLE ROW LEVEL SECURITY");
-      await admin.query("ALTER TABLE platform.note FORCE ROW LEVEL SECURITY");
+      await admin.query("ALTER TABLE platform.department ENABLE ROW LEVEL SECURITY");
+      await admin.query("ALTER TABLE platform.department FORCE ROW LEVEL SECURITY");
       await admin.end();
     }
-    expect(await countBNotesVisibleUnderA()).toBe(0);
+    expect(await countBDepartmentsVisibleUnderA()).toBe(0);
     expect(await checkRlsPolicies(env.migratorUrl)).toEqual([]);
   });
 });

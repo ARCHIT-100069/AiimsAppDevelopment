@@ -12,9 +12,6 @@ import { PLATFORM_ADMIN_ROLE, type RoleCode } from "@aiims/domain-types";
 
 /** Permission vocabulary — grows per stage, never ad hoc strings. */
 export const PERMISSIONS = [
-  // Stage 0 proof (removed with the note module at the end of Stage 1)
-  "note:create",
-  "note:read",
   // Stage 1 — Core Platform
   "platform:tenant:manage", // platform operators only
   "org:manage", // organizations, facilities, departments
@@ -32,18 +29,10 @@ export type Permission = (typeof PERMISSIONS)[number];
  */
 const ROLE_PERMISSIONS: Record<RoleCode | typeof PLATFORM_ADMIN_ROLE, readonly Permission[]> = {
   [PLATFORM_ADMIN_ROLE]: ["platform:tenant:manage"],
-  admin: [
-    "org:manage",
-    "org:read",
-    "user:manage",
-    "user:read",
-    "reference:read",
-    "note:create",
-    "note:read",
-  ],
-  doctor: ["org:read", "user:read", "reference:read", "note:create", "note:read"],
-  nurse: ["org:read", "reference:read", "note:read"],
-  front_desk: ["org:read", "reference:read", "note:read"],
+  admin: ["org:manage", "org:read", "user:manage", "user:read", "reference:read"],
+  doctor: ["org:read", "user:read", "reference:read"],
+  nurse: ["org:read", "reference:read"],
+  front_desk: ["org:read", "reference:read"],
 };
 
 export interface Decision {

@@ -14,34 +14,6 @@ import type { Pool } from "pg";
 import * as s from "./schema";
 import type { TenantDb } from "./tenant-context";
 
-/* ------------------------------- note (Stage 0 proof) ------------------- */
-
-export interface NoteRow {
-  id: string;
-  tenantId: string;
-  authorId: string;
-  body: string;
-  createdAt: Date;
-}
-
-export async function insertNote(
-  db: TenantDb,
-  row: { id: string; tenantId: string; authorId: string; body: string },
-): Promise<NoteRow> {
-  const [inserted] = await db.insert(s.note).values(row).returning();
-  if (!inserted) throw new Error("insert returned no row");
-  return inserted;
-}
-
-export async function listNotes(db: TenantDb, limit = 50): Promise<NoteRow[]> {
-  return db
-    .select()
-    .from(s.note)
-    .where(isNull(s.note.deletedAt))
-    .orderBy(desc(s.note.createdAt))
-    .limit(limit);
-}
-
 /* ------------------------------- identity / rbac ------------------------ */
 
 export async function findActiveUserByKeycloakSub(

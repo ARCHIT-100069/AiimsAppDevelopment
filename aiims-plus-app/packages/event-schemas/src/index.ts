@@ -26,26 +26,12 @@ export const eventEnvelopeSchema = z.object({
 });
 export type EventEnvelope = z.infer<typeof eventEnvelopeSchema>;
 
-/* ------------------------------------------------------------------ *
- * Stage 0 events — the walking-skeleton proof event only.
- * ------------------------------------------------------------------ */
-
-export const NOTE_CREATED_V1 = "note.created.v1" as const;
-
-/** Payload for note.created.v1 — references only, no note body (no PHI in events). */
-export const noteCreatedV1PayloadSchema = z.object({
-  noteId: uuidSchema,
-  authorId: uuidSchema,
-});
-export type NoteCreatedV1Payload = z.infer<typeof noteCreatedV1PayloadSchema>;
-
 import { PLATFORM_EVENT_SCHEMAS } from "./platform-events";
 
 export * from "./platform-events";
 
 /** Registry mapping event type → payload schema; consumers validate against this. */
 export const EVENT_PAYLOAD_SCHEMAS: Record<string, z.ZodType> = {
-  [NOTE_CREATED_V1]: noteCreatedV1PayloadSchema,
   ...PLATFORM_EVENT_SCHEMAS,
 };
 
