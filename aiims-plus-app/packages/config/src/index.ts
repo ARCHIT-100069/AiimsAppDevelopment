@@ -42,6 +42,9 @@ export const envSchema = z.object({
   ADAPTER_NOTIFICATION: adapterModeSchema,
   ADAPTER_AI: adapterModeSchema,
 
+  /** OTel OTLP endpoint (IDR-0013); tracing activates only when set. */
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
+
   /** Object storage (S3 in AWS; MinIO locally — IDR-0016). Unused until a stage needs it. */
   S3_ENDPOINT: z.url().optional(),
   S3_REGION: z.string().default("ap-south-1"),

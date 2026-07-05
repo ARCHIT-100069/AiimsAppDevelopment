@@ -1,3 +1,4 @@
+import "./platform/tracing"; // FIRST: OTel patches modules before they load (IDR-0013)
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { loadConfig } from "@aiims/config";
