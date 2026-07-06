@@ -40,3 +40,27 @@ export const mrnCounter = clinical.table("mrn_counter", {
   tenantId: uuid("tenant_id").primaryKey(),
   lastValue: bigint("last_value", { mode: "number" }).notNull().default(0),
 });
+
+/** Stage 3: clinical profile over an app_user (DB Arch §8). */
+export const practitioner = clinical.table("practitioner", {
+  id: uuid("id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  appUserId: uuid("app_user_id").notNull(),
+  nameGiven: text("name_given").notNull(),
+  nameFamily: text("name_family").notNull(),
+  registrationNo: text("registration_no").notNull(),
+  departmentId: uuid("department_id"),
+  specialtySystem: text("specialty_system"),
+  specialtyCode: text("specialty_code"),
+  specialtyDisplay: text("specialty_display"),
+  specialtyCodings: jsonb("specialty_codings").notNull().default([]),
+  status: text("status").$type<"active" | "inactive">().notNull().default("active"),
+  fhirId: text("fhir_id"),
+  fhirExtensions: jsonb("fhir_extensions").notNull().default({}),
+  version: integer("version").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  retentionClass: text("retention_class"),
+  retentionUntil: timestamp("retention_until", { withTimezone: true }),
+});

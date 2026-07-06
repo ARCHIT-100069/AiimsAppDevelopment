@@ -14,7 +14,7 @@ import { ReferenceService } from "../application/reference.service";
 
 const codesQuerySchema = listQuerySchema.extend({
   /** Required allow-listed filter — no unbounded cross-system scans (DB §12). */
-  system: z.enum(["icd-10", "loinc", "snomed"]),
+  system: z.enum(["icd-10", "loinc", "snomed", "specialty"]),
 });
 
 /** Map db rows → contract DTOs explicitly (DTO-only surface, clarification #1). */

@@ -11,6 +11,12 @@ const CODE_SYSTEMS = [
   { code: "icd-10", name: "ICD-10", uri: "http://hl7.org/fhir/sid/icd-10", release: "dev-minimal" },
   { code: "loinc", name: "LOINC", uri: "http://loinc.org", release: "dev-minimal" },
   { code: "snomed", name: "SNOMED CT", uri: "http://snomed.info/sct", release: "dev-minimal" },
+  {
+    code: "specialty",
+    name: "Practitioner Specialty",
+    uri: "urn:aiims:specialty",
+    release: "dev-minimal",
+  },
 ] as const;
 
 const CODES: ReadonlyArray<readonly [system: string, code: string, display: string]> = [
@@ -45,6 +51,16 @@ const CODES: ReadonlyArray<readonly [system: string, code: string, display: stri
   ["snomed", "38341003", "Hypertensive disorder"],
   ["snomed", "73211009", "Diabetes mellitus"],
   ["snomed", "185349003", "Encounter for check up"],
+  // Practitioner specialties (decision b: minimal dev set; NHA value set is a
+  // Production import replacing these on the same natural keys).
+  ["specialty", "general-medicine", "General Medicine"],
+  ["specialty", "cardiology", "Cardiology"],
+  ["specialty", "pediatrics", "Pediatrics"],
+  ["specialty", "orthopedics", "Orthopedics"],
+  ["specialty", "gynecology", "Gynecology"],
+  ["specialty", "general-surgery", "General Surgery"],
+  ["specialty", "dermatology", "Dermatology"],
+  ["specialty", "ophthalmology", "Ophthalmology"],
 ];
 
 /** Idempotent upsert; runs as the migrator (reference.* is read-only to the app). */

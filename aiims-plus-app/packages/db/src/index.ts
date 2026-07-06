@@ -13,3 +13,4 @@ export { checkRlsPolicies } from "./check-rls-policies";
 export * from "./queries";
 export * from "./platform-queries";
 export * from "./patient-queries";
+export * from "./practitioner-queries";
