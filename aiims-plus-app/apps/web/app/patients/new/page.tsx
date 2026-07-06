@@ -6,7 +6,7 @@ import { RegisterForm } from "./register-form";
 export default async function NewPatientPage() {
   if (!(await canRegisterPatients())) redirect("/patients"); // server-authoritative (FEDR-0008)
   return (
-    <AppShell>
+    <AppShell active="Patients">
       <a
         href="/patients"
         className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-teal-700"

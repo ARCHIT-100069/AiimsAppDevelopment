@@ -14,7 +14,7 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
   if (!res.ok) redirect("/patients");
   const patient: PatientResponse = await res.json();
   return (
-    <AppShell>
+    <AppShell active="Patients">
       <a
         href="/patients"
         className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-teal-700"

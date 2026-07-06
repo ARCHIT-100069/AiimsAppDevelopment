@@ -8,18 +8,20 @@ import {
   IconCross,
   IconLogout,
   IconPatients,
+  IconStethoscope,
 } from "@aiims/ui-web";
 import { readSession } from "../lib/session";
 
 const NAV = [
-  { label: "Patients", href: "/patients", icon: IconPatients, active: true },
+  { label: "Patients", href: "/patients", icon: IconPatients },
+  { label: "Practitioners", href: "/practitioners", icon: IconStethoscope },
   { label: "Appointments", href: "#", icon: IconCalendar, soon: true },
   { label: "Encounters", href: "#", icon: IconClipboard, soon: true },
   { label: "Billing", href: "#", icon: IconBilling, soon: true },
 ];
 
 /** Authenticated shell (FEDR-0005): sidebar nav + top bar with user context. */
-export async function AppShell({ children }: { children: ReactNode }) {
+export async function AppShell({ active, children }: { active?: string; children: ReactNode }) {
   const session = await readSession();
   const role = session?.roles.find((r) => ["admin", "doctor", "nurse", "front_desk"].includes(r));
 
@@ -32,28 +34,31 @@ export async function AppShell({ children }: { children: ReactNode }) {
           <span className="text-lg font-bold tracking-tight">AIIMS+</span>
         </div>
         <nav className="flex-1 space-y-1 px-3 py-2">
-          {NAV.map(({ label, href, icon: Icon, active, soon }) => (
-            <a
-              key={label}
-              href={soon ? undefined : href}
-              aria-current={active ? "page" : undefined}
-              aria-disabled={soon}
-              className={[
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
-                active
-                  ? "bg-teal-50 text-teal-700"
-                  : soon
-                    ? "cursor-default text-slate-400"
-                    : "text-slate-600 hover:bg-slate-100",
-              ].join(" ")}
-            >
-              <Icon width={18} height={18} />
-              <span className="flex-1">{label}</span>
-              {soon ? (
-                <span className="text-[10px] uppercase tracking-wide text-slate-300">Soon</span>
-              ) : null}
-            </a>
-          ))}
+          {NAV.map(({ label, href, icon: Icon, soon }) => {
+            const isActive = active === label;
+            return (
+              <a
+                key={label}
+                href={soon ? undefined : href}
+                aria-current={isActive ? "page" : undefined}
+                aria-disabled={soon}
+                className={[
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
+                  isActive
+                    ? "bg-teal-50 text-teal-700"
+                    : soon
+                      ? "cursor-default text-slate-400"
+                      : "text-slate-600 hover:bg-slate-100",
+                ].join(" ")}
+              >
+                <Icon width={18} height={18} />
+                <span className="flex-1">{label}</span>
+                {soon ? (
+                  <span className="text-[10px] uppercase tracking-wide text-slate-300">Soon</span>
+                ) : null}
+              </a>
+            );
+          })}
         </nav>
         <div className="border-t border-slate-100 p-4 text-xs text-slate-400">
           Demo environment · synthetic data
@@ -97,8 +102,14 @@ function prettyRole(role?: string): string {
 
 export { Badge };
 
-/** Server-authoritative capability check for UI affordances (FEDR-0008). */
+/** Server-authoritative capability checks for UI affordances (FEDR-0008). */
 export async function canRegisterPatients(): Promise<boolean> {
   const session = await readSession();
   return session?.roles.some((r) => r === "front_desk") ?? false;
+}
+
+/** Practitioner directory is managed by admins (decision e). */
+export async function canManagePractitioners(): Promise<boolean> {
+  const session = await readSession();
+  return session?.roles.some((r) => r === "admin") ?? false;
 }

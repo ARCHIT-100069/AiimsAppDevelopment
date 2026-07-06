@@ -12,7 +12,7 @@ export default async function PatientsPage() {
     ? await res.json()
     : { data: [], meta: { nextCursor: null } };
   return (
-    <AppShell>
+    <AppShell active="Patients">
       <PatientList initial={body.data} canCreate={await canRegisterPatients()} />
     </AppShell>
   );
