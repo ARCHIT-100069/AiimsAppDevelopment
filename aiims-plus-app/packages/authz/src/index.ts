@@ -10,6 +10,9 @@
  */
 import { PLATFORM_ADMIN_ROLE, type RoleCode } from "@aiims/domain-types";
 
+/** Roles that treat patients — used by the practitioner clinical-role check (decision i). */
+export const CLINICAL_ROLES = ["doctor", "nurse"] as const;
+
 /** Permission vocabulary — grows per stage, never ad hoc strings. */
 export const PERMISSIONS = [
   // Stage 1 — Core Platform
@@ -23,6 +26,9 @@ export const PERMISSIONS = [
   "patient:create",
   "patient:read",
   "patient:update",
+  // Stage 3 — Practitioner (decision e: admin manages the staff directory)
+  "practitioner:manage",
+  "practitioner:read",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -35,10 +41,32 @@ const ROLE_PERMISSIONS: Record<RoleCode | typeof PLATFORM_ADMIN_ROLE, readonly P
   [PLATFORM_ADMIN_ROLE]: ["platform:tenant:manage"],
   // Separation of duties (SDR-0002): admin administers, clinicians treat,
   // front desk registers — admin deliberately holds NO patient permission.
-  admin: ["org:manage", "org:read", "user:manage", "user:read", "reference:read"],
-  doctor: ["org:read", "user:read", "reference:read", "patient:read", "patient:update"],
-  nurse: ["org:read", "reference:read", "patient:read"],
-  front_desk: ["org:read", "reference:read", "patient:create", "patient:read", "patient:update"],
+  admin: [
+    "org:manage",
+    "org:read",
+    "user:manage",
+    "user:read",
+    "reference:read",
+    "practitioner:manage",
+    "practitioner:read",
+  ],
+  doctor: [
+    "org:read",
+    "user:read",
+    "reference:read",
+    "patient:read",
+    "patient:update",
+    "practitioner:read",
+  ],
+  nurse: ["org:read", "reference:read", "patient:read", "practitioner:read"],
+  front_desk: [
+    "org:read",
+    "reference:read",
+    "patient:create",
+    "patient:read",
+    "patient:update",
+    "practitioner:read",
+  ],
 };
 
 export interface Decision {

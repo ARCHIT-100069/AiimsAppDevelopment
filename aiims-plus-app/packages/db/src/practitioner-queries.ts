@@ -16,6 +16,7 @@ export interface SpecialtyCoding {
 
 export interface PractitionerRow {
   id: string;
+  tenantId: string;
   appUserId: string;
   nameGiven: string;
   nameFamily: string;
@@ -29,6 +30,7 @@ export interface PractitionerRow {
 
 const columns = {
   id: s.practitioner.id,
+  tenantId: s.practitioner.tenantId,
   appUserId: s.practitioner.appUserId,
   nameGiven: s.practitioner.nameGiven,
   nameFamily: s.practitioner.nameFamily,
@@ -195,6 +197,19 @@ export async function updatePractitionerVersioned(
     .where(and(eq(s.practitioner.id, id), eq(s.practitioner.version, expectedVersion), notDeleted))
     .returning(columns);
   return row;
+}
+
+/** Linked user's display name — used to default the practitioner name (decision c). */
+export async function getAppUserDisplayName(
+  db: TenantDb,
+  appUserId: string,
+): Promise<string | undefined> {
+  const [row] = await db
+    .select({ displayName: s.appUser.displayName })
+    .from(s.appUser)
+    .where(eq(s.appUser.id, appUserId))
+    .limit(1);
+  return row?.displayName;
 }
 
 /** Role codes of the app_user a practitioner would link to (decision i check). */

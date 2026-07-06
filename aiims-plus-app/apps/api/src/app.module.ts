@@ -11,6 +11,7 @@ import { HealthController } from "./platform/health.controller";
 import { ProblemFilter } from "./platform/problem.filter";
 import { OrganizationModule } from "./modules/organization/organization.module";
 import { PatientModule } from "./modules/patient/patient.module";
+import { PractitionerModule } from "./modules/practitioner/practitioner.module";
 import { ReferenceModule } from "./modules/reference/reference.module";
 import { TenancyModule } from "./modules/tenancy/tenancy.module";
 import { AuthGuard } from "./platform/auth.guard";
@@ -25,6 +26,7 @@ import { PlatformModule } from "./platform/platform.module";
     OrganizationModule,
     ReferenceModule,
     PatientModule,
+    PractitionerModule,
   ],
   controllers: [HealthController],
   providers: [
