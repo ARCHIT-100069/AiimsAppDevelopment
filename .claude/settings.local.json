@@ -81,7 +81,11 @@
       "Bash(lsof -nP -iTCP:3000 -iTCP:3001 -iTCP:8080 -sTCP:LISTEN)",
       "Bash(awk 'NR>1{print \"  \"$1\" on \"$9}')",
       "Bash(grep -E \"error|Tasks|\\\\\\\\$\")",
-      "Bash(pnpm --filter @aiims/web exec tsc -p tsconfig.json --noEmit)"
+      "Bash(pnpm --filter @aiims/web exec tsc -p tsconfig.json --noEmit)",
+      "Bash(awk '{s+=$1} END {print s\" unit tests passed\"}')",
+      "Bash(pnpm --filter @aiims/db check:rls)",
+      "Bash(DATABASE_URL_MIGRATOR=\"postgres://postgres:postgres@localhost:5432/aiims\" pnpm --filter @aiims/db check:rls)",
+      "Bash(xargs -n1 basename)"
     ]
   }
 }

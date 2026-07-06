@@ -11,6 +11,10 @@ build/
 .next/
 .turbo/
 *.tsbuildinfo
+# Compiled TS emitted next to source must never be committed (F3 guard)
+packages/*/src/**/*.js
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.map
 
 # Environment — secrets never committed (SDR-0006)
 .env

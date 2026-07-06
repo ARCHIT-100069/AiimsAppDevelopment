@@ -123,6 +123,36 @@ describe("patient encryption + persistence (TDR-0003, DDR-0006)", () => {
     });
   });
 
+  it("ABHA blind-index lookup finds the patient without decryption (DDR-0006)", async () => {
+    const ABHA = "99716314638014";
+    const id = newId();
+    await withTenantContext(appPool, A, async (db) => {
+      const mrn = await issueMrn(db, A.tenantId);
+      const { keyRef, values } = await cipher.encryptRecord(
+        { abha_number: ABHA },
+        { tenantId: A.tenantId, recordId: id },
+      );
+      await insertPatient(db, {
+        id,
+        tenantId: A.tenantId,
+        mrn,
+        nameGiven: "Nadia",
+        nameFamily: "Synthetic",
+        gender: "female",
+        birthDate: "1992-02-02",
+        abhaNumberEnc: values.abha_number,
+        abhaNumberBidx: bidx("abha", A.tenantId, ABHA),
+        encKeyRef: keyRef,
+      });
+    });
+    // Lookup by a differently-formatted ABHA (normalization must collapse it).
+    const found = await withTenantContext(appPool, A, (db) =>
+      findPatientByBlindIndex(db, "abha", bidx("abha", A.tenantId, "9971-6314-638014")),
+    );
+    expect(found?.id).toBe(id);
+    expect(found?.nameGiven).toBe("Nadia");
+  });
+
   it("idempotency keys persist in-tenant and replay to the original resource", async () => {
     const id = await insertEncryptedPatient(A, "Kiran", "+919876500003");
     await withTenantContext(appPool, A, (db) =>

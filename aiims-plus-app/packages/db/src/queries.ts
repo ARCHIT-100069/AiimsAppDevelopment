@@ -173,31 +173,8 @@ export async function appendAuditRow(db: TenantDb, input: AuditAppendInput): Pro
   });
 }
 
-export interface AuditRowView {
-  id: string;
-  action: string;
-  resourceType: string;
-  resourceId: string;
-  occurredAt: Date;
-  prevHash: Buffer;
-  rowHash: Buffer;
-}
-
-export async function listAuditRows(db: TenantDb, tenantId: string): Promise<AuditRowView[]> {
-  return db
-    .select({
-      id: s.auditLog.id,
-      action: s.auditLog.action,
-      resourceType: s.auditLog.resourceType,
-      resourceId: s.auditLog.resourceId,
-      occurredAt: s.auditLog.occurredAt,
-      prevHash: s.auditLog.prevHash,
-      rowHash: s.auditLog.rowHash,
-    })
-    .from(s.auditLog)
-    .where(eq(s.auditLog.tenantId, tenantId))
-    .orderBy(asc(s.auditLog.occurredAt), asc(s.auditLog.id));
-}
+/* The audit-integrity reader (chain re-walk) lands with the scheduled
+ * verifier in Production (ODR-0011, Stage 9) — not exported until then. */
 
 /* ------------------------------- tenants -------------------------------- */
 
