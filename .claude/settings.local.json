@@ -85,7 +85,8 @@
       "Bash(awk '{s+=$1} END {print s\" unit tests passed\"}')",
       "Bash(pnpm --filter @aiims/db check:rls)",
       "Bash(DATABASE_URL_MIGRATOR=\"postgres://postgres:postgres@localhost:5432/aiims\" pnpm --filter @aiims/db check:rls)",
-      "Bash(xargs -n1 basename)"
+      "Bash(xargs -n1 basename)",
+      "Bash(git commit -q -m 'fix\\(stage-2\\): resolve all 8 verification findings \\(1 High, 2 Med, 5 Low\\) *)"
     ]
   }
 }
