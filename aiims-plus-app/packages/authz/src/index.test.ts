@@ -80,6 +80,25 @@ describe("Stage 1 permission matrix (separation of duties, SDR-0002)", () => {
     }
   });
 
+  it("practitioner directory: admin manages, all tenant roles read (decision e)", () => {
+    expect(
+      decide({ principal: { roles: ["admin"] }, permission: "practitioner:manage" }).allowed,
+    ).toBe(true);
+    for (const role of ["admin", "doctor", "nurse", "front_desk"]) {
+      expect(
+        decide({ principal: { roles: [role] }, permission: "practitioner:read" }).allowed,
+      ).toBe(true);
+    }
+    for (const role of ["doctor", "nurse", "front_desk"]) {
+      expect(
+        decide({ principal: { roles: [role] }, permission: "practitioner:manage" }).allowed,
+      ).toBe(false);
+    }
+    expect(
+      decide({ principal: { roles: ["platform_admin"] }, permission: "practitioner:read" }).allowed,
+    ).toBe(false);
+  });
+
   it("no tenant role can manage the tenant registry", () => {
     for (const role of ["admin", "doctor", "nurse", "front_desk"]) {
       expect(

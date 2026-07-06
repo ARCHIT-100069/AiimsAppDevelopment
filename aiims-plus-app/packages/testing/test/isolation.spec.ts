@@ -20,12 +20,16 @@
 import { Client, Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  assignRoleIdempotent,
   checkRlsPolicies,
   createAppPool,
+  findRoleByCode,
+  insertAppUser,
   insertDepartment,
   insertFacility,
   insertOrganization,
   insertOutboxEvent,
+  insertPractitioner,
   newId,
   SEED,
   withTenantContext,
@@ -38,6 +42,7 @@ let env: IsolationEnv;
 let appPool: Pool;
 let deptB: string;
 let patientB: string;
+let practitionerB: string;
 
 const kp = new LocalKeyProvider("3".repeat(64), "4".repeat(64), "test");
 const patientCipher = new FieldCipher(kp);
@@ -80,7 +85,39 @@ beforeAll(async () => {
   deptB = await buildHierarchy(B, "tenant-b-secret (synthetic)");
   await seedPatient(A, "Asha");
   patientB = await seedPatient(B, "Tenant-B-Secret-Patient");
+  await seedPractitioner(A, "Asha-Prac", "MCI-A-ISO");
+  practitionerB = await seedPractitioner(B, "Tenant-B-Secret-Prac", "MCI-B-SECRET");
 }, 180_000);
+
+/** Practitioner linked to a fresh clinical user in the given tenant. */
+async function seedPractitioner(
+  ctx: typeof A,
+  nameGiven: string,
+  registrationNo: string,
+): Promise<string> {
+  const id = newId();
+  await withTenantContext(appPool, ctx, async (db) => {
+    const userId = newId();
+    await insertAppUser(db, {
+      id: userId,
+      tenantId: ctx.tenantId,
+      keycloakSub: newId(),
+      displayName: nameGiven,
+    });
+    const role = await findRoleByCode(db, "doctor");
+    await assignRoleIdempotent(db, { tenantId: ctx.tenantId, userId, roleId: role!.id });
+    await insertPractitioner(db, {
+      id,
+      tenantId: ctx.tenantId,
+      appUserId: userId,
+      nameGiven,
+      nameFamily: "Synthetic",
+      registrationNo,
+      specialties: [],
+    });
+  });
+  return id;
+}
 
 /** Patient with an ENCRYPTED phone — same value in both tenants on purpose. */
 async function seedPatient(ctx: typeof A, nameGiven: string): Promise<string> {
@@ -294,6 +331,38 @@ describe("cross-tenant isolation gate (TDR-0006) — runs as aiims_app under FOR
           `INSERT INTO clinical.patient (id, tenant_id, mrn, name_given, name_family, gender, birth_date)
            VALUES ($1, $2, 'MRN-FORGED', 'X', 'Y', 'other', '1990-01-01')`,
           [newId(), SEED.tenantB],
+        ),
+      ).rejects.toThrow(/row-level security/);
+      await client.query("ROLLBACK");
+    } finally {
+      client.release();
+    }
+  });
+
+  it("PRACTITIONER: A cannot reach B's practitioner by id, name, or registration number", async () => {
+    expect(
+      await underA("SELECT id FROM clinical.practitioner WHERE id = $1", [practitionerB]),
+    ).toHaveLength(0);
+    expect(
+      await underA(
+        "SELECT id FROM clinical.practitioner WHERE name_given ILIKE '%tenant-b-secret%'",
+      ),
+    ).toHaveLength(0);
+    expect(
+      await underA("SELECT id FROM clinical.practitioner WHERE registration_no = 'MCI-B-SECRET'"),
+    ).toHaveLength(0);
+  });
+
+  it("PRACTITIONER: writing B's tenant_id under A is rejected (WITH CHECK)", async () => {
+    const client = await appPool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT set_config('app.tenant_id', $1, true)", [SEED.tenantA]);
+      await expect(
+        client.query(
+          `INSERT INTO clinical.practitioner (id, tenant_id, app_user_id, name_given, name_family, registration_no)
+           VALUES ($1, $2, $3, 'X', 'Y', 'MRN-FORGED')`,
+          [newId(), SEED.tenantB /* forged */, newId()],
         ),
       ).rejects.toThrow(/row-level security/);
       await client.query("ROLLBACK");
