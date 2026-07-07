@@ -3,13 +3,16 @@
  * structure"). Deterministic canned responses make the full experience
  * demoable with zero external dependency. No PHI is logged or fabricated.
  */
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
+import type { AppConfig } from "@aiims/config";
+import { CONFIG } from "../platform/config.provider";
 import type {
   AbdmGateway,
   AiGateway,
   ConsentProvider,
   NotificationSender,
   PaymentGateway,
+  StorageGateway,
 } from "./ports";
 
 @Injectable()
@@ -72,5 +75,44 @@ export class MockAiGateway implements AiGateway {
     // Constitution enforced at the seam: only operational capabilities exist
     // on the interface; outputs are labeled and human-reviewed (AIDR-0010).
     return { suggestionRef: `mock-ai-${input.capability}`, label: "AI-generated — verify" };
+  }
+}
+
+/**
+ * Mock object storage (APDR-0007). Returns a presigned-style URL pointing at
+ * the local MinIO endpoint — demonstrating the direct-to-storage flow (key +
+ * expiry + no API byte-proxying) without depending on AWS. Real S3/MinIO
+ * signature v4 is Stage 8 behind this same seam; bytes never touch the API.
+ */
+@Injectable()
+export class MockStorageGateway implements StorageGateway {
+  constructor(@Inject(CONFIG) private readonly config: AppConfig) {}
+
+  private url(objectKey: string, op: "put" | "get", expiresInSeconds: number): string {
+    const base = this.config.S3_ENDPOINT ?? "http://localhost:9000";
+    const bucket = this.config.S3_BUCKET;
+    const params = new URLSearchParams({
+      "X-Amz-Mock-Op": op,
+      "X-Amz-Expires": String(expiresInSeconds),
+      "X-Amz-Signature": `mock-${op}-${Date.now().toString(36)}`,
+    });
+    return `${base}/${bucket}/${objectKey}?${params.toString()}`;
+  }
+
+  async presignUpload(input: {
+    objectKey: string;
+    contentType: string;
+    expiresInSeconds?: number;
+  }): Promise<{ url: string; expiresInSeconds: number }> {
+    const expiresInSeconds = input.expiresInSeconds ?? 900;
+    return { url: this.url(input.objectKey, "put", expiresInSeconds), expiresInSeconds };
+  }
+
+  async presignDownload(input: {
+    objectKey: string;
+    expiresInSeconds?: number;
+  }): Promise<{ url: string; expiresInSeconds: number }> {
+    const expiresInSeconds = input.expiresInSeconds ?? 900;
+    return { url: this.url(input.objectKey, "get", expiresInSeconds), expiresInSeconds };
   }
 }

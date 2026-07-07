@@ -221,3 +221,20 @@ export async function roleCodesForAppUser(db: TenantDb, appUserId: string): Prom
     .where(eq(s.userRole.userId, appUserId));
   return rows.map((r) => r.code);
 }
+
+/**
+ * The practitioner id for a signed-in clinician (their app_user id). Clinical
+ * documentation is authored by a practitioner, so EMR writes resolve the
+ * caller's app_user → practitioner (one profile per user, decision a).
+ */
+export async function getPractitionerIdByAppUser(
+  db: TenantDb,
+  appUserId: string,
+): Promise<string | undefined> {
+  const [row] = await db
+    .select({ id: s.practitioner.id })
+    .from(s.practitioner)
+    .where(and(eq(s.practitioner.appUserId, appUserId), isNull(s.practitioner.deletedAt)))
+    .limit(1);
+  return row?.id;
+}

@@ -14,6 +14,7 @@ import { PatientModule } from "./modules/patient/patient.module";
 import { PractitionerModule } from "./modules/practitioner/practitioner.module";
 import { ReferenceModule } from "./modules/reference/reference.module";
 import { SchedulingModule } from "./modules/scheduling/scheduling.module";
+import { EmrModule } from "./modules/emr/emr.module";
 import { TenancyModule } from "./modules/tenancy/tenancy.module";
 import { AuthGuard } from "./platform/auth.guard";
 import { AuthzGuard } from "./platform/authz.guard";
@@ -29,6 +30,7 @@ import { PlatformModule } from "./platform/platform.module";
     PatientModule,
     PractitionerModule,
     SchedulingModule,
+    EmrModule,
   ],
   controllers: [HealthController],
   providers: [

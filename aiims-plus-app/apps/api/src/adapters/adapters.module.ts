@@ -12,6 +12,7 @@ import {
   MockConsentProvider,
   MockNotificationSender,
   MockPaymentGateway,
+  MockStorageGateway,
 } from "./mocks";
 import {
   ABDM_GATEWAY,
@@ -19,6 +20,7 @@ import {
   CONSENT_PROVIDER,
   NOTIFICATION_SENDER,
   PAYMENT_GATEWAY,
+  STORAGE_GATEWAY,
 } from "./ports";
 
 function select<T>(mode: "mock" | "real", name: string, mock: T): T {
@@ -36,6 +38,7 @@ function select<T>(mode: "mock" | "real", name: string, mock: T): T {
     MockAbdmGateway,
     MockConsentProvider,
     MockPaymentGateway,
+    MockStorageGateway,
     MockNotificationSender,
     MockAiGateway,
     {
@@ -67,7 +70,20 @@ function select<T>(mode: "mock" | "real", name: string, mock: T): T {
       inject: [CONFIG, MockAiGateway],
       useFactory: (c: AppConfig, mock: MockAiGateway) => select(c.ADAPTER_AI, "AiGateway", mock),
     },
+    {
+      provide: STORAGE_GATEWAY,
+      inject: [CONFIG, MockStorageGateway],
+      useFactory: (c: AppConfig, mock: MockStorageGateway) =>
+        select(c.ADAPTER_STORAGE, "StorageGateway", mock),
+    },
   ],
-  exports: [ABDM_GATEWAY, CONSENT_PROVIDER, PAYMENT_GATEWAY, NOTIFICATION_SENDER, AI_GATEWAY],
+  exports: [
+    ABDM_GATEWAY,
+    CONSENT_PROVIDER,
+    PAYMENT_GATEWAY,
+    NOTIFICATION_SENDER,
+    AI_GATEWAY,
+    STORAGE_GATEWAY,
+  ],
 })
 export class AdaptersModule {}

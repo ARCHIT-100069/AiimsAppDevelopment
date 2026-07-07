@@ -57,9 +57,30 @@ export interface AiGateway {
   }): Promise<{ suggestionRef: string; label: "AI-generated — verify" }>;
 }
 
+/**
+ * APDR-0007 — object storage seam (Stage 5). Large clinical files never pass
+ * through the API: the server issues short-lived PRESIGNED URLs and the client
+ * transfers bytes directly to storage. Mock = local MinIO; real AWS S3 signing
+ * is Stage 8 behind this same seam.
+ */
+export interface StorageGateway {
+  /** A presigned PUT URL for a tenant-scoped object key. */
+  presignUpload(input: {
+    objectKey: string;
+    contentType: string;
+    expiresInSeconds?: number;
+  }): Promise<{ url: string; expiresInSeconds: number }>;
+  /** A presigned GET URL for an existing object. */
+  presignDownload(input: {
+    objectKey: string;
+    expiresInSeconds?: number;
+  }): Promise<{ url: string; expiresInSeconds: number }>;
+}
+
 /* NestJS injection tokens for the ports. */
 export const ABDM_GATEWAY = Symbol("ABDM_GATEWAY");
 export const CONSENT_PROVIDER = Symbol("CONSENT_PROVIDER");
 export const PAYMENT_GATEWAY = Symbol("PAYMENT_GATEWAY");
 export const NOTIFICATION_SENDER = Symbol("NOTIFICATION_SENDER");
 export const AI_GATEWAY = Symbol("AI_GATEWAY");
+export const STORAGE_GATEWAY = Symbol("STORAGE_GATEWAY");

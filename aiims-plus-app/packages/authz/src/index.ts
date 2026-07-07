@@ -37,6 +37,12 @@ export const PERMISSIONS = [
   "schedule:manage", // availability templates
   "schedule:read", // templates + computed slots
   "encounter:read",
+  // Stage 5 — EMR (Constitution: sign is human/doctor-only; no AI here)
+  "encounter:document", // notes, vitals, conditions on an in-progress encounter
+  "encounter:sign", // finalize (doctor-only, human attestation)
+  "order:place", // place a lab/imaging order (doctor)
+  "result:file", // file a diagnostic report against an order
+  "result:read",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -62,6 +68,7 @@ const ROLE_PERMISSIONS: Record<RoleCode | typeof PLATFORM_ADMIN_ROLE, readonly P
     "schedule:read",
     "appointment:read",
     "encounter:read",
+    "result:read",
   ],
   doctor: [
     "org:read",
@@ -73,6 +80,13 @@ const ROLE_PERMISSIONS: Record<RoleCode | typeof PLATFORM_ADMIN_ROLE, readonly P
     "appointment:read",
     "schedule:read",
     "encounter:read",
+    // The clinical heart (Stage 5): document, sign (Constitution: doctor-only),
+    // order, and file results.
+    "encounter:document",
+    "encounter:sign",
+    "order:place",
+    "result:file",
+    "result:read",
   ],
   nurse: [
     "org:read",
@@ -82,6 +96,9 @@ const ROLE_PERMISSIONS: Record<RoleCode | typeof PLATFORM_ADMIN_ROLE, readonly P
     "appointment:read",
     "schedule:read",
     "encounter:read",
+    // Nurse may document (vitals) but NOT sign, order, or file results.
+    "encounter:document",
+    "result:read",
   ],
   front_desk: [
     "org:read",
@@ -96,6 +113,7 @@ const ROLE_PERMISSIONS: Record<RoleCode | typeof PLATFORM_ADMIN_ROLE, readonly P
     "appointment:read",
     "schedule:read",
     "encounter:read",
+    "result:read",
   ],
 };
 

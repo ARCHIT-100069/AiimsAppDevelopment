@@ -17,6 +17,9 @@ export interface EncounterProps {
   readonly departmentId: string | null;
   readonly class: "AMB";
   readonly status: EncounterStatus;
+  readonly chiefComplaint: string | null;
+  readonly signedAt: Date | null;
+  readonly signedBy: string | null;
   readonly periodStart: Date;
   readonly periodEnd: Date | null;
   readonly version: number;
@@ -47,6 +50,9 @@ export class Encounter {
       departmentId: input.departmentId ?? null,
       class: "AMB",
       status: "in_progress",
+      chiefComplaint: null,
+      signedAt: null,
+      signedBy: null,
       periodStart: now,
       periodEnd: null,
       version: 0,

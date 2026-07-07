@@ -41,6 +41,8 @@ export const envSchema = z.object({
   ADAPTER_PAYMENT: adapterModeSchema,
   ADAPTER_NOTIFICATION: adapterModeSchema,
   ADAPTER_AI: adapterModeSchema,
+  /** Object storage seam (Stage 5, APDR-0007): mock = local MinIO, real = AWS S3 (Stage 8). */
+  ADAPTER_STORAGE: adapterModeSchema,
 
   /**
    * Field-encryption key provider (DDR-0006/SDR-0005 via the KeyProvider
@@ -60,9 +62,10 @@ export const envSchema = z.object({
   /** OTel OTLP endpoint (IDR-0013); tracing activates only when set. */
   OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
 
-  /** Object storage (S3 in AWS; MinIO locally — IDR-0016). Unused until a stage needs it. */
+  /** Object storage (S3 in AWS; MinIO locally — IDR-0016). Active from Stage 5 (attachments). */
   S3_ENDPOINT: z.url().optional(),
   S3_REGION: z.string().default("ap-south-1"),
+  S3_BUCKET: z.string().default("aiims-clinical"),
 
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 });
