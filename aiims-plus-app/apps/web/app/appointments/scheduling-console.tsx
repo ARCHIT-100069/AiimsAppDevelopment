@@ -56,6 +56,7 @@ export function SchedulingConsole({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [encounterLink, setEncounterLink] = useState<string | null>(null);
 
   const practitionerName = (id: string) => {
     const p = practitioners.find((x) => x.id === id);
@@ -135,6 +136,7 @@ export function SchedulingConsole({
     if (res.ok) {
       const body = await res.json();
       setNotice(`${patientName(a.patientId)} checked in — token #${body.queueToken}.`);
+      setEncounterLink(body.encounterId ? `/encounters/${body.encounterId}` : null);
       await reload();
     } else {
       const problem = await res.json().catch(() => ({}));
@@ -179,6 +181,11 @@ export function SchedulingConsole({
       {notice ? (
         <p role="status" className="mt-4 rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-800">
           {notice}
+          {encounterLink ? (
+            <a href={encounterLink} className="ml-2 font-medium text-teal-700 underline">
+              Open encounter →
+            </a>
+          ) : null}
         </p>
       ) : null}
       {error ? (

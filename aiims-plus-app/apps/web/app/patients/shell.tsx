@@ -119,3 +119,15 @@ export async function canManageAppointments(): Promise<boolean> {
   const session = await readSession();
   return session?.roles.some((r) => r === "front_desk") ?? false;
 }
+
+/** Clinicians document the encounter; nurse may add vitals (decision D-5.6). */
+export async function canDocumentEncounter(): Promise<boolean> {
+  const session = await readSession();
+  return session?.roles.some((r) => r === "doctor" || r === "nurse") ?? false;
+}
+
+/** Constitution: only a doctor signs an encounter (decision D-5.6). */
+export async function canSignEncounter(): Promise<boolean> {
+  const session = await readSession();
+  return session?.roles.some((r) => r === "doctor") ?? false;
+}
