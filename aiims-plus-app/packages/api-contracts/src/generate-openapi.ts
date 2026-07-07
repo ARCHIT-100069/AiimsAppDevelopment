@@ -39,8 +39,25 @@ import {
   practitionerResponseSchema,
   updatePractitionerRequestSchema,
 } from "./practitioners";
+import {
+  appointmentResponseSchema,
+  cancelAppointmentRequestSchema,
+  checkInResponseSchema,
+  createAppointmentRequestSchema,
+  listAppointmentsResponseSchema,
+  updateAppointmentRequestSchema,
+} from "./appointments";
+import {
+  availabilityResponseSchema,
+  createAvailabilityRequestSchema,
+  listAvailabilityResponseSchema,
+  slotsResponseSchema,
+} from "./availability";
+import { queueResponseSchema } from "./queue";
+import { encounterResponseSchema } from "./encounters";
 import { fhirPatientSchema } from "./fhir";
 import { fhirPractitionerSchema } from "./fhir-practitioner";
+import { fhirAppointmentSchema } from "./fhir-appointment";
 import { problemDetailsSchema } from "./problem";
 
 const toSchema = (schema: z.ZodType) => z.toJSONSchema(schema, { target: "openapi-3.0" });
@@ -105,6 +122,22 @@ const uuidPathParam = {
   in: "path",
   required: true,
   schema: { type: "string", format: "uuid" },
+};
+
+const ifMatchHeader = {
+  name: "If-Match",
+  in: "header",
+  required: true,
+  schema: { type: "string" },
+  description: "Current version token; stale ⇒ 409",
+};
+
+const idempotencyKeyHeader = {
+  name: "Idempotency-Key",
+  in: "header",
+  required: true,
+  schema: { type: "string", minLength: 8, maxLength: 128 },
+  description: "Replay-safe key for this clinical write (APDR-0006)",
 };
 
 const jsonOk = (description: string, schema: z.ZodType) => ({
@@ -172,9 +205,9 @@ export const openApiDocument = {
   openapi: "3.1.0",
   info: {
     title: "AIIMS+ API",
-    version: "0.3.0",
+    version: "0.4.0",
     description:
-      "AIIMS+ API through Stage 3 (Core Platform + Patient + Practitioner). Versioned URI (/v1), Problem-Details errors (APDR-0002/0003); every write is tenant-scoped, audited, and duplicate-safe. FHIR R4 read surfaces are dark by default behind the fhir.read flag.",
+      "AIIMS+ API through Stage 4 (Core Platform + Patient + Practitioner + Appointments/OPD). Versioned URI (/v1), Problem-Details errors (APDR-0002/0003); every write is tenant-scoped, audited, and duplicate-safe. Double-booking is prevented by a DB slot-exclusion constraint. FHIR R4 read surfaces are dark by default behind the fhir.read flag.",
   },
   paths: {
     "/healthz": {
@@ -385,6 +418,178 @@ export const openApiDocument = {
       ...patchById("practitioner", updatePractitionerRequestSchema, practitionerResponseSchema),
     },
     "/fhir/R4/Practitioner/{id}": fhirRead("Practitioner", fhirPractitionerSchema),
+
+    // ---- Stage 4: Appointments / OPD scheduling ----
+    "/v1/appointments": {
+      post: {
+        summary:
+          "Book an appointment (Idempotency-Key REQUIRED). Double-booking is rejected by the DB slot-exclusion constraint → 409.",
+        parameters: [idempotencyKeyHeader],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(createAppointmentRequestSchema) } },
+        },
+        responses: {
+          "201": jsonOk("Appointment booked", appointmentResponseSchema),
+          "200": jsonOk(
+            "Idempotent replay — original appointment returned",
+            appointmentResponseSchema,
+          ),
+          "409": problemResponse("Slot conflict (double-booking) or duplicate idempotency key"),
+          "404": problemResponse(
+            "Patient, practitioner, department, or facility not found in this tenant",
+          ),
+          ...standardErrors,
+        },
+      },
+      get: {
+        summary:
+          "Search appointments (allow-listed: one of patient / practitioner / department, optional date range — APDR-0005)",
+        parameters: [
+          { name: "patientId", in: "query", schema: { type: "string", format: "uuid" } },
+          { name: "practitionerId", in: "query", schema: { type: "string", format: "uuid" } },
+          { name: "departmentId", in: "query", schema: { type: "string", format: "uuid" } },
+          { name: "from", in: "query", schema: { type: "string", format: "date-time" } },
+          { name: "to", in: "query", schema: { type: "string", format: "date-time" } },
+          { name: "limit", in: "query", schema: { type: "integer", maximum: 100 } },
+          { name: "cursor", in: "query", schema: { type: "string" } },
+        ],
+        responses: {
+          "200": jsonOk(
+            "Appointments visible to the caller's tenant (RLS-bounded)",
+            listAppointmentsResponseSchema,
+          ),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/appointments/{id}": {
+      ...readById("appointment", appointmentResponseSchema),
+      patch: {
+        summary:
+          "Reschedule / edit an appointment (If-Match required). A new slot that overlaps another booking ⇒ 409.",
+        parameters: [uuidPathParam, ifMatchHeader],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(updateAppointmentRequestSchema) } },
+        },
+        responses: {
+          "200": jsonOk("Appointment updated", appointmentResponseSchema),
+          "409": problemResponse("Version conflict (DDR-0009) or slot conflict"),
+          "404": problemResponse("Appointment not visible to the caller's tenant"),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/appointments/{id}/cancel": {
+      post: {
+        summary: "Cancel an appointment (If-Match) — frees the slot",
+        parameters: [uuidPathParam, ifMatchHeader],
+        requestBody: {
+          required: false,
+          content: { "application/json": { schema: toSchema(cancelAppointmentRequestSchema) } },
+        },
+        responses: {
+          "200": jsonOk("Appointment cancelled", appointmentResponseSchema),
+          "409": problemResponse("Version conflict or invalid state transition"),
+          "404": problemResponse("Appointment not visible to the caller's tenant"),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/appointments/{id}/no-show": {
+      post: {
+        summary: "Mark an appointment as no-show (If-Match) — frees the slot",
+        parameters: [uuidPathParam, ifMatchHeader],
+        responses: {
+          "200": jsonOk("Appointment marked no-show", appointmentResponseSchema),
+          "409": problemResponse("Version conflict or invalid state transition"),
+          "404": problemResponse("Appointment not visible to the caller's tenant"),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/appointments/{id}/check-in": {
+      post: {
+        summary:
+          "Check in an arrived patient (Idempotency-Key) — issues a queue token and OPENS a clinical encounter",
+        parameters: [uuidPathParam, idempotencyKeyHeader],
+        responses: {
+          "200": jsonOk(
+            "Checked in — appointment + opened encounter id + queue token",
+            checkInResponseSchema,
+          ),
+          "409": problemResponse("Invalid state transition (not currently booked)"),
+          "404": problemResponse("Appointment not visible to the caller's tenant"),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/practitioners/{id}/slots": {
+      get: {
+        summary:
+          "Computed free slots for a practitioner on a date (advisory; the DB constraint is authoritative)",
+        parameters: [
+          uuidPathParam,
+          { name: "date", in: "query", required: true, schema: { type: "string", format: "date" } },
+        ],
+        responses: {
+          "200": jsonOk("Bookable slots", slotsResponseSchema),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/practitioner-availability": {
+      post: {
+        summary: "Create a recurring availability template (admin)",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(createAvailabilityRequestSchema) } },
+        },
+        responses: {
+          "201": jsonOk("Availability template created", availabilityResponseSchema),
+          "404": problemResponse("Practitioner or facility not found in this tenant"),
+          ...standardErrors,
+        },
+      },
+      get: {
+        summary: "List availability templates for a practitioner",
+        parameters: [
+          {
+            name: "practitionerId",
+            in: "query",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        responses: {
+          "200": jsonOk("Availability templates", listAvailabilityResponseSchema),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/opd/queue": {
+      get: {
+        summary:
+          "The live OPD waiting queue for a facility/department on a date (ordered by priority, token)",
+        parameters: [
+          {
+            name: "facilityId",
+            in: "query",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+          { name: "departmentId", in: "query", schema: { type: "string", format: "uuid" } },
+          { name: "date", in: "query", schema: { type: "string", format: "date" } },
+        ],
+        responses: {
+          "200": jsonOk("Ordered queue entries", queueResponseSchema),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/encounters/{id}": readById("encounter", encounterResponseSchema),
+    "/fhir/R4/Appointment/{id}": fhirRead("Appointment", fhirAppointmentSchema),
   },
   components: {
     securitySchemes: {
