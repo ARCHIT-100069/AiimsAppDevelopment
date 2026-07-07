@@ -22,9 +22,30 @@ export const encounterResponseSchema = z.object({
   departmentId: uuidSchema.nullable(),
   class: z.enum(ENCOUNTER_CLASSES),
   status: z.enum(ENCOUNTER_STATUSES),
+  /** Stage 5 documentation fields. */
+  chiefComplaint: z.string().nullable(),
+  signedAt: isoTimestampSchema.nullable(),
+  signedBy: uuidSchema.nullable(),
   periodStart: isoTimestampSchema,
   periodEnd: isoTimestampSchema.nullable(),
   version: z.number().int(),
   createdAt: isoTimestampSchema,
 });
 export type EncounterResponse = z.infer<typeof encounterResponseSchema>;
+
+/** Update the chief complaint while the encounter is still open (in_progress). */
+export const updateEncounterRequestSchema = z.object({
+  chiefComplaint: z.string().trim().min(1).max(1000),
+});
+export type UpdateEncounterRequest = z.infer<typeof updateEncounterRequestSchema>;
+
+/**
+ * Sign / finalize the encounter (Stage 5, Constitution — doctor-only, human).
+ * Freezes documentation; post-sign changes require an amendment (DDR-0013).
+ */
+export const signEncounterRequestSchema = z.object({
+  attestation: z.literal(true, {
+    error: "Signing requires an explicit clinician attestation (Constitution)",
+  }),
+});
+export type SignEncounterRequest = z.infer<typeof signEncounterRequestSchema>;

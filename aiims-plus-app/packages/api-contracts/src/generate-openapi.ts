@@ -54,10 +54,46 @@ import {
   slotsResponseSchema,
 } from "./availability";
 import { queueResponseSchema } from "./queue";
-import { encounterResponseSchema } from "./encounters";
+import {
+  encounterResponseSchema,
+  signEncounterRequestSchema,
+  updateEncounterRequestSchema,
+} from "./encounters";
+import {
+  amendNoteRequestSchema,
+  createNoteRequestSchema,
+  listNotesResponseSchema,
+  noteResponseSchema,
+} from "./clinical-notes";
+import {
+  createObservationRequestSchema,
+  listObservationsResponseSchema,
+  observationResponseSchema,
+} from "./observations";
+import {
+  conditionResponseSchema,
+  createConditionRequestSchema,
+  listConditionsResponseSchema,
+} from "./conditions";
+import {
+  createOrderRequestSchema,
+  createResultRequestSchema,
+  listOrdersResponseSchema,
+  listResultsResponseSchema,
+  orderResponseSchema,
+  resultResponseSchema,
+} from "./orders";
+import {
+  attachmentResponseSchema,
+  presignDownloadResponseSchema,
+  presignUploadRequestSchema,
+  presignUploadResponseSchema,
+  registerAttachmentRequestSchema,
+} from "./attachments";
 import { fhirPatientSchema } from "./fhir";
 import { fhirPractitionerSchema } from "./fhir-practitioner";
 import { fhirAppointmentSchema } from "./fhir-appointment";
+import { fhirBundleSchema, fhirEncounterSchema } from "./fhir-encounter";
 import { problemDetailsSchema } from "./problem";
 
 const toSchema = (schema: z.ZodType) => z.toJSONSchema(schema, { target: "openapi-3.0" });
@@ -201,13 +237,43 @@ const fhirRead = (resourceType: string, schema: z.ZodType) => ({
   },
 });
 
+/** POST a documentation child under an encounter (in_progress only). */
+const encChildPost = (name: string, req: z.ZodType, res: z.ZodType) => ({
+  post: {
+    summary: `Record ${name} on an encounter (in_progress only; signed ⇒ 409)`,
+    parameters: [uuidPathParam],
+    requestBody: {
+      required: true,
+      content: { "application/json": { schema: toSchema(req) } },
+    },
+    responses: {
+      "201": jsonOk(`${name} recorded`, res),
+      "404": problemResponse("Encounter not found in this tenant"),
+      "409": problemResponse("Encounter is signed/finalized (amend instead)"),
+      ...standardErrors,
+    },
+  },
+});
+/** GET the documentation children of an encounter. */
+const encChildList = (name: string, listSchema: z.ZodType) => ({
+  get: {
+    summary: `List ${name} for an encounter (tenant-scoped)`,
+    parameters: [uuidPathParam],
+    responses: {
+      "200": jsonOk(`${name} for the encounter`, listSchema),
+      "404": problemResponse("Encounter not found in this tenant"),
+      ...standardErrors,
+    },
+  },
+});
+
 export const openApiDocument = {
   openapi: "3.1.0",
   info: {
     title: "AIIMS+ API",
-    version: "0.4.0",
+    version: "0.5.0",
     description:
-      "AIIMS+ API through Stage 4 (Core Platform + Patient + Practitioner + Appointments/OPD). Versioned URI (/v1), Problem-Details errors (APDR-0002/0003); every write is tenant-scoped, audited, and duplicate-safe. Double-booking is prevented by a DB slot-exclusion constraint. FHIR R4 read surfaces are dark by default behind the fhir.read flag.",
+      "AIIMS+ API through Stage 5 (Core Platform + Patient + Practitioner + Appointments/OPD + EMR). Versioned URI (/v1), Problem-Details errors (APDR-0002/0003); every write is tenant-scoped, audited, and duplicate-safe. Double-booking is prevented by a DB slot-exclusion constraint. Clinical documentation is signed (human-only) and amended by versioning (DDR-0013); large files use presigned object URLs (APDR-0007). FHIR R4 read surfaces are dark by default behind the fhir.read flag.",
   },
   paths: {
     "/healthz": {
@@ -588,8 +654,154 @@ export const openApiDocument = {
         },
       },
     },
-    "/v1/encounters/{id}": readById("encounter", encounterResponseSchema),
+    "/v1/encounters/{id}": {
+      ...readById("encounter", encounterResponseSchema),
+      patch: {
+        summary: "Update the encounter's chief complaint (while in_progress; If-Match)",
+        parameters: [uuidPathParam, ifMatchHeader],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(updateEncounterRequestSchema) } },
+        },
+        responses: {
+          "200": jsonOk("Encounter updated", encounterResponseSchema),
+          "409": problemResponse("Version conflict or encounter already signed"),
+          "404": problemResponse("Encounter not found in this tenant"),
+          ...standardErrors,
+        },
+      },
+    },
     "/fhir/R4/Appointment/{id}": fhirRead("Appointment", fhirAppointmentSchema),
+
+    // ---- Stage 5: EMR — encounter documentation, sign, orders/results ----
+    "/v1/encounters/{id}/sign": {
+      post: {
+        summary:
+          "Sign/finalize the encounter (Constitution: doctor-only, human). Freezes documentation; If-Match.",
+        parameters: [uuidPathParam, ifMatchHeader],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(signEncounterRequestSchema) } },
+        },
+        responses: {
+          "200": jsonOk("Encounter signed", encounterResponseSchema),
+          "409": problemResponse("Version conflict or already signed"),
+          "404": problemResponse("Encounter not found in this tenant"),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/encounters/{id}/notes": {
+      ...encChildPost("clinical note", createNoteRequestSchema, noteResponseSchema),
+      ...encChildList("clinical notes (latest versions)", listNotesResponseSchema),
+    },
+    "/v1/notes/{id}/amend": {
+      post: {
+        summary: "Amend a note (creates a new version, DDR-0013; the prior version is retained)",
+        parameters: [uuidPathParam],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(amendNoteRequestSchema) } },
+        },
+        responses: {
+          "201": jsonOk("New note version created", noteResponseSchema),
+          "404": problemResponse("Note not found in this tenant"),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/encounters/{id}/observations": {
+      ...encChildPost("observation", createObservationRequestSchema, observationResponseSchema),
+      ...encChildList("observations", listObservationsResponseSchema),
+    },
+    "/v1/encounters/{id}/conditions": {
+      ...encChildPost("condition", createConditionRequestSchema, conditionResponseSchema),
+      ...encChildList("conditions", listConditionsResponseSchema),
+    },
+    "/v1/encounters/{id}/orders": {
+      ...encChildPost("service request (order)", createOrderRequestSchema, orderResponseSchema),
+      ...encChildList("orders", listOrdersResponseSchema),
+    },
+    "/v1/encounters/{id}/results": encChildList(
+      "diagnostic reports (results)",
+      listResultsResponseSchema,
+    ),
+    "/v1/orders/{id}/results": {
+      post: {
+        summary: "File a diagnostic report against an order (result)",
+        parameters: [uuidPathParam],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(createResultRequestSchema) } },
+        },
+        responses: {
+          "201": jsonOk("Result filed", resultResponseSchema),
+          "404": problemResponse("Order or attachment not found in this tenant"),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/encounters/{id}/attachments": {
+      post: {
+        summary: "Register an uploaded attachment's metadata (after the presigned PUT)",
+        parameters: [uuidPathParam],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(registerAttachmentRequestSchema) } },
+        },
+        responses: {
+          "201": jsonOk("Attachment registered", attachmentResponseSchema),
+          "404": problemResponse("Encounter not found in this tenant"),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/encounters/{id}/attachments/presign-upload": {
+      post: {
+        summary:
+          "Get a presigned PUT URL to upload a large file directly to object storage (APDR-0007)",
+        parameters: [uuidPathParam],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(presignUploadRequestSchema) } },
+        },
+        responses: {
+          "200": jsonOk(
+            "Presigned upload URL + tenant-scoped object key",
+            presignUploadResponseSchema,
+          ),
+          "404": problemResponse("Encounter not found in this tenant"),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/attachments/{id}/download-url": {
+      get: {
+        summary: "Get a presigned GET URL to download an attachment (APDR-0007)",
+        parameters: [uuidPathParam],
+        responses: {
+          "200": jsonOk("Presigned download URL", presignDownloadResponseSchema),
+          "404": problemResponse("Attachment not found in this tenant"),
+          ...standardErrors,
+        },
+      },
+    },
+    "/fhir/R4/Encounter/{id}": fhirRead("Encounter", fhirEncounterSchema),
+    "/fhir/R4/Encounter/{id}/$everything": {
+      get: {
+        summary:
+          "FHIR Encounter $everything — a Bundle of the encounter + observations/conditions/notes/orders/results (dark by fhir.read)",
+        parameters: [uuidPathParam],
+        responses: {
+          "200": {
+            description: "FHIR collection Bundle",
+            content: { "application/fhir+json": { schema: toSchema(fhirBundleSchema) } },
+          },
+          "404": problemResponse("Not found, or FHIR surface disabled for this tenant"),
+          ...standardErrors,
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {

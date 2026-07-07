@@ -30,11 +30,13 @@ import { PLATFORM_EVENT_SCHEMAS } from "./platform-events";
 import { PATIENT_EVENT_SCHEMAS } from "./patient-events";
 import { PRACTITIONER_EVENT_SCHEMAS } from "./practitioner-events";
 import { APPOINTMENT_EVENT_SCHEMAS } from "./appointment-events";
+import { EMR_EVENT_SCHEMAS } from "./emr-events";
 
 export * from "./platform-events";
 export * from "./patient-events";
 export * from "./practitioner-events";
 export * from "./appointment-events";
+export * from "./emr-events";
 
 /** Registry mapping event type → payload schema; consumers validate against this. */
 export const EVENT_PAYLOAD_SCHEMAS: Record<string, z.ZodType> = {
@@ -42,6 +44,7 @@ export const EVENT_PAYLOAD_SCHEMAS: Record<string, z.ZodType> = {
   ...PATIENT_EVENT_SCHEMAS,
   ...PRACTITIONER_EVENT_SCHEMAS,
   ...APPOINTMENT_EVENT_SCHEMAS,
+  ...EMR_EVENT_SCHEMAS,
 };
 
 /** Validate a full envelope including its type-specific payload. */
