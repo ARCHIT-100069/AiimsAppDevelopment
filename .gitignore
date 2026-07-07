@@ -25,6 +25,10 @@ packages/*/src/**/*.map
 *.log
 coverage/
 
+# Generated API artifact — openApiDocument (generate-openapi.ts) is the source
+# of truth; the emitted JSON is produced on demand and never committed.
+openapi.json
+
 # Terraform
 .terraform/
 *.tfstate

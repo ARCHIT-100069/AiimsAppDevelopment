@@ -15,7 +15,7 @@
     "format:check": "prettier --check .",
     "test": "turbo run test",
     "test:integration": "turbo run test:integration",
-    "test:isolation": "pnpm --filter @aiims/db test:isolation",
+    "test:isolation": "pnpm --filter @aiims/testing test:isolation",
     "db:migrate": "pnpm --filter @aiims/db migrate",
     "db:seed": "pnpm --filter @aiims/db seed",
     "dev": "pnpm --filter @aiims/api dev",

@@ -26,6 +26,21 @@ import {
   tenantResponseSchema,
   userResponseSchema,
 } from "./platform";
+import {
+  createPatientRequestSchema,
+  listPatientsResponseSchema,
+  patientResponseSchema,
+  updatePatientRequestSchema,
+} from "./patients";
+import {
+  createPractitionerRequestSchema,
+  createPractitionerResponseSchema,
+  listPractitionersResponseSchema,
+  practitionerResponseSchema,
+  updatePractitionerRequestSchema,
+} from "./practitioners";
+import { fhirPatientSchema } from "./fhir";
+import { fhirPractitionerSchema } from "./fhir-practitioner";
 import { problemDetailsSchema } from "./problem";
 
 const toSchema = (schema: z.ZodType) => z.toJSONSchema(schema, { target: "openapi-3.0" });
@@ -85,13 +100,81 @@ const crud = (
   },
 });
 
+const uuidPathParam = {
+  name: "id",
+  in: "path",
+  required: true,
+  schema: { type: "string", format: "uuid" },
+};
+
+const jsonOk = (description: string, schema: z.ZodType) => ({
+  description,
+  content: { "application/json": { schema: toSchema(schema) } },
+});
+
+/** GET /:id — tenant-scoped read (audited for clinical resources). */
+const readById = (name: string, responseSchema: z.ZodType) => ({
+  get: {
+    summary: `Get one ${name} by id (tenant-scoped; RLS-bounded)`,
+    parameters: [uuidPathParam],
+    responses: {
+      "200": jsonOk(`${name} found`, responseSchema),
+      "404": problemResponse(`${name} not visible to the caller's tenant`),
+      ...standardErrors,
+    },
+  },
+});
+
+/** PATCH /:id — optimistic concurrency via If-Match (DDR-0009 → 409). */
+const patchById = (name: string, requestSchema: z.ZodType, responseSchema: z.ZodType) => ({
+  patch: {
+    summary: `Update ${name} (optimistic concurrency — If-Match required, APDR-0006)`,
+    parameters: [
+      uuidPathParam,
+      {
+        name: "If-Match",
+        in: "header",
+        required: true,
+        schema: { type: "string" },
+        description: "Current version token; stale ⇒ 409",
+      },
+    ],
+    requestBody: {
+      required: true,
+      content: { "application/json": { schema: toSchema(requestSchema) } },
+    },
+    responses: {
+      "200": jsonOk(`${name} updated`, responseSchema),
+      "409": problemResponse("Version conflict — refetch and retry (DDR-0009)"),
+      "404": problemResponse(`${name} not visible to the caller's tenant`),
+      ...standardErrors,
+    },
+  },
+});
+
+/** GET /fhir/R4/{Resource}/:id — dark by default behind `fhir.read` (returns 404 when off). */
+const fhirRead = (resourceType: string, schema: z.ZodType) => ({
+  get: {
+    summary: `Read FHIR R4 ${resourceType} (dark by default — gated on the fhir.read flag; 404 when disabled)`,
+    parameters: [uuidPathParam],
+    responses: {
+      "200": {
+        description: `FHIR ${resourceType} regenerated from the relational model (ADR-0003/DDR-0005)`,
+        content: { "application/fhir+json": { schema: toSchema(schema) } },
+      },
+      "404": problemResponse("Resource not found, or FHIR surface disabled for this tenant"),
+      ...standardErrors,
+    },
+  },
+});
+
 export const openApiDocument = {
   openapi: "3.1.0",
   info: {
     title: "AIIMS+ API",
-    version: "0.1.0",
+    version: "0.3.0",
     description:
-      "Core Platform surface (Stage 1). Versioned URI (/v1), Problem-Details errors (APDR-0002/0003); every write is tenant-scoped, audited, and duplicate-safe.",
+      "AIIMS+ API through Stage 3 (Core Platform + Patient + Practitioner). Versioned URI (/v1), Problem-Details errors (APDR-0002/0003); every write is tenant-scoped, audited, and duplicate-safe. FHIR R4 read surfaces are dark by default behind the fhir.read flag.",
   },
   paths: {
     "/healthz": {
@@ -178,7 +261,7 @@ export const openApiDocument = {
             name: "system",
             in: "query",
             required: true,
-            schema: { enum: ["icd-10", "loinc", "snomed"] },
+            schema: { enum: ["icd-10", "loinc", "snomed", "specialty"] },
           },
           { name: "limit", in: "query", schema: { type: "integer", maximum: 100 } },
           { name: "cursor", in: "query", schema: { type: "string" } },
@@ -192,6 +275,116 @@ export const openApiDocument = {
         },
       },
     },
+
+    // ---- Stage 2: Patients (PHI; identifiers encrypted at rest — DDR-0006) ----
+    "/v1/patients": {
+      post: {
+        summary:
+          "Register a patient (Idempotency-Key REQUIRED — APDR-0006; replay returns the original)",
+        parameters: [
+          {
+            name: "Idempotency-Key",
+            in: "header",
+            required: true,
+            schema: { type: "string", minLength: 8, maxLength: 128 },
+            description: "Replay-safe key for this clinical write",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(createPatientRequestSchema) } },
+        },
+        responses: {
+          "201": jsonOk("Patient registered", patientResponseSchema),
+          "200": jsonOk("Idempotent replay — original patient returned", patientResponseSchema),
+          "409": problemResponse("Duplicate natural key (duplicate-safe creation)"),
+          ...standardErrors,
+        },
+      },
+      get: {
+        summary:
+          "Search patients (allow-listed: name trigram / MRN prefix / one blind-indexed identifier — APDR-0005)",
+        parameters: [
+          { name: "q", in: "query", schema: { type: "string" }, description: "Name (trigram)" },
+          { name: "mrn", in: "query", schema: { type: "string" }, description: "MRN prefix" },
+          {
+            name: "phone",
+            in: "query",
+            schema: { type: "string" },
+            description: "Exact phone (blind index)",
+          },
+          {
+            name: "abha",
+            in: "query",
+            schema: { type: "string" },
+            description: "Exact ABHA (blind index)",
+          },
+          { name: "limit", in: "query", schema: { type: "integer", maximum: 100 } },
+          { name: "cursor", in: "query", schema: { type: "string" } },
+        ],
+        responses: {
+          "200": jsonOk(
+            "Patients visible to the caller's tenant (RLS-bounded)",
+            listPatientsResponseSchema,
+          ),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/patients/{id}": {
+      ...readById("patient", patientResponseSchema),
+      ...patchById("patient", updatePatientRequestSchema, patientResponseSchema),
+    },
+    "/fhir/R4/Patient/{id}": fhirRead("Patient", fhirPatientSchema),
+
+    // ---- Stage 3: Practitioners (clinical profile over an app_user) ----
+    "/v1/practitioners": {
+      post: {
+        summary:
+          "Register a practitioner over an existing app_user (immutable link; duplicate-safe → 409). May return non-blocking warnings (decision i).",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(createPractitionerRequestSchema) } },
+        },
+        responses: {
+          "201": jsonOk(
+            "Practitioner created (with any advisory warnings)",
+            createPractitionerResponseSchema,
+          ),
+          "409": problemResponse("Duplicate registration number in this tenant"),
+          "404": problemResponse("Linked app_user or department not found in this tenant"),
+          ...standardErrors,
+        },
+      },
+      get: {
+        summary:
+          "Search practitioners (allow-listed: name trigram / registration / department — APDR-0005)",
+        parameters: [
+          { name: "q", in: "query", schema: { type: "string" }, description: "Name (trigram)" },
+          {
+            name: "registrationNo",
+            in: "query",
+            schema: { type: "string" },
+            description: "Exact registration",
+          },
+          { name: "departmentId", in: "query", schema: { type: "string", format: "uuid" } },
+          { name: "limit", in: "query", schema: { type: "integer", maximum: 100 } },
+          { name: "cursor", in: "query", schema: { type: "string" } },
+        ],
+        responses: {
+          "200": jsonOk(
+            "Practitioners visible to the caller's tenant (RLS-bounded)",
+            listPractitionersResponseSchema,
+          ),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/practitioners/{id}": {
+      ...readById("practitioner", practitionerResponseSchema),
+      ...patchById("practitioner", updatePractitionerRequestSchema, practitionerResponseSchema),
+    },
+    "/fhir/R4/Practitioner/{id}": fhirRead("Practitioner", fhirPractitionerSchema),
   },
   components: {
     securitySchemes: {

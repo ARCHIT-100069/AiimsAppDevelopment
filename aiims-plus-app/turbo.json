@@ -14,11 +14,27 @@
     },
     "test:integration": {
       "dependsOn": ["^build"],
-      "cache": false
+      "cache": false,
+      "passThroughEnv": [
+        "DOCKER_HOST",
+        "TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE",
+        "TESTCONTAINERS_RYUK_DISABLED",
+        "TESTCONTAINERS_HOST_OVERRIDE",
+        "ISOLATION_DATABASE_URL",
+        "DATABASE_URL_MIGRATOR"
+      ]
     },
     "test:isolation": {
       "dependsOn": ["^build"],
-      "cache": false
+      "cache": false,
+      "passThroughEnv": [
+        "DOCKER_HOST",
+        "TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE",
+        "TESTCONTAINERS_RYUK_DISABLED",
+        "TESTCONTAINERS_HOST_OVERRIDE",
+        "ISOLATION_DATABASE_URL",
+        "DATABASE_URL_MIGRATOR"
+      ]
     },
     "dev": {
       "cache": false,
