@@ -29,6 +29,14 @@ export const PERMISSIONS = [
   // Stage 3 — Practitioner (decision e: admin manages the staff directory)
   "practitioner:manage",
   "practitioner:read",
+  // Stage 4 — Appointments / OPD (decision D-4.7: reception books, admin
+  // configures schedules, doctors advance their queue — separation of duties)
+  "appointment:manage", // book / reschedule / cancel / no-show
+  "appointment:checkin", // arrive a patient → issue token + open encounter
+  "appointment:read",
+  "schedule:manage", // availability templates
+  "schedule:read", // templates + computed slots
+  "encounter:read",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -49,6 +57,11 @@ const ROLE_PERMISSIONS: Record<RoleCode | typeof PLATFORM_ADMIN_ROLE, readonly P
     "reference:read",
     "practitioner:manage",
     "practitioner:read",
+    // Configures OPD schedules and oversees; does NOT book (front desk does).
+    "schedule:manage",
+    "schedule:read",
+    "appointment:read",
+    "encounter:read",
   ],
   doctor: [
     "org:read",
@@ -57,8 +70,19 @@ const ROLE_PERMISSIONS: Record<RoleCode | typeof PLATFORM_ADMIN_ROLE, readonly P
     "patient:read",
     "patient:update",
     "practitioner:read",
+    "appointment:read",
+    "schedule:read",
+    "encounter:read",
   ],
-  nurse: ["org:read", "reference:read", "patient:read", "practitioner:read"],
+  nurse: [
+    "org:read",
+    "reference:read",
+    "patient:read",
+    "practitioner:read",
+    "appointment:read",
+    "schedule:read",
+    "encounter:read",
+  ],
   front_desk: [
     "org:read",
     "reference:read",
@@ -66,6 +90,12 @@ const ROLE_PERMISSIONS: Record<RoleCode | typeof PLATFORM_ADMIN_ROLE, readonly P
     "patient:read",
     "patient:update",
     "practitioner:read",
+    // Reception owns the OPD desk: booking through check-in.
+    "appointment:manage",
+    "appointment:checkin",
+    "appointment:read",
+    "schedule:read",
+    "encounter:read",
   ],
 };
 
