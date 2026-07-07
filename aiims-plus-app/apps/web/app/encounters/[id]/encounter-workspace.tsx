@@ -4,6 +4,7 @@ import { useState } from "react";
 import type {
   ConditionResponse,
   EncounterResponse,
+  InvoiceResponse,
   NoteResponse,
   ObservationResponse,
   OrderResponse,
@@ -39,8 +40,11 @@ export function EncounterWorkspace({
   initialConditions,
   initialOrders,
   initialResults,
+  initialInvoice,
   canDocument,
   canSign,
+  canBill,
+  canShare,
 }: {
   encounter: EncounterResponse;
   initialNotes: NoteResponse[];
@@ -48,8 +52,11 @@ export function EncounterWorkspace({
   initialConditions: ConditionResponse[];
   initialOrders: OrderResponse[];
   initialResults: ResultResponse[];
+  initialInvoice: InvoiceResponse | null;
   canDocument: boolean;
   canSign: boolean;
+  canBill: boolean;
+  canShare: boolean;
 }) {
   const id = initialEncounter.id;
   const [encounter, setEncounter] = useState(initialEncounter);
@@ -58,6 +65,8 @@ export function EncounterWorkspace({
   const [conditions, setConditions] = useState(initialConditions);
   const [orders, setOrders] = useState(initialOrders);
   const [results] = useState(initialResults);
+  const [invoice, setInvoice] = useState<InvoiceResponse | null>(initialInvoice);
+  const [shared, setShared] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const signed = encounter.status === "finished" || encounter.signedAt !== null;
@@ -202,7 +211,127 @@ export function EncounterWorkspace({
           }}
         />
       ) : null}
+
+      <BillingPanel
+        invoice={invoice}
+        shared={shared}
+        canBill={canBill}
+        canShare={canShare}
+        onGenerate={async () => {
+          setError(null);
+          const res = await fetch(emr(`encounters/${id}/invoice`), {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: "{}",
+          });
+          if (res.ok) setInvoice(await res.json());
+          else
+            setError((await res.json().catch(() => ({}))).detail ?? "Could not generate invoice");
+        }}
+        onPay={async () => {
+          if (!invoice) return;
+          setError(null);
+          const res = await fetch(emr(`invoices/${invoice.id}/pay`), {
+            method: "POST",
+            headers: { "content-type": "application/json", "idempotency-key": crypto.randomUUID() },
+            body: JSON.stringify({ method: "mock" }),
+          });
+          if (res.ok) setInvoice(await res.json());
+          else setError((await res.json().catch(() => ({}))).detail ?? "Payment failed");
+        }}
+        onShare={async () => {
+          setError(null);
+          const res = await fetch(emr(`encounters/${id}/share`), {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: "{}",
+          });
+          if (res.ok) {
+            const body = await res.json();
+            setShared(body.careContextRef);
+          } else setError((await res.json().catch(() => ({}))).detail ?? "Share failed");
+        }}
+      />
     </section>
+  );
+}
+
+function BillingPanel({
+  invoice,
+  shared,
+  canBill,
+  canShare,
+  onGenerate,
+  onPay,
+  onShare,
+}: {
+  invoice: InvoiceResponse | null;
+  shared: string | null;
+  canBill: boolean;
+  canShare: boolean;
+  onGenerate: () => Promise<void>;
+  onPay: () => Promise<void>;
+  onShare: () => Promise<void>;
+}) {
+  const paid = invoice?.status === "paid";
+  return (
+    <Card className="p-6">
+      <h2 className="text-sm font-semibold text-slate-700">Billing</h2>
+      {!invoice ? (
+        <div className="mt-3">
+          {canBill ? (
+            <Button type="button" variant="secondary" onClick={onGenerate}>
+              Generate invoice
+            </Button>
+          ) : (
+            <p className="text-sm text-slate-400">No invoice yet.</p>
+          )}
+        </div>
+      ) : (
+        <div className="mt-3 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-sm text-slate-600">{invoice.invoiceNumber}</span>
+            <Badge tone={paid ? "green" : "sky"}>{invoice.status}</Badge>
+          </div>
+          <ul className="space-y-1 text-sm text-slate-600">
+            {invoice.lines.map((l) => (
+              <li key={l.id} className="flex justify-between">
+                <span>{l.description}</span>
+                <span className="font-mono">
+                  {invoice.currency} {l.lineAmount}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className="flex justify-between border-t border-slate-100 pt-2 text-sm font-semibold text-slate-800">
+            <span>Total</span>
+            <span className="font-mono">
+              {invoice.currency} {invoice.total}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {!paid && canBill ? (
+              <Button type="button" onClick={onPay}>
+                Take payment (mock)
+              </Button>
+            ) : null}
+            {paid ? (
+              <span className="text-xs text-slate-500">Paid · ref {invoice.paymentRef}</span>
+            ) : null}
+            {paid && canShare && !shared ? (
+              <Button type="button" variant="secondary" onClick={onShare}>
+                Share on consent (ABDM)
+              </Button>
+            ) : null}
+          </div>
+          {shared ? (
+            <p role="status" className="rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-800">
+              Care context shared · {shared}
+            </p>
+          ) : null}
+        </div>
+      )}
+    </Card>
   );
 }
 

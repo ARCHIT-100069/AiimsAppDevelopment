@@ -8,7 +8,7 @@ import { relay } from "../../../../lib/proxy-response";
  * without a file per path. Only these top-level resources are proxied; the
  * bearer is attached server-side and If-Match / Idempotency-Key are forwarded.
  */
-const ALLOWED = new Set(["encounters", "notes", "orders", "attachments"]);
+const ALLOWED = new Set(["encounters", "notes", "orders", "attachments", "invoices"]);
 
 function target(path: string[], search: string): string | null {
   if (path.length === 0 || !ALLOWED.has(path[0]!)) return null;

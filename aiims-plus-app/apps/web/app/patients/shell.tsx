@@ -131,3 +131,15 @@ export async function canSignEncounter(): Promise<boolean> {
   const session = await readSession();
   return session?.roles.some((r) => r === "doctor") ?? false;
 }
+
+/** Reception is the cashier: invoice + settle payment (decision D-6.5). */
+export async function canBillEncounter(): Promise<boolean> {
+  const session = await readSession();
+  return session?.roles.some((r) => r === "front_desk") ?? false;
+}
+
+/** Doctor or reception may share the encounter on consent (mock ABDM). */
+export async function canShareEncounter(): Promise<boolean> {
+  const session = await readSession();
+  return session?.roles.some((r) => r === "doctor" || r === "front_desk") ?? false;
+}

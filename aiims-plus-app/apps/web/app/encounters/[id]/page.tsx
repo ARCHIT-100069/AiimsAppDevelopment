@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import type {
   EncounterResponse,
+  InvoiceResponse,
   ListConditionsResponse,
   ListNotesResponse,
   ListObservationsResponse,
@@ -9,7 +10,13 @@ import type {
 } from "@aiims/api-contracts";
 import { apiFetch } from "../../lib/api";
 import { readSession } from "../../lib/session";
-import { AppShell, canDocumentEncounter, canSignEncounter } from "../../patients/shell";
+import {
+  AppShell,
+  canBillEncounter,
+  canDocumentEncounter,
+  canShareEncounter,
+  canSignEncounter,
+} from "../../patients/shell";
 import { EncounterWorkspace } from "./encounter-workspace";
 
 export default async function EncounterPage({ params }: { params: Promise<{ id: string }> }) {
@@ -20,7 +27,7 @@ export default async function EncounterPage({ params }: { params: Promise<{ id: 
   if (!encRes.ok) notFound();
   const encounter: EncounterResponse = await encRes.json();
 
-  const [notes, observations, conditions, orders, results] = await Promise.all([
+  const [notes, observations, conditions, orders, results, invoiceRes] = await Promise.all([
     apiFetch(`/v1/encounters/${id}/notes`).then(okJson<ListNotesResponse>({ data: [] })),
     apiFetch(`/v1/encounters/${id}/observations`).then(
       okJson<ListObservationsResponse>({ data: [] }),
@@ -28,7 +35,9 @@ export default async function EncounterPage({ params }: { params: Promise<{ id: 
     apiFetch(`/v1/encounters/${id}/conditions`).then(okJson<ListConditionsResponse>({ data: [] })),
     apiFetch(`/v1/encounters/${id}/orders`).then(okJson<ListOrdersResponse>({ data: [] })),
     apiFetch(`/v1/encounters/${id}/results`).then(okJson<ListResultsResponse>({ data: [] })),
+    apiFetch(`/v1/encounters/${id}/invoice`),
   ]);
+  const invoice: InvoiceResponse | null = invoiceRes.ok ? await invoiceRes.json() : null;
 
   return (
     <AppShell active="Appointments">
@@ -39,8 +48,11 @@ export default async function EncounterPage({ params }: { params: Promise<{ id: 
         initialConditions={conditions.data}
         initialOrders={orders.data}
         initialResults={results.data}
+        initialInvoice={invoice}
         canDocument={await canDocumentEncounter()}
         canSign={await canSignEncounter()}
+        canBill={await canBillEncounter()}
+        canShare={await canShareEncounter()}
       />
     </AppShell>
   );

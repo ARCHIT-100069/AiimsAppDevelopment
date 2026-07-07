@@ -43,8 +43,11 @@ describe("EncounterWorkspace (a11y)", () => {
         initialConditions={[]}
         initialOrders={[]}
         initialResults={[]}
+        initialInvoice={null}
         canDocument
         canSign
+        canBill
+        canShare
       />,
     );
     expect(screen.getByLabelText("Chief complaint")).toBeInTheDocument();
