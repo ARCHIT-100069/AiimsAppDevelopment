@@ -465,7 +465,7 @@ export async function computeFreeSlots(
   practitionerId: string,
   date: string,
 ): Promise<{ startAt: Date; endAt: Date }[]> {
-  const rows = await db.execute<{ start_at: Date; end_at: Date }>(sql`
+  const rows = await db.execute<{ start_at: string | Date; end_at: string | Date }>(sql`
     WITH template AS (
       SELECT a.start_time, a.end_time, a.slot_minutes, f.timezone AS zone
       FROM clinical.practitioner_availability a
@@ -499,7 +499,8 @@ export async function computeFreeSlots(
     )
     ORDER BY start_at
   `);
-  return rows.rows.map((r) => ({ startAt: r.start_at, endAt: r.end_at }));
+  // Raw SQL results come back as strings; normalise to Date at the boundary.
+  return rows.rows.map((r) => ({ startAt: new Date(r.start_at), endAt: new Date(r.end_at) }));
 }
 
 /* --------------------------------- queue --------------------------------- */

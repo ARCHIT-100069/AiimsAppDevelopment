@@ -99,6 +99,34 @@ describe("Stage 1 permission matrix (separation of duties, SDR-0002)", () => {
     ).toBe(false);
   });
 
+  it("scheduling: reception books/checks-in, admin configures, all clinical read (D-4.7)", () => {
+    // Reception (front_desk) owns booking + check-in; admin does NOT book.
+    for (const perm of ["appointment:manage", "appointment:checkin"] as const) {
+      expect(decide({ principal: { roles: ["front_desk"] }, permission: perm }).allowed).toBe(true);
+      expect(decide({ principal: { roles: ["admin"] }, permission: perm }).allowed).toBe(false);
+      expect(decide({ principal: { roles: ["doctor"] }, permission: perm }).allowed).toBe(false);
+    }
+    // Availability templates are admin config; reception/clinicians cannot manage.
+    expect(decide({ principal: { roles: ["admin"] }, permission: "schedule:manage" }).allowed).toBe(
+      true,
+    );
+    expect(
+      decide({ principal: { roles: ["front_desk"] }, permission: "schedule:manage" }).allowed,
+    ).toBe(false);
+    // Everyone in-tenant can read the schedule + queue + encounter.
+    for (const role of ["admin", "doctor", "nurse", "front_desk"]) {
+      expect(decide({ principal: { roles: [role] }, permission: "appointment:read" }).allowed).toBe(
+        true,
+      );
+      expect(decide({ principal: { roles: [role] }, permission: "encounter:read" }).allowed).toBe(
+        true,
+      );
+    }
+    expect(
+      decide({ principal: { roles: ["platform_admin"] }, permission: "appointment:read" }).allowed,
+    ).toBe(false);
+  });
+
   it("no tenant role can manage the tenant registry", () => {
     for (const role of ["admin", "doctor", "nurse", "front_desk"]) {
       expect(

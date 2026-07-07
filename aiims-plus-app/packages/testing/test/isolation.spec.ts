@@ -371,6 +371,33 @@ describe("cross-tenant isolation gate (TDR-0006) — runs as aiims_app under FOR
     }
   });
 
+  it("APPOINTMENT/ENCOUNTER: A cannot read B's rows and cannot forge B's tenant_id", async () => {
+    // A sees none of B's appointments/encounters (RLS), even by direct id scan.
+    expect(
+      await underA("SELECT id FROM clinical.appointment WHERE tenant_id = $1", [SEED.tenantB]),
+    ).toHaveLength(0);
+    expect(
+      await underA("SELECT id FROM clinical.encounter WHERE tenant_id = $1", [SEED.tenantB]),
+    ).toHaveLength(0);
+    // WITH CHECK: forging B's tenant_id on an appointment under A is rejected.
+    const client = await appPool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT set_config('app.tenant_id', $1, true)", [SEED.tenantA]);
+      await expect(
+        client.query(
+          `INSERT INTO clinical.appointment
+             (id, tenant_id, patient_id, practitioner_id, facility_id, start_at, end_at)
+           VALUES ($1, $2, $3, $4, $5, now(), now() + interval '15 min')`,
+          [newId(), SEED.tenantB /* forged */, newId(), newId(), newId()],
+        ),
+      ).rejects.toThrow(/row-level security/);
+      await client.query("ROLLBACK");
+    } finally {
+      client.release();
+    }
+  });
+
   it("policy manifest is clean on a freshly migrated database (DDR-0011 gate)", async () => {
     expect(await checkRlsPolicies(env.migratorUrl)).toEqual([]);
   });
