@@ -90,10 +90,18 @@ import {
   presignUploadResponseSchema,
   registerAttachmentRequestSchema,
 } from "./attachments";
+import {
+  generateInvoiceRequestSchema,
+  invoiceResponseSchema,
+  payInvoiceRequestSchema,
+  shareEncounterRequestSchema,
+  shareEncounterResponseSchema,
+} from "./invoices";
 import { fhirPatientSchema } from "./fhir";
 import { fhirPractitionerSchema } from "./fhir-practitioner";
 import { fhirAppointmentSchema } from "./fhir-appointment";
 import { fhirBundleSchema, fhirEncounterSchema } from "./fhir-encounter";
+import { fhirInvoiceSchema } from "./fhir-invoice";
 import { problemDetailsSchema } from "./problem";
 
 const toSchema = (schema: z.ZodType) => z.toJSONSchema(schema, { target: "openapi-3.0" });
@@ -271,9 +279,9 @@ export const openApiDocument = {
   openapi: "3.1.0",
   info: {
     title: "AIIMS+ API",
-    version: "0.5.0",
+    version: "0.6.0",
     description:
-      "AIIMS+ API through Stage 5 (Core Platform + Patient + Practitioner + Appointments/OPD + EMR). Versioned URI (/v1), Problem-Details errors (APDR-0002/0003); every write is tenant-scoped, audited, and duplicate-safe. Double-booking is prevented by a DB slot-exclusion constraint. Clinical documentation is signed (human-only) and amended by versioning (DDR-0013); large files use presigned object URLs (APDR-0007). FHIR R4 read surfaces are dark by default behind the fhir.read flag.",
+      "AIIMS+ API through Stage 6 (Core Platform + Patient + Practitioner + Appointments/OPD + EMR + Billing). Versioned URI (/v1), Problem-Details errors (APDR-0002/0003); every write is tenant-scoped, audited, and duplicate-safe. Double-booking is prevented by a DB slot-exclusion constraint. Clinical documentation is signed (human-only) and amended by versioning (DDR-0013); large files use presigned object URLs (APDR-0007). FHIR R4 read surfaces are dark by default behind the fhir.read flag.",
   },
   paths: {
     "/healthz": {
@@ -786,6 +794,69 @@ export const openApiDocument = {
         },
       },
     },
+    // ---- Stage 6: Billing — invoice an encounter, (mock) pay, share ----
+    "/v1/encounters/{id}/invoice": {
+      post: {
+        summary:
+          "Generate an invoice for an encounter (charge capture; one per encounter → 409 on repeat)",
+        parameters: [uuidPathParam],
+        requestBody: {
+          required: false,
+          content: { "application/json": { schema: toSchema(generateInvoiceRequestSchema) } },
+        },
+        responses: {
+          "201": jsonOk("Invoice generated", invoiceResponseSchema),
+          "409": problemResponse("An invoice already exists for this encounter"),
+          "404": problemResponse("Encounter not found in this tenant"),
+          ...standardErrors,
+        },
+      },
+      get: {
+        summary: "Get the invoice for an encounter",
+        parameters: [uuidPathParam],
+        responses: {
+          "200": jsonOk("Invoice", invoiceResponseSchema),
+          "404": problemResponse("No invoice for this encounter"),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/invoices/{id}": readById("invoice", invoiceResponseSchema),
+    "/v1/invoices/{id}/pay": {
+      post: {
+        summary: "Settle an invoice via the (mock) payment gateway (Idempotency-Key; replay-safe)",
+        parameters: [uuidPathParam, idempotencyKeyHeader],
+        requestBody: {
+          required: false,
+          content: { "application/json": { schema: toSchema(payInvoiceRequestSchema) } },
+        },
+        responses: {
+          "200": jsonOk("Invoice paid", invoiceResponseSchema),
+          "409": problemResponse("Invoice already paid or cancelled"),
+          "404": problemResponse("Invoice not found in this tenant"),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/encounters/{id}/share": {
+      post: {
+        summary:
+          "Mock ABDM share-on-consent — link the encounter care context after validating a (mock) consent artifact",
+        parameters: [uuidPathParam],
+        requestBody: {
+          required: false,
+          content: { "application/json": { schema: toSchema(shareEncounterRequestSchema) } },
+        },
+        responses: {
+          "200": jsonOk("Care context shared (mock)", shareEncounterResponseSchema),
+          "409": problemResponse("Consent could not be validated for this share"),
+          "404": problemResponse("Encounter not found in this tenant"),
+          ...standardErrors,
+        },
+      },
+    },
+    "/fhir/R4/Invoice/{id}": fhirRead("Invoice", fhirInvoiceSchema),
+
     "/fhir/R4/Encounter/{id}": fhirRead("Encounter", fhirEncounterSchema),
     "/fhir/R4/Encounter/{id}/$everything": {
       get: {
