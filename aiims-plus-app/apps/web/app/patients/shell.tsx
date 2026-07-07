@@ -15,7 +15,7 @@ import { readSession } from "../lib/session";
 const NAV = [
   { label: "Patients", href: "/patients", icon: IconPatients },
   { label: "Practitioners", href: "/practitioners", icon: IconStethoscope },
-  { label: "Appointments", href: "#", icon: IconCalendar, soon: true },
+  { label: "Appointments", href: "/appointments", icon: IconCalendar },
   { label: "Encounters", href: "#", icon: IconClipboard, soon: true },
   { label: "Billing", href: "#", icon: IconBilling, soon: true },
 ];
@@ -112,4 +112,10 @@ export async function canRegisterPatients(): Promise<boolean> {
 export async function canManagePractitioners(): Promise<boolean> {
   const session = await readSession();
   return session?.roles.some((r) => r === "admin") ?? false;
+}
+
+/** Reception owns the OPD desk: booking through check-in (decision D-4.7). */
+export async function canManageAppointments(): Promise<boolean> {
+  const session = await readSession();
+  return session?.roles.some((r) => r === "front_desk") ?? false;
 }
