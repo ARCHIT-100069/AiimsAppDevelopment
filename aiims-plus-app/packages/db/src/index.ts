@@ -15,3 +15,4 @@ export * from "./platform-queries";
 export * from "./patient-queries";
 export * from "./practitioner-queries";
 export * from "./scheduling-queries";
+export * from "./emr-queries";

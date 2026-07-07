@@ -85,6 +85,36 @@
       "schema": "clinical",
       "table": "opd_queue_counter",
       "policy": "tenant_isolation"
+    },
+    {
+      "schema": "clinical",
+      "table": "clinical_note",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "clinical",
+      "table": "observation",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "clinical",
+      "table": "condition",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "clinical",
+      "table": "attachment",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "orders",
+      "table": "service_request",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "orders",
+      "table": "diagnostic_report",
+      "policy": "tenant_isolation"
     }
   ]
 }

@@ -7,6 +7,7 @@ import {
   date,
   integer,
   jsonb,
+  numeric,
   pgSchema,
   smallint,
   text,
@@ -129,6 +130,9 @@ export const encounter = clinical.table("encounter", {
     .$type<"in_progress" | "finished" | "cancelled">()
     .notNull()
     .default("in_progress"),
+  chiefComplaint: text("chief_complaint"),
+  signedAt: timestamp("signed_at", { withTimezone: true }),
+  signedBy: uuid("signed_by"),
   periodStart: timestamp("period_start", { withTimezone: true }).notNull().defaultNow(),
   periodEnd: timestamp("period_end", { withTimezone: true }),
   fhirId: text("fhir_id"),
@@ -166,4 +170,87 @@ export const opdQueueCounter = clinical.table("opd_queue_counter", {
   departmentId: uuid("department_id").notNull(),
   serviceDate: date("service_date").notNull(),
   lastValue: integer("last_value").notNull().default(0),
+});
+
+/** Stage 5: append-only versioned clinical note (DDR-0013). */
+export const clinicalNote = clinical.table("clinical_note", {
+  id: uuid("id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  encounterId: uuid("encounter_id").notNull(),
+  noteId: uuid("note_id").notNull(),
+  version: integer("version").notNull().default(1),
+  supersedesId: uuid("supersedes_id"),
+  noteType: text("note_type")
+    .$type<"progress" | "consult" | "discharge">()
+    .notNull()
+    .default("progress"),
+  body: text("body").notNull(),
+  authorId: uuid("author_id").notNull(),
+  status: text("status").$type<"active" | "amended">().notNull().default("active"),
+  amendmentReason: text("amendment_reason"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  retentionClass: text("retention_class"),
+  retentionUntil: timestamp("retention_until", { withTimezone: true }),
+});
+
+/** Stage 5: observation / vital (FHIR Observation, LOINC). */
+export const observation = clinical.table("observation", {
+  id: uuid("id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  encounterId: uuid("encounter_id").notNull(),
+  patientId: uuid("patient_id").notNull(),
+  codeSystem: text("code_system").notNull(),
+  code: text("code").notNull(),
+  display: text("display").notNull(),
+  valueNumeric: numeric("value_numeric"),
+  unit: text("unit"),
+  valueText: text("value_text"),
+  effectiveAt: timestamp("effective_at", { withTimezone: true }).notNull().defaultNow(),
+  recordedBy: uuid("recorded_by").notNull(),
+  version: integer("version").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  retentionClass: text("retention_class"),
+  retentionUntil: timestamp("retention_until", { withTimezone: true }),
+});
+
+/** Stage 5: condition / diagnosis (FHIR Condition, ICD-10/SNOMED). */
+export const condition = clinical.table("condition", {
+  id: uuid("id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  encounterId: uuid("encounter_id").notNull(),
+  patientId: uuid("patient_id").notNull(),
+  codeSystem: text("code_system").notNull(),
+  code: text("code").notNull(),
+  display: text("display").notNull(),
+  category: text("category").$type<"diagnosis" | "problem">().notNull().default("diagnosis"),
+  clinicalStatus: text("clinical_status")
+    .$type<"active" | "resolved">()
+    .notNull()
+    .default("active"),
+  note: text("note"),
+  recordedBy: uuid("recorded_by").notNull(),
+  version: integer("version").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  retentionClass: text("retention_class"),
+  retentionUntil: timestamp("retention_until", { withTimezone: true }),
+});
+
+/** Stage 5: attachment metadata; bytes live in object storage (APDR-0007). */
+export const attachment = clinical.table("attachment", {
+  id: uuid("id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  encounterId: uuid("encounter_id").notNull(),
+  objectKey: text("object_key").notNull(),
+  contentType: text("content_type").notNull(),
+  sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
+  sha256: text("sha256"),
+  uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });

@@ -258,6 +258,9 @@ export interface EncounterRow {
   departmentId: string | null;
   class: "AMB";
   status: "in_progress" | "finished" | "cancelled";
+  chiefComplaint: string | null;
+  signedAt: Date | null;
+  signedBy: string | null;
   periodStart: Date;
   periodEnd: Date | null;
   version: number;
@@ -274,6 +277,9 @@ const encColumns = {
   departmentId: s.encounter.departmentId,
   class: s.encounter.class,
   status: s.encounter.status,
+  chiefComplaint: s.encounter.chiefComplaint,
+  signedAt: s.encounter.signedAt,
+  signedBy: s.encounter.signedBy,
   periodStart: s.encounter.periodStart,
   periodEnd: s.encounter.periodEnd,
   version: s.encounter.version,
