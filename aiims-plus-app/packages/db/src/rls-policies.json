@@ -115,6 +115,21 @@
       "schema": "orders",
       "table": "diagnostic_report",
       "policy": "tenant_isolation"
+    },
+    {
+      "schema": "billing",
+      "table": "invoice_counter",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "billing",
+      "table": "invoice",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "billing",
+      "table": "invoice_line",
+      "policy": "tenant_isolation"
     }
   ]
 }
