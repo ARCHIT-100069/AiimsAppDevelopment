@@ -127,6 +127,36 @@ describe("Stage 1 permission matrix (separation of duties, SDR-0002)", () => {
     ).toBe(false);
   });
 
+  it("EMR: doctor documents/signs/orders; nurse documents only; sign is doctor-only (D-5.6 / Constitution)", () => {
+    // Doctor: the full clinical heart.
+    for (const perm of [
+      "encounter:document",
+      "encounter:sign",
+      "order:place",
+      "result:file",
+    ] as const) {
+      expect(decide({ principal: { roles: ["doctor"] }, permission: perm }).allowed).toBe(true);
+    }
+    // Nurse may document (vitals) but NEVER sign, order, or file results.
+    expect(
+      decide({ principal: { roles: ["nurse"] }, permission: "encounter:document" }).allowed,
+    ).toBe(true);
+    for (const perm of ["encounter:sign", "order:place", "result:file"] as const) {
+      expect(decide({ principal: { roles: ["nurse"] }, permission: perm }).allowed).toBe(false);
+      // Constitution: NOBODY but a doctor signs — not admin, not front_desk.
+      expect(decide({ principal: { roles: ["admin"] }, permission: perm }).allowed).toBe(false);
+      expect(decide({ principal: { roles: ["front_desk"] }, permission: perm }).allowed).toBe(
+        false,
+      );
+    }
+    // Results are readable across the clinical + reception roles.
+    for (const role of ["admin", "doctor", "nurse", "front_desk"]) {
+      expect(decide({ principal: { roles: [role] }, permission: "result:read" }).allowed).toBe(
+        true,
+      );
+    }
+  });
+
   it("no tenant role can manage the tenant registry", () => {
     for (const role of ["admin", "doctor", "nurse", "front_desk"]) {
       expect(

@@ -8,6 +8,7 @@ export default defineConfig({
       "test/patient.spec.ts",
       "test/practitioner.spec.ts",
       "test/scheduling.spec.ts",
+      "test/emr.spec.ts",
     ],
     testTimeout: 120_000,
     hookTimeout: 180_000,

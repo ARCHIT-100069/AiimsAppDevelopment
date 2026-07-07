@@ -398,6 +398,38 @@ describe("cross-tenant isolation gate (TDR-0006) — runs as aiims_app under FOR
     }
   });
 
+  it("EMR/ORDERS: A cannot read B's clinical records and cannot forge B's tenant_id", async () => {
+    // RLS scoping: A sees none of B's EMR rows across clinical + orders schemas.
+    for (const table of [
+      "clinical.clinical_note",
+      "clinical.observation",
+      "clinical.condition",
+      "orders.service_request",
+      "orders.diagnostic_report",
+    ]) {
+      expect(
+        await underA(`SELECT id FROM ${table} WHERE tenant_id = $1`, [SEED.tenantB]),
+      ).toHaveLength(0);
+    }
+    // WITH CHECK: forging B's tenant_id on a clinical note under A is rejected.
+    const client = await appPool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT set_config('app.tenant_id', $1, true)", [SEED.tenantA]);
+      await expect(
+        client.query(
+          `INSERT INTO clinical.clinical_note
+             (id, tenant_id, encounter_id, note_id, version, note_type, body, author_id)
+           VALUES ($1, $2, $3, $4, 1, 'progress', 'forged', $5)`,
+          [newId(), SEED.tenantB /* forged */, newId(), newId(), newId()],
+        ),
+      ).rejects.toThrow(/row-level security/);
+      await client.query("ROLLBACK");
+    } finally {
+      client.release();
+    }
+  });
+
   it("policy manifest is clean on a freshly migrated database (DDR-0011 gate)", async () => {
     expect(await checkRlsPolicies(env.migratorUrl)).toEqual([]);
   });
