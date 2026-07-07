@@ -14,6 +14,15 @@ export interface AbdmGateway {
   verifyAbha(abhaAddress: string): Promise<{ verified: boolean; reference: string }>;
   /** Mock M1: create an ABHA for a new patient (real flow is Stage 8). */
   createAbha(): Promise<{ abhaNumber: string; abhaAddress: string; reference: string }>;
+  /**
+   * Mock M2/M3: link a care context to a patient after consent (Stage 6 share).
+   * Real HIP/HIU + consent flow is Stage 8 behind this same seam.
+   */
+  linkCareContext(input: {
+    patientRef: string;
+    encounterRef: string;
+    consentArtifactRef: string;
+  }): Promise<{ careContextRef: string }>;
 }
 
 /** ADR-0004 — regime-agnostic consent authority. */

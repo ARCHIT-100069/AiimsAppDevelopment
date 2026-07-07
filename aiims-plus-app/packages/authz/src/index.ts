@@ -43,6 +43,10 @@ export const PERMISSIONS = [
   "order:place", // place a lab/imaging order (doctor)
   "result:file", // file a diagnostic report against an order
   "result:read",
+  // Stage 6 — Billing (reception/cashier invoices + settles; consent-gated share)
+  "billing:manage", // generate invoice, take (mock) payment
+  "billing:read",
+  "encounter:share", // mock ABDM share-on-consent (closes the golden path)
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -69,6 +73,7 @@ const ROLE_PERMISSIONS: Record<RoleCode | typeof PLATFORM_ADMIN_ROLE, readonly P
     "appointment:read",
     "encounter:read",
     "result:read",
+    "billing:read",
   ],
   doctor: [
     "org:read",
@@ -87,6 +92,9 @@ const ROLE_PERMISSIONS: Record<RoleCode | typeof PLATFORM_ADMIN_ROLE, readonly P
     "order:place",
     "result:file",
     "result:read",
+    "billing:read",
+    // A doctor may share the encounter on consent (care-context linking).
+    "encounter:share",
   ],
   nurse: [
     "org:read",
@@ -114,6 +122,10 @@ const ROLE_PERMISSIONS: Record<RoleCode | typeof PLATFORM_ADMIN_ROLE, readonly P
     "schedule:read",
     "encounter:read",
     "result:read",
+    // Reception is also the cashier: invoice + settle + consent-share.
+    "billing:manage",
+    "billing:read",
+    "encounter:share",
   ],
 };
 

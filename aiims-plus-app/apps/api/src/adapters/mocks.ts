@@ -31,6 +31,15 @@ export class MockAbdmGateway implements AbdmGateway {
       reference: `mock-abdm-create-${Date.now()}`,
     };
   }
+
+  async linkCareContext(input: {
+    patientRef: string;
+    encounterRef: string;
+    consentArtifactRef: string;
+  }): Promise<{ careContextRef: string }> {
+    // Mock: deterministic care-context reference; no external call.
+    return { careContextRef: `mock-carecontext-${input.encounterRef.split("/").pop()}` };
+  }
 }
 
 @Injectable()
