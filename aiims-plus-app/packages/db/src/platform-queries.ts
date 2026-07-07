@@ -31,6 +31,11 @@ export function isForeignKeyViolation(err: unknown): boolean {
   return pgCode(err) === "23503";
 }
 
+/** Postgres 23P01 — exclusion violation (slot overlap / double-booking) ⇒ 409 upstream. */
+export function isExclusionViolation(err: unknown): boolean {
+  return pgCode(err) === "23P01";
+}
+
 /* ------------------------------ keyset paging ---------------------------- */
 
 export interface Keyset {

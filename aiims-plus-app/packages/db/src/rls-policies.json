@@ -65,6 +65,26 @@
       "schema": "clinical",
       "table": "practitioner",
       "policy": "tenant_isolation"
+    },
+    {
+      "schema": "clinical",
+      "table": "appointment",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "clinical",
+      "table": "encounter",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "clinical",
+      "table": "practitioner_availability",
+      "policy": "tenant_isolation"
+    },
+    {
+      "schema": "clinical",
+      "table": "opd_queue_counter",
+      "policy": "tenant_isolation"
     }
   ]
 }
