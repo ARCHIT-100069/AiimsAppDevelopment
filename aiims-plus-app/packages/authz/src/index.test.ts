@@ -189,6 +189,13 @@ describe("Stage 1 permission matrix (separation of duties, SDR-0002)", () => {
     );
   });
 
+  it("AI is operational-only for clinicians: doctor uses; others cannot (Stage 7)", () => {
+    expect(decide({ principal: { roles: ["doctor"] }, permission: "ai:use" }).allowed).toBe(true);
+    for (const role of ["admin", "nurse", "front_desk", "platform_admin"]) {
+      expect(decide({ principal: { roles: [role] }, permission: "ai:use" }).allowed).toBe(false);
+    }
+  });
+
   it("no tenant role can manage the tenant registry", () => {
     for (const role of ["admin", "doctor", "nurse", "front_desk"]) {
       expect(

@@ -102,6 +102,24 @@ jobs:
       # concurrency, idempotency, MRN uniqueness. Merge-blocking.
       - run: pnpm --filter @aiims/testing test:integration
 
+  ai-evals:
+    name: "AI safety evals (AIDR-0012 / TDR-0007) — BLOCKING"
+    runs-on: ubuntu-latest
+    needs: static
+    defaults:
+      run:
+        working-directory: aiims-plus-app/apps/ai
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Release-blocking Constitution evals for the AI plane: PHI-leak,
+      # prompt-injection, clinical-decision refusal, failure-safe. Run on the
+      # DEFAULT mock provider — no credentials required (AIDR-0014).
+      - run: pip install -e ".[dev]"
+      - run: pytest -q
+
   security-scans:
     name: security scans (SDR-0012)
     runs-on: ubuntu-latest
