@@ -77,9 +77,11 @@ describe("adapter ports (BDR-0008, ADR-0010)", () => {
     expect(coding.suggestions.length).toBeGreaterThan(0); // fever/cough → ICD-10
   });
 
-  it('selecting "real" fails fast in Stage 0 (Production work behind the seam)', async () => {
+  it('selecting "real" without credentials fails fast at boot (Stage 8 real adapters)', async () => {
+    // Real adapters are BUILT but disabled: selecting "real" with no credentials
+    // must throw at construction, never silently fall back to mock.
     await expect(
       Test.createTestingModule({ imports: [configModule("real"), AdaptersModule] }).compile(),
-    ).rejects.toThrow(/Production work/);
+    ).rejects.toThrow(/requires|pending/i);
   });
 });

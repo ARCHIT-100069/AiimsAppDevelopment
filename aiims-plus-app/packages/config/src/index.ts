@@ -45,6 +45,23 @@ export const envSchema = z.object({
   ADAPTER_STORAGE: adapterModeSchema,
 
   /**
+   * Stage 8 real-integration credentials — ALL OPTIONAL. Each real adapter is
+   * disabled until its ADAPTER_* is "real" AND its credentials are present; a
+   * real adapter selected without credentials fails fast at boot. Nothing here
+   * is fabricated — supply values to activate. (ADR-0006/0004, §18.)
+   */
+  ABDM_BASE_URL: z.url().optional(),
+  ABDM_CLIENT_ID: z.string().optional(),
+  ABDM_CLIENT_SECRET: z.string().optional(),
+  PAYMENT_BASE_URL: z.url().optional(),
+  PAYMENT_API_KEY: z.string().optional(),
+  NOTIFICATION_BASE_URL: z.url().optional(),
+  NOTIFICATION_API_KEY: z.string().optional(),
+  /** Real object storage (AWS S3 / MinIO) needs static credentials for SigV4. */
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
+
+  /**
    * Field-encryption key provider (DDR-0006/SDR-0005 via the KeyProvider
    * seam): "local" (dev-only) now; "aws-kms" activates at AWS bootstrap.
    */
