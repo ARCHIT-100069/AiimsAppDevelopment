@@ -12,6 +12,16 @@ export { seed, SEED } from "./seed";
 export { checkRlsPolicies } from "./check-rls-policies";
 export * from "./audit-hash";
 export { verifyAuditChain, verifyAuditIntegrity, type AuditChainRow } from "./verify-audit";
+export {
+  loadRetentionPolicy,
+  retentionUntilFor,
+  applyRetentionSchedule,
+  cryptoShredExpiredPatients,
+  runRetentionSweep,
+  type RetentionPolicy,
+  type RetentionRule,
+  type ShredResult,
+} from "./retention";
 export * from "./queries";
 export * from "./platform-queries";
 export * from "./patient-queries";
