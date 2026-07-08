@@ -11,6 +11,7 @@
  */
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import type { Pool } from "pg";
+import { computeRowHash, GENESIS_HASH } from "./audit-hash";
 import * as s from "./schema";
 import type { TenantDb } from "./tenant-context";
 
@@ -142,9 +143,11 @@ export async function appendAuditRow(db: TenantDb, input: AuditAppendInput): Pro
     .where(eq(s.auditLog.tenantId, input.tenantId))
     .orderBy(desc(s.auditLog.occurredAt), desc(s.auditLog.id))
     .limit(1);
-  const prevHash = prev[0]?.rowHash ?? Buffer.alloc(32);
+  const prevHash = prev[0]?.rowHash ?? GENESIS_HASH;
 
-  const canonical = JSON.stringify({
+  // Stable, key-sorted canonicalisation so the hash is reproducible by the
+  // integrity verifier regardless of jsonb key ordering (ODR-0011).
+  const rowHash = computeRowHash(prevHash, {
     id: input.id,
     tenantId: input.tenantId,
     actorId: input.actorId,
@@ -155,8 +158,6 @@ export async function appendAuditRow(db: TenantDb, input: AuditAppendInput): Pro
     consentRef: input.consentRef ?? null,
     context: input.context,
   });
-  const { createHash } = await import("node:crypto");
-  const rowHash = createHash("sha256").update(prevHash).update(canonical).digest();
 
   await db.insert(s.auditLog).values({
     id: input.id,

@@ -10,6 +10,8 @@ export { withTenantContext, type TenantContext, type TenantDb } from "./tenant-c
 export { migrate } from "./migrate";
 export { seed, SEED } from "./seed";
 export { checkRlsPolicies } from "./check-rls-policies";
+export * from "./audit-hash";
+export { verifyAuditChain, verifyAuditIntegrity, type AuditChainRow } from "./verify-audit";
 export * from "./queries";
 export * from "./platform-queries";
 export * from "./patient-queries";
