@@ -97,6 +97,7 @@ import {
   shareEncounterRequestSchema,
   shareEncounterResponseSchema,
 } from "./invoices";
+import { codingSuggestRequestSchema, codingSuggestResponseSchema } from "./ai";
 import { fhirPatientSchema } from "./fhir";
 import { fhirPractitionerSchema } from "./fhir-practitioner";
 import { fhirAppointmentSchema } from "./fhir-appointment";
@@ -279,9 +280,9 @@ export const openApiDocument = {
   openapi: "3.1.0",
   info: {
     title: "AIIMS+ API",
-    version: "0.6.0",
+    version: "0.7.0",
     description:
-      "AIIMS+ API through Stage 6 (Core Platform + Patient + Practitioner + Appointments/OPD + EMR + Billing). Versioned URI (/v1), Problem-Details errors (APDR-0002/0003); every write is tenant-scoped, audited, and duplicate-safe. Double-booking is prevented by a DB slot-exclusion constraint. Clinical documentation is signed (human-only) and amended by versioning (DDR-0013); large files use presigned object URLs (APDR-0007). FHIR R4 read surfaces are dark by default behind the fhir.read flag.",
+      "AIIMS+ API through Stage 7 (Core Platform + Patient + Practitioner + Appointments/OPD + EMR + Billing + operational AI). Versioned URI (/v1), Problem-Details errors (APDR-0002/0003); every write is tenant-scoped, audited, and duplicate-safe. Double-booking is prevented by a DB slot-exclusion constraint. Clinical documentation is signed (human-only) and amended by versioning (DDR-0013); large files use presigned object URLs (APDR-0007). FHIR R4 read surfaces are dark by default behind the fhir.read flag.",
   },
   paths: {
     "/healthz": {
@@ -856,6 +857,29 @@ export const openApiDocument = {
       },
     },
     "/fhir/R4/Invoice/{id}": fhirRead("Invoice", fhirInvoiceSchema),
+
+    // ---- Stage 7: AI (operational-only, HITL; dark behind ai.coding_assist) ----
+    "/v1/ai/coding-suggestion": {
+      post: {
+        summary:
+          "AI ICD-10 coding suggestion (operational-only, HITL — advisory, labelled, never auto-applied; PHI-redacted; dark behind the ai.coding_assist flag → 404 when off)",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(codingSuggestRequestSchema) } },
+        },
+        responses: {
+          "200": jsonOk(
+            "Labelled coding suggestions (verify before use)",
+            codingSuggestResponseSchema,
+          ),
+          "404": problemResponse("AI capability disabled for this tenant"),
+          "502": problemResponse(
+            "AI plane/provider unavailable — care is never blocked (AIDR-0014)",
+          ),
+          ...standardErrors,
+        },
+      },
+    },
 
     "/fhir/R4/Encounter/{id}": fhirRead("Encounter", fhirEncounterSchema),
     "/fhir/R4/Encounter/{id}/$everything": {

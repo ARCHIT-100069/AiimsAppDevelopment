@@ -67,6 +67,14 @@ export const envSchema = z.object({
   S3_REGION: z.string().default("ap-south-1"),
   S3_BUCKET: z.string().default("aiims-clinical"),
 
+  /**
+   * AI plane (Stage 7, AIDR-0002/0003). The Node core reaches AI ONLY through
+   * the AiGateway port. `ADAPTER_AI=real` calls the isolated plane at
+   * AI_PLANE_URL; default `mock` needs no plane. The plane itself picks its
+   * model provider (mock|http) from its own env — no provider = mock.
+   */
+  AI_PLANE_URL: z.url().optional(),
+
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 });
 

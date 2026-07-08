@@ -15,6 +15,7 @@ export * from "./conditions";
 export * from "./orders";
 export * from "./attachments";
 export * from "./invoices";
+export * from "./ai";
 export * from "./fhir";
 export * from "./fhir-practitioner";
 export * from "./fhir-appointment";
