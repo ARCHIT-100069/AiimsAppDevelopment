@@ -14,6 +14,7 @@ import {
   MockPaymentGateway,
   MockStorageGateway,
 } from "./mocks";
+import { HttpAiGateway } from "./real/http-ai.gateway";
 import {
   ABDM_GATEWAY,
   AI_GATEWAY,
@@ -66,9 +67,13 @@ function select<T>(mode: "mock" | "real", name: string, mock: T): T {
         select(c.ADAPTER_NOTIFICATION, "NotificationSender", mock),
     },
     {
+      // AI is the one seam with a real, buildable implementation now: the HTTP
+      // client to the isolated plane. It is constructed only when selected
+      // (ADAPTER_AI=real + AI_PLANE_URL); default stays the in-process mock.
       provide: AI_GATEWAY,
       inject: [CONFIG, MockAiGateway],
-      useFactory: (c: AppConfig, mock: MockAiGateway) => select(c.ADAPTER_AI, "AiGateway", mock),
+      useFactory: (c: AppConfig, mock: MockAiGateway) =>
+        c.ADAPTER_AI === "real" ? new HttpAiGateway(c) : mock,
     },
     {
       provide: STORAGE_GATEWAY,

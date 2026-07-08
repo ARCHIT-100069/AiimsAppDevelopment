@@ -54,16 +54,21 @@ export interface NotificationSender {
   }): Promise<{ accepted: boolean; messageRef: string }>;
 }
 
-/** AIDR-0002 — the single AI ingress/egress. Operational-only (Constitution). */
+/**
+ * AIDR-0002 — the single AI ingress/egress. Operational-only (Constitution):
+ * suggestions are advisory, labelled, and never auto-applied (HITL). The core
+ * reaches the isolated AI plane ONLY through this seam. Two implementations:
+ * an in-process deterministic mock (default) and an HTTP client to the plane
+ * (activated by config). PHI is redacted before this is called (AIDR-0008).
+ */
 export interface AiGateway {
-  /**
-   * Request an operational suggestion. Stage 0 stub: the mock refuses
-   * clinical categories by construction, mirroring the gateway contract.
-   */
-  suggest(input: {
-    capability: "coding_assist" | "documentation_draft" | "search";
-    contextRef: string;
-  }): Promise<{ suggestionRef: string; label: "AI-generated — verify" }>;
+  /** Suggest ICD-10 codes for (already-redacted) clinical text. */
+  codingAssist(input: { text: string; tenantRef: string }): Promise<{
+    suggestions: { code: { system: string; code: string; display: string }; confidence: number }[];
+    label: "AI-generated — verify";
+    redactionApplied: boolean;
+    provider: string;
+  }>;
 }
 
 /**

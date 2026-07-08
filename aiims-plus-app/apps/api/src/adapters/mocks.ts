@@ -75,15 +75,58 @@ export class MockNotificationSender implements NotificationSender {
   }
 }
 
+/** Deterministic keyword → ICD-10 mock (the default when no AI plane/model). */
+const MOCK_ICD10: { keys: string[]; code: { system: string; code: string; display: string } }[] = [
+  {
+    keys: ["fever", "febrile", "pyrexia"],
+    code: { system: "icd-10", code: "R50.9", display: "Fever, unspecified" },
+  },
+  {
+    keys: ["cough", "uri", "cold", "respiratory"],
+    code: {
+      system: "icd-10",
+      code: "J06.9",
+      display: "Acute upper respiratory infection, unspecified",
+    },
+  },
+  {
+    keys: ["hypertension", "bp"],
+    code: { system: "icd-10", code: "I10", display: "Essential (primary) hypertension" },
+  },
+  {
+    keys: ["diabetes", "diabetic"],
+    code: {
+      system: "icd-10",
+      code: "E11.9",
+      display: "Type 2 diabetes mellitus without complications",
+    },
+  },
+  {
+    keys: ["back pain", "lumbago"],
+    code: { system: "icd-10", code: "M54.5", display: "Low back pain" },
+  },
+];
+
 @Injectable()
 export class MockAiGateway implements AiGateway {
-  async suggest(input: {
-    capability: "coding_assist" | "documentation_draft" | "search";
-    contextRef: string;
-  }): Promise<{ suggestionRef: string; label: "AI-generated — verify" }> {
-    // Constitution enforced at the seam: only operational capabilities exist
-    // on the interface; outputs are labeled and human-reviewed (AIDR-0010).
-    return { suggestionRef: `mock-ai-${input.capability}`, label: "AI-generated — verify" };
+  async codingAssist(input: { text: string; tenantRef: string }): Promise<{
+    suggestions: { code: { system: string; code: string; display: string }; confidence: number }[];
+    label: "AI-generated — verify";
+    redactionApplied: boolean;
+    provider: string;
+  }> {
+    // Constitution enforced at the seam: operational-only, labelled, HITL.
+    const text = input.text.toLowerCase();
+    const suggestions = MOCK_ICD10.filter((m) => m.keys.some((k) => text.includes(k))).map((m) => ({
+      code: m.code,
+      confidence: 0.6,
+    }));
+    return {
+      suggestions,
+      label: "AI-generated — verify",
+      redactionApplied: false,
+      provider: "mock",
+    };
   }
 }
 

@@ -71,9 +71,10 @@ describe("adapter ports (BDR-0008, ADR-0010)", () => {
     expect(
       (await notify.send({ channel: "sms", templateRef: "t1", recipientRef: "u1" })).accepted,
     ).toBe(true);
-    expect((await ai.suggest({ capability: "search", contextRef: "c1" })).label).toBe(
-      "AI-generated — verify",
-    );
+    const coding = await ai.codingAssist({ text: "fever and cough", tenantRef: "t1" });
+    expect(coding.label).toBe("AI-generated — verify");
+    expect(coding.provider).toBe("mock");
+    expect(coding.suggestions.length).toBeGreaterThan(0); // fever/cough → ICD-10
   });
 
   it('selecting "real" fails fast in Stage 0 (Production work behind the seam)', async () => {

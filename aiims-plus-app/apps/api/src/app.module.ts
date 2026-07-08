@@ -16,6 +16,7 @@ import { ReferenceModule } from "./modules/reference/reference.module";
 import { SchedulingModule } from "./modules/scheduling/scheduling.module";
 import { EmrModule } from "./modules/emr/emr.module";
 import { BillingModule } from "./modules/billing/billing.module";
+import { AiModule } from "./modules/ai/ai.module";
 import { TenancyModule } from "./modules/tenancy/tenancy.module";
 import { AuthGuard } from "./platform/auth.guard";
 import { AuthzGuard } from "./platform/authz.guard";
@@ -33,6 +34,7 @@ import { PlatformModule } from "./platform/platform.module";
     SchedulingModule,
     EmrModule,
     BillingModule,
+    AiModule,
   ],
   controllers: [HealthController],
   providers: [

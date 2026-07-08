@@ -47,6 +47,8 @@ export const PERMISSIONS = [
   "billing:manage", // generate invoice, take (mock) payment
   "billing:read",
   "encounter:share", // mock ABDM share-on-consent (closes the golden path)
+  // Stage 7 — AI (operational-only, HITL). Clinicians may request suggestions.
+  "ai:use",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -95,6 +97,8 @@ const ROLE_PERMISSIONS: Record<RoleCode | typeof PLATFORM_ADMIN_ROLE, readonly P
     "billing:read",
     // A doctor may share the encounter on consent (care-context linking).
     "encounter:share",
+    // Operational AI assistance (advisory, HITL — never auto-applied).
+    "ai:use",
   ],
   nurse: [
     "org:read",
