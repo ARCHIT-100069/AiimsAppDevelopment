@@ -1,20 +1,14 @@
-"""AIIMS+ AI plane — Stage 0 stub (AIDR-0003).
+"""AIIMS+ AI plane entrypoint (Stage 7, AIDR-0003).
 
 Operational-only by Constitution (AI-ARCHITECTURE §3): no diagnosis, no
 treatment recommendations, no autonomous clinical decisions, no write path to
-clinical records. The core reaches this plane ONLY through the AiGateway port
-(mocked in Stage 0); real capabilities activate in Stage 7 behind feature
-flags, PHI redaction (AIDR-0008), and release-blocking safety evals
-(AIDR-0012/TDR-0007).
+clinical records. The core reaches this plane ONLY through the AiGateway port.
+Activates behind feature flags, PHI redaction (AIDR-0008), and release-blocking
+safety evals (AIDR-0012/TDR-0007). No PHI is ever logged here (SDR-0010).
 
-Typed per Master Plan §29 (mypy); no PHI is ever logged here (SDR-0010).
+Run: uvicorn main:app --port 8000
 """
 
-from fastapi import FastAPI
+from aiims_ai.app import app
 
-app = FastAPI(title="aiims-ai", version="0.0.0")
-
-
-@app.get("/healthz")
-def healthz() -> dict[str, str]:
-    return {"status": "ok", "service": "aiims-ai", "version": "0.0.0"}
+__all__ = ["app"]
