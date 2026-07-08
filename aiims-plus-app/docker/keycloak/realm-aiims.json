@@ -4,10 +4,30 @@
   "registrationAllowed": false,
   "accessTokenLifespan": 300,
   "ssoSessionIdleTimeout": 1800,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "passwordPolicy": "length(12) and upperCase(1) and lowerCase(1) and digits(1) and specialChars(1) and notUsername and passwordHistory(3) and forceExpiredPasswordChange(90)",
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyDigits": 6,
+  "otpPolicyPeriod": 30,
+  "otpPolicyInitialCounter": 0,
+  "otpPolicyLookAheadWindow": 1,
+  "otpSupportedApplications": [
+    "totpAppFreeOTPName",
+    "totpAppGoogleName",
+    "totpAppMicrosoftAuthenticatorName"
+  ],
   "clients": [
     {
       "clientId": "aiims-cli",
-      "name": "AIIMS+ dev CLI (password grant for LOCAL DEV ONLY \u2014 SDR-0001 mandates PKCE for real clients)",
+      "name": "AIIMS+ dev CLI (password grant for LOCAL DEV ONLY — SDR-0001 mandates PKCE for real clients)",
       "enabled": true,
       "publicClient": true,
       "directAccessGrantsEnabled": true,
@@ -31,7 +51,7 @@
     },
     {
       "clientId": "aiims-web",
-      "name": "AIIMS+ web BFF (Authorization Code + PKCE \u2014 SDR-0001)",
+      "name": "AIIMS+ web BFF (Authorization Code + PKCE — SDR-0001)",
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": true,
@@ -70,7 +90,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "doctor",
+          "value": "DevDoctor#2026",
           "temporary": false
         }
       ],
@@ -89,7 +109,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "admin",
+          "value": "DevAdmin#2026",
           "temporary": false
         }
       ],
@@ -108,7 +128,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "frontdesk",
+          "value": "DevFrontdesk#2026",
           "temporary": false
         }
       ],
@@ -127,7 +147,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "doctor",
+          "value": "DevDoctorB#2026",
           "temporary": false
         }
       ],
@@ -146,7 +166,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "platform",
+          "value": "DevPlatform#2026",
           "temporary": false
         }
       ],
@@ -163,7 +183,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "admin",
+          "value": "DevAdminC#2026",
           "temporary": false
         }
       ],
@@ -176,8 +196,100 @@
     "realm": [
       {
         "name": "platform_admin",
-        "description": "AIIMS+ platform operator \u2014 tenant registry operations only (Stage 1)"
+        "description": "AIIMS+ platform operator — tenant registry operations only (Stage 1)"
       }
     ]
-  }
+  },
+  "requiredActions": [
+    {
+      "alias": "CONFIGURE_TOTP",
+      "name": "Configure OTP",
+      "providerId": "CONFIGURE_TOTP",
+      "enabled": true,
+      "defaultAction": true,
+      "priority": 10,
+      "config": {}
+    },
+    {
+      "alias": "TERMS_AND_CONDITIONS",
+      "name": "Terms and Conditions",
+      "providerId": "TERMS_AND_CONDITIONS",
+      "enabled": false,
+      "defaultAction": false,
+      "priority": 20,
+      "config": {}
+    },
+    {
+      "alias": "UPDATE_PASSWORD",
+      "name": "Update Password",
+      "providerId": "UPDATE_PASSWORD",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 30,
+      "config": {}
+    },
+    {
+      "alias": "UPDATE_PROFILE",
+      "name": "Update Profile",
+      "providerId": "UPDATE_PROFILE",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 40,
+      "config": {}
+    },
+    {
+      "alias": "VERIFY_EMAIL",
+      "name": "Verify Email",
+      "providerId": "VERIFY_EMAIL",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 50,
+      "config": {}
+    },
+    {
+      "alias": "delete_account",
+      "name": "Delete Account",
+      "providerId": "delete_account",
+      "enabled": false,
+      "defaultAction": false,
+      "priority": 60,
+      "config": {}
+    },
+    {
+      "alias": "webauthn-register",
+      "name": "Webauthn Register",
+      "providerId": "webauthn-register",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 70,
+      "config": {}
+    },
+    {
+      "alias": "webauthn-register-passwordless",
+      "name": "Webauthn Register Passwordless",
+      "providerId": "webauthn-register-passwordless",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 80,
+      "config": {}
+    },
+    {
+      "alias": "VERIFY_PROFILE",
+      "name": "Verify Profile",
+      "providerId": "VERIFY_PROFILE",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 90,
+      "config": {}
+    },
+    {
+      "alias": "update_user_locale",
+      "name": "Update User Locale",
+      "providerId": "update_user_locale",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 1000,
+      "config": {}
+    }
+  ]
 }

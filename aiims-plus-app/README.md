@@ -50,7 +50,7 @@ Demo the Stage 0 exit criteria:
 ```bash
 # Login via Keycloak (synthetic user doctor.a, tenant A)
 TOKEN=$(curl -s -X POST http://localhost:8080/realms/aiims/protocol/openid-connect/token \
-  -d grant_type=password -d client_id=aiims-cli -d username=doctor.a -d password=doctor \
+  -d grant_type=password -d client_id=aiims-cli -d username=doctor.a -d password='DevDoctor#2026' \
   | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
 
 # Tenant-scoped, audited read of the directory (writes need the admin role)
@@ -65,7 +65,7 @@ Stage 1 demo (platform operator → tenant bootstrap → directory):
 
 ```bash
 PA=$(curl -s -X POST http://localhost:8080/realms/aiims/protocol/openid-connect/token \
-  -d grant_type=password -d client_id=aiims-cli -d username=platform.admin -d password=platform \
+  -d grant_type=password -d client_id=aiims-cli -d username=platform.admin -d password='DevPlatform#2026' \
   | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
 curl -s -X POST localhost:3000/v1/tenants -H "Authorization: Bearer $PA" \
   -H 'content-type: application/json' -d '{"slug":"my-clinic","name":"My Clinic"}'

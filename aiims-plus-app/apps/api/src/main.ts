@@ -5,6 +5,7 @@ import { loadConfig } from "@aiims/config";
 import { AppModule } from "./app.module";
 import { createLogger } from "./platform/logger";
 import { requestContextMiddleware } from "./platform/request-context";
+import { securityHeadersMiddleware } from "./platform/security-headers";
 
 async function bootstrap(): Promise<void> {
   // Fail fast on invalid configuration BEFORE Nest builds the graph (BDR-0011).
@@ -12,6 +13,7 @@ async function bootstrap(): Promise<void> {
   const logger = createLogger(config.LOG_LEVEL);
 
   const app = await NestFactory.create(AppModule, { logger: false });
+  app.use(securityHeadersMiddleware); // baseline hardening headers on every response (Stage 9)
   app.use(requestContextMiddleware); // correlation id on every request (APDR-0003)
   app.enableShutdownHooks();
 
