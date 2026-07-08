@@ -28,14 +28,14 @@ Legend: ✅ done & verified · 🟡 built, dormant until configured · ⏳ pendi
 
 ## 2. AuthN / AuthZ
 
-| Item                                                                  | State | Evidence / note                                                                                                  |
-| --------------------------------------------------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------- |
-| OIDC via Keycloak; JWT verified against JWKS; tenant claim → RLS      | ✅    | `auth.guard.ts`; SDR-0003                                                                                        |
-| RBAC permission model (least privilege)                               | ✅    | `@aiims/authz` (14 tests)                                                                                        |
-| **MFA (TOTP)** policy + forced enrolment for new users                | ✅    | realm `otpPolicy` + `CONFIGURE_TOTP` defaultAction; verified on Keycloak 26.4                                    |
-| Brute-force protection + strong password policy                       | ✅    | realm `bruteForceProtected` + `passwordPolicy`; verified via admin API                                           |
-| Auth-Code + **PKCE** for the web client; BFF holds tokens server-side | ✅    | `aiims-web` client; SDR-0001                                                                                     |
-| Production IdP: real users, remove synthetic realm/dev CLI client     | ⏳    | dev realm ships synthetic users + a direct-grant CLI client (local only); **prod provisions its own IdP tenant** |
+| Item                                                                  | State | Evidence / note                                                                                                                                            |
+| --------------------------------------------------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OIDC via Keycloak; JWT verified against JWKS; tenant claim → RLS      | ✅    | `auth.guard.ts`; SDR-0003                                                                                                                                  |
+| RBAC permission model (least privilege)                               | ✅    | `@aiims/authz` (14 tests)                                                                                                                                  |
+| **MFA (TOTP)** policy + forced enrolment for new users                | 🟡    | built in the **hardened** realm (`docker/keycloak-hardened/`), verified on Keycloak 26.4; demo default is the plain realm — enable hardened for production |
+| Brute-force protection + strong password policy                       | 🟡    | hardened realm `bruteForceProtected` + `passwordPolicy`; verified via admin API                                                                            |
+| Auth-Code + **PKCE** for the web client; BFF holds tokens server-side | ✅    | `aiims-web` client; SDR-0001                                                                                                                               |
+| Production IdP: real users, remove synthetic realm/dev CLI client     | ⏳    | dev realm ships synthetic users + a direct-grant CLI client (local only); **prod provisions its own IdP tenant**                                           |
 
 ## 3. Transport & application hardening
 

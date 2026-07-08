@@ -1,59 +1,65 @@
-# Keycloak realm — `realm-aiims.json` (SDR-0001)
+# Keycloak realms (SDR-0001)
 
-Imported at boot via `start-dev --import-realm`. Verified to import cleanly on
-Keycloak 26.4.
+There are **two** realm definitions. `docker-compose` mounts this directory
+(`docker/keycloak/`) as Keycloak's import folder, so **only the plain demo realm
+here is imported by default**. The hardened production realm lives outside the
+import folder so it is never auto-loaded.
 
-## Authentication hardening (Stage 9)
+| File                                        | Realm                            | Use                                                                                          |
+| ------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------- |
+| `docker/keycloak/realm-aiims.json`          | plain — **imported by default**  | Demos / local dev. Simple passwords, **no MFA**, no password policy.                         |
+| `docker/keycloak-hardened/realm-aiims.json` | hardened — **not** auto-imported | Production. TOTP MFA (forced for new users), brute-force protection, strong password policy. |
 
-- **MFA / TOTP.** `otpPolicy*` defines standard TOTP (SHA-1, 6 digits, 30 s).
-  `CONFIGURE_TOTP` is a realm **default required action** (`defaultAction: true`),
-  so every **new** user must enrol an authenticator on first interactive
-  (browser / Authorization-Code + PKCE) login. Enrolment then makes the default
-  browser flow's _Conditional OTP_ step demand a code on every subsequent login.
-- **Brute-force protection.** `bruteForceProtected` with a 5-failure factor and
-  escalating lockout wait.
-- **Password policy.** length ≥ 12, upper + lower + digit + special, not equal to
-  the username, 3-password history, 90-day expiry. Enforced on every password
-  change; **also validated against imported credentials** — hence the dev seed
-  passwords below are policy-compliant.
+Verified: both import cleanly on Keycloak 26.4; the plain realm boots with no MFA
+and `doctor.a` / `doctor` logs in.
 
-## Why the pre-seeded dev users don't carry `CONFIGURE_TOTP`
+## Demo credentials (plain realm — LOCAL DEV ONLY)
 
-Keycloak's **direct-grant** flow (the `aiims-cli` public client, used for LOCAL
-DEV token curls and scripted checks) rejects any account with a **pending
-required action** — `invalid_grant: "Account is not fully set up"`. Pinning
-`CONFIGURE_TOTP` on the seeded users would therefore break the documented dev
-login and token-based testing.
+| username         | password    | tenant           |
+| ---------------- | ----------- | ---------------- |
+| `doctor.a`       | `doctor`    | A                |
+| `admin.a`        | `admin`     | A                |
+| `frontdesk.a`    | `frontdesk` | A                |
+| `doctor.b`       | `doctor`    | B                |
+| `admin.c`        | `admin`     | C                |
+| `platform.admin` | `platform`  | (platform_admin) |
 
-The seeded users are left without pending actions so the dev CLI keeps working;
-MFA enrolment is instead forced for **new** users via the realm default action
-(above), which only runs in the **browser** flow — exactly the path real human
-operators use. The dev CLI direct-grant path is local-only and never exposed in
-production (SDR-0001 mandates PKCE for real clients).
+Synthetic throwaway accounts. No production secret lives here.
 
-### Enforcing MFA on the seeded / all existing accounts (production)
+## Switching to the hardened (MFA) realm for production
 
-If a deployment reuses these accounts and wants MFA on them too, add the action
-per user (one admin toggle, kept out of the dev realm):
+Point Keycloak's import at the hardened folder instead — one line in
+`docker-compose.yml`:
 
-```bash
-# add CONFIGURE_TOTP to an existing user; browser login will then force enrolment
-kcadm.sh update users/<id> -r aiims -s 'requiredActions=["CONFIGURE_TOTP"]'
+```yaml
+volumes:
+  - ./docker/keycloak-hardened:/opt/keycloak/data/import:ro
 ```
 
-Or set the browser flow's OTP execution to **REQUIRED**. Neither affects the
-direct-grant flow.
+Then recreate Keycloak so the realm re-imports:
 
-## Dev credentials (synthetic — LOCAL DEV ONLY)
+```bash
+docker compose down -v   # -v wipes the Keycloak DB so the realm re-imports
+docker compose up -d
+```
 
-| username         | password            | tenant           |
-| ---------------- | ------------------- | ---------------- |
-| `doctor.a`       | `DevDoctor#2026`    | A                |
-| `admin.a`        | `DevAdmin#2026`     | A                |
-| `frontdesk.a`    | `DevFrontdesk#2026` | A                |
-| `doctor.b`       | `DevDoctorB#2026`   | B                |
-| `admin.c`        | `DevAdminC#2026`    | C                |
-| `platform.admin` | `DevPlatform#2026`  | (platform_admin) |
+The hardened realm then applies:
 
-These are throwaway local-dev credentials for a synthetic realm. Real
-deployments provision their own IdP users; no production secret lives here.
+- **TOTP MFA** — `CONFIGURE_TOTP` is a realm **default required action**, so every
+  **new** user must enrol an authenticator on first interactive (browser /
+  Authorization-Code + PKCE) login; the Conditional-OTP step then demands a code
+  each login.
+- **Brute-force protection** (5-failure lockout) and a **strong password policy**
+  (len ≥ 12, upper/lower/digit/special, notUsername, history 3, 90-day expiry).
+  Keycloak validates imported credentials against the policy, so the hardened
+  realm ships policy-compliant passwords (e.g. `doctor.a` / `DevDoctor#2026`).
+
+### Note on the dev direct-grant client
+
+The hardened realm deliberately does **not** pin `CONFIGURE_TOTP` on the
+pre-seeded users: Keycloak's direct-grant flow (`aiims-cli`) rejects any account
+with a pending required action (`"Account is not fully set up"`), which would
+break scripted/dev logins. MFA is forced for **new** users via the default
+action (browser flow only). To force it on an existing account in production, add
+the action per user (`kcadm.sh update users/<id> -s 'requiredActions=["CONFIGURE_TOTP"]'`)
+or set the browser flow's OTP execution to REQUIRED.
