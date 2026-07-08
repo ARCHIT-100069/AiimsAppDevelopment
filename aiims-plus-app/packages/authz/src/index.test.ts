@@ -157,6 +157,38 @@ describe("Stage 1 permission matrix (separation of duties, SDR-0002)", () => {
     }
   });
 
+  it("billing: reception invoices + settles; all clinical read; share is doctor/reception (D-6.5)", () => {
+    // Reception (front_desk) is the cashier.
+    expect(
+      decide({ principal: { roles: ["front_desk"] }, permission: "billing:manage" }).allowed,
+    ).toBe(true);
+    // Clinicians and admin do NOT take payment.
+    for (const role of ["admin", "doctor", "nurse"]) {
+      expect(decide({ principal: { roles: [role] }, permission: "billing:manage" }).allowed).toBe(
+        false,
+      );
+    }
+    // Everyone in-tenant can read a bill.
+    for (const role of ["admin", "doctor", "nurse", "front_desk"]) {
+      expect(decide({ principal: { roles: [role] }, permission: "billing:read" }).allowed).toBe(
+        true,
+      );
+    }
+    // Consent-share (mock ABDM): doctor + reception; nurse/admin cannot.
+    expect(
+      decide({ principal: { roles: ["doctor"] }, permission: "encounter:share" }).allowed,
+    ).toBe(true);
+    expect(
+      decide({ principal: { roles: ["front_desk"] }, permission: "encounter:share" }).allowed,
+    ).toBe(true);
+    expect(decide({ principal: { roles: ["nurse"] }, permission: "encounter:share" }).allowed).toBe(
+      false,
+    );
+    expect(decide({ principal: { roles: ["admin"] }, permission: "encounter:share" }).allowed).toBe(
+      false,
+    );
+  });
+
   it("no tenant role can manage the tenant registry", () => {
     for (const role of ["admin", "doctor", "nurse", "front_desk"]) {
       expect(
