@@ -430,6 +430,30 @@ describe("cross-tenant isolation gate (TDR-0006) — runs as aiims_app under FOR
     }
   });
 
+  it("BILLING: A cannot read B's invoices and cannot forge B's tenant_id", async () => {
+    for (const table of ["billing.invoice", "billing.invoice_line"]) {
+      expect(
+        await underA(`SELECT id FROM ${table} WHERE tenant_id = $1`, [SEED.tenantB]),
+      ).toHaveLength(0);
+    }
+    const client = await appPool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SELECT set_config('app.tenant_id', $1, true)", [SEED.tenantA]);
+      await expect(
+        client.query(
+          `INSERT INTO billing.invoice
+             (id, tenant_id, invoice_number, encounter_id, patient_id, subtotal, total)
+           VALUES ($1, $2, 'INV-FORGED', $3, $4, 0, 0)`,
+          [newId(), SEED.tenantB /* forged */, newId(), newId()],
+        ),
+      ).rejects.toThrow(/row-level security/);
+      await client.query("ROLLBACK");
+    } finally {
+      client.release();
+    }
+  });
+
   it("policy manifest is clean on a freshly migrated database (DDR-0011 gate)", async () => {
     expect(await checkRlsPolicies(env.migratorUrl)).toEqual([]);
   });

@@ -107,6 +107,7 @@ const ROLE_PERMISSIONS: Record<RoleCode | typeof PLATFORM_ADMIN_ROLE, readonly P
     // Nurse may document (vitals) but NOT sign, order, or file results.
     "encounter:document",
     "result:read",
+    "billing:read",
   ],
   front_desk: [
     "org:read",

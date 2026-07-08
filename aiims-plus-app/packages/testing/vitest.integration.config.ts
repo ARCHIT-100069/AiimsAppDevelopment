@@ -9,6 +9,7 @@ export default defineConfig({
       "test/practitioner.spec.ts",
       "test/scheduling.spec.ts",
       "test/emr.spec.ts",
+      "test/billing.spec.ts",
     ],
     testTimeout: 120_000,
     hookTimeout: 180_000,
