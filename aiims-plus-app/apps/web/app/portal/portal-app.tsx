@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BookablePractitioner, MySummaryResponse } from "@aiims/api-contracts";
 
 /* ---------------------------------- utils --------------------------------- */
+// A FIXED timeZone keeps these strings identical on the server and the client,
+// so they never trigger a React hydration mismatch (which would silently kill
+// interactivity in the App Router).
 const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  new Date(iso).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Kolkata",
+  });
 const fmtDateTime = (iso: string) =>
   new Date(iso).toLocaleString("en-IN", {
     day: "numeric",
@@ -14,6 +22,7 @@ const fmtDateTime = (iso: string) =>
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Asia/Kolkata",
   });
 
 type SectionKey =
@@ -126,7 +135,12 @@ export function PortalApp({
   practitioners: BookablePractitioner[];
 }) {
   const [active, setActive] = useState<SectionKey>("dashboard");
-  const now = Date.now();
+  // Start at 0 so the FIRST render (server + client hydration) is identical;
+  // switch to the real clock only after mount. This avoids a hydration mismatch
+  // in the upcoming/past split that would otherwise break interactivity.
+  const [now, setNow] = useState(0);
+  useEffect(() => setNow(Date.now()), []);
+
   const upcoming = me.appointments
     .filter((a) => +new Date(a.startAt) >= now && a.status !== "cancelled")
     .sort((a, b) => +new Date(a.startAt) - +new Date(b.startAt));
@@ -135,9 +149,9 @@ export function PortalApp({
   const groups = [...new Set(NAV.map((n) => n.group))];
 
   return (
-    <div className="app-bg min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
+    <div className="app-bg min-h-screen lg:flex">
       {/* Sidebar */}
-      <aside className="hidden border-r border-slate-200 bg-white lg:flex lg:flex-col">
+      <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
         <div className="flex items-center gap-2 px-5 py-4 text-lg font-semibold text-teal-700">
           <span aria-hidden>✚</span> AIIMS+
           <span className="text-sm font-normal text-slate-400">Portal</span>
@@ -168,7 +182,7 @@ export function PortalApp({
       </aside>
 
       {/* Main */}
-      <div className="flex min-h-screen flex-col">
+      <div className="flex min-h-screen flex-1 flex-col">
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/80 px-6 py-3 backdrop-blur">
           {/* Mobile section picker */}
           <select
@@ -822,6 +836,7 @@ function Link({ children, onClick }: { children: React.ReactNode; onClick: () =>
 function Toggle({ label, on, set }: { label: string; on: boolean; set: (v: boolean) => void }) {
   return (
     <button
+      type="button"
       onClick={() => set(!on)}
       className="flex w-full items-center justify-between py-2 text-left text-sm text-slate-700"
     >

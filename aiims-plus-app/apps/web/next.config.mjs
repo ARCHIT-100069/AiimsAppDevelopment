@@ -5,6 +5,14 @@
 // JSON API — it needs a CSP that permits its own scripts/styles while still
 // denying framing, sniffing, and referrer leakage.
 const ONE_YEAR = 31536000;
+const isDev = process.env.NODE_ENV !== "production";
+// Next.js injects inline bootstrap/hydration scripts (self.__next_f, RSC
+// payload). A bare `script-src 'self'` blocks them, so the app renders but never
+// hydrates (dead buttons). Allow inline scripts; in dev Turbopack also needs
+// eval + a websocket for HMR. Production hardening path: a per-request nonce via
+// middleware — for now the sensitive JSON surface (the API) keeps its strict CSP.
+const scriptSrc = `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`;
+const connectSrc = `connect-src 'self'${isDev ? " ws: http:" : ""}`;
 const securityHeaders = [
   { key: "Strict-Transport-Security", value: `max-age=${ONE_YEAR}; includeSubDomains; preload` },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -25,8 +33,8 @@ const securityHeaders = [
       "frame-ancestors 'none'",
       "img-src 'self' data:",
       "style-src 'self' 'unsafe-inline'",
-      "script-src 'self'",
-      "connect-src 'self'",
+      scriptSrc,
+      connectSrc,
       "object-src 'none'",
     ].join("; "),
   },
