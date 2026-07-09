@@ -17,6 +17,8 @@ export interface Session {
   expiresAt: number;
   displayName: string;
   roles: string[];
+  /** id_token — needed as id_token_hint for RP-initiated (SSO) logout. */
+  idToken?: string;
 }
 
 function sessionKey(): Buffer {

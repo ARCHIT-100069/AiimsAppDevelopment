@@ -29,6 +29,10 @@ export function authorizeUrl(challenge: string, state: string): string {
     code_challenge: challenge,
     code_challenge_method: "S256",
     state,
+    // Always show the login form, even if a Keycloak SSO session exists. Without
+    // this, after logout the next "Sign in" silently re-authenticates the same
+    // user (Keycloak keeps its own session). prompt=login lets you switch users.
+    prompt: "login",
   });
   return `${issuer()}/protocol/openid-connect/auth?${params}`;
 }
