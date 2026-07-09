@@ -1,25 +1,42 @@
 /**
- * Patient portal ("me") — read-only self-service. A patient sees ONLY their own
- * record: the endpoint is scoped to the token's `patientId` AND runs inside the
- * patient's tenant RLS context. Guarded by `self:read`, held solely by the
- * `patient` role. No write path.
+ * Patient portal ("me") — self-service. A patient sees and acts on ONLY their
+ * own record: every endpoint is scoped to the token's `patientId` AND runs
+ * inside the patient's tenant RLS context. Reads need `self:read`; booking
+ * needs `self:book`. Booking (MeService) writes an appointment + outbox event +
+ * audit in one transaction, forcing the patient id from the token — never the
+ * request body.
  */
-import { Controller, Get } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, Post } from "@nestjs/common";
 import {
   getPatientById,
+  listBookablePractitioners,
   listDiagnosesByPatient,
   listInvoicesByPatient,
+  listReportsByPatient,
+  listVisitsByPatient,
+  listVitalsByPatient,
   searchAppointments,
 } from "@aiims/db";
-import type { MySummaryResponse } from "@aiims/api-contracts";
+import {
+  bookMyAppointmentRequestSchema,
+  type BookableOptionsResponse,
+  type MyAppointment,
+  type MySummaryResponse,
+} from "@aiims/api-contracts";
 import type { Principal } from "@aiims/domain-types";
 import { NotFoundError } from "../../../common/errors";
 import { UnitOfWork } from "../../../platform/db.provider";
 import { CurrentPrincipal, RequirePermission } from "../../../platform/decorators";
+import { MeService } from "../application/me.service";
+
+const VISIT_MINUTES = 15;
 
 @Controller("v1/me")
 export class MeController {
-  constructor(private readonly uow: UnitOfWork) {}
+  constructor(
+    private readonly uow: UnitOfWork,
+    private readonly me: MeService,
+  ) {}
 
   @Get("summary")
   @RequirePermission("self:read")
@@ -33,10 +50,13 @@ export class MeController {
         const patient = await getPatientById(db, patientId);
         if (!patient) throw new NotFoundError("Patient not found");
 
-        const [appointments, diagnoses, invoices] = await Promise.all([
+        const [appointments, diagnoses, invoices, visits, reports, vitals] = await Promise.all([
           searchAppointments(db, { patientId, limit: 20 }),
           listDiagnosesByPatient(db, patientId),
           listInvoicesByPatient(db, patientId),
+          listVisitsByPatient(db, patientId),
+          listReportsByPatient(db, patientId),
+          listVitalsByPatient(db, patientId),
         ]);
 
         return {
@@ -78,8 +98,75 @@ export class MeController {
             issuedAt: i.issuedAt.toISOString(),
             paidAt: i.paidAt ? i.paidAt.toISOString() : null,
           })),
+          visits: visits.map((v) => ({
+            id: v.id,
+            status: v.status,
+            chiefComplaint: v.chiefComplaint ?? null,
+            date: v.periodStart.toISOString(),
+            signed: v.signedAt !== null,
+          })),
+          reports: reports.map((r) => ({
+            id: r.id,
+            status: r.status,
+            conclusion: r.conclusion,
+            issuedAt: r.issuedAt.toISOString(),
+          })),
+          vitals: vitals.map((v) => ({
+            id: v.id,
+            code: v.code,
+            display: v.display,
+            valueNumeric: v.valueNumeric ?? null,
+            unit: v.unit ?? null,
+            valueText: v.valueText ?? null,
+            effectiveAt: v.effectiveAt.toISOString(),
+          })),
         };
       },
     );
+  }
+
+  @Get("practitioners")
+  @RequirePermission("self:read")
+  async practitioners(@CurrentPrincipal() principal: Principal): Promise<BookableOptionsResponse> {
+    const practitioners = await this.uow.withTenant(
+      { tenantId: principal.tenantId, actorId: principal.actorId },
+      (db) => listBookablePractitioners(db),
+    );
+    return { practitioners };
+  }
+
+  @Post("appointments")
+  @HttpCode(201)
+  @RequirePermission("self:book")
+  async book(
+    @CurrentPrincipal() principal: Principal,
+    @Body() rawBody: unknown,
+  ): Promise<MyAppointment> {
+    const patientId = principal.patientId;
+    if (!patientId) throw new NotFoundError("No patient record for this token");
+    const req = bookMyAppointmentRequestSchema.parse(rawBody);
+
+    const start = new Date(req.startAt);
+    const end = new Date(start.getTime() + VISIT_MINUTES * 60_000);
+
+    // The patient id comes from the TOKEN — a patient can only book for self.
+    const a = await this.me.book(principal, {
+      patientId,
+      practitionerId: req.practitionerId,
+      facilityId: req.facilityId,
+      departmentId: req.departmentId,
+      startAt: start,
+      endAt: end,
+      reasonText: req.reasonText,
+    });
+
+    return {
+      id: a.id,
+      startAt: a.startAt.toISOString(),
+      endAt: a.endAt.toISOString(),
+      status: a.status,
+      appointmentType: a.appointmentType,
+      reasonText: a.reasonText ?? null,
+    };
   }
 }

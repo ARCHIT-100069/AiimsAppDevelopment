@@ -45,15 +45,73 @@ export const myInvoiceSchema = z.object({
   paidAt: z.string().nullable(),
 });
 
+export const myVisitSchema = z.object({
+  id: z.uuid(),
+  status: z.string(),
+  chiefComplaint: z.string().nullable(),
+  date: z.string(),
+  signed: z.boolean(),
+});
+
+export const myReportSchema = z.object({
+  id: z.uuid(),
+  status: z.string(),
+  conclusion: z.string(),
+  issuedAt: z.string(),
+});
+
+export const myVitalSchema = z.object({
+  id: z.uuid(),
+  code: z.string(),
+  display: z.string(),
+  valueNumeric: z.string().nullable(),
+  unit: z.string().nullable(),
+  valueText: z.string().nullable(),
+  effectiveAt: z.string(),
+});
+
 export const mySummaryResponseSchema = z.object({
   profile: myProfileSchema,
   appointments: z.array(myAppointmentSchema),
   diagnoses: z.array(myDiagnosisSchema),
   invoices: z.array(myInvoiceSchema),
+  visits: z.array(myVisitSchema),
+  reports: z.array(myReportSchema),
+  vitals: z.array(myVitalSchema),
+});
+
+/** Bookable practitioner option shown to the patient. */
+export const bookablePractitionerSchema = z.object({
+  practitionerId: z.uuid(),
+  name: z.string(),
+  specialty: z.string().nullable(),
+  facilityId: z.uuid(),
+  facilityName: z.string(),
+  departmentId: z.uuid(),
+  departmentName: z.string(),
+});
+export const bookableOptionsResponseSchema = z.object({
+  practitioners: z.array(bookablePractitionerSchema),
+});
+
+/** A patient books an appointment for THEMSELVES — no patientId here; the
+ *  server uses the token's own patient id. */
+export const bookMyAppointmentRequestSchema = z.object({
+  practitionerId: z.uuid(),
+  facilityId: z.uuid(),
+  departmentId: z.uuid().optional(),
+  startAt: z.iso.datetime({ offset: true }),
+  reasonText: z.string().trim().min(1).max(500).optional(),
 });
 
 export type MyProfile = z.infer<typeof myProfileSchema>;
 export type MyAppointment = z.infer<typeof myAppointmentSchema>;
 export type MyDiagnosis = z.infer<typeof myDiagnosisSchema>;
 export type MyInvoice = z.infer<typeof myInvoiceSchema>;
+export type MyVisit = z.infer<typeof myVisitSchema>;
+export type MyReport = z.infer<typeof myReportSchema>;
+export type MyVital = z.infer<typeof myVitalSchema>;
 export type MySummaryResponse = z.infer<typeof mySummaryResponseSchema>;
+export type BookablePractitioner = z.infer<typeof bookablePractitionerSchema>;
+export type BookableOptionsResponse = z.infer<typeof bookableOptionsResponseSchema>;
+export type BookMyAppointmentRequest = z.infer<typeof bookMyAppointmentRequestSchema>;

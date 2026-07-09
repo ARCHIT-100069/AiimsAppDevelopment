@@ -49,8 +49,10 @@ export const PERMISSIONS = [
   "encounter:share", // mock ABDM share-on-consent (closes the golden path)
   // Stage 7 — AI (operational-only, HITL). Clinicians may request suggestions.
   "ai:use",
-  // Patient portal — a patient reads ONLY their own record (/v1/me/*).
+  // Patient portal — a patient reads ONLY their own record (/v1/me/*)…
   "self:read",
+  // …and books an appointment for themselves (server forces their own id).
+  "self:book",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -64,8 +66,8 @@ const ROLE_PERMISSIONS: Record<
   readonly Permission[]
 > = {
   [PLATFORM_ADMIN_ROLE]: ["platform:tenant:manage"],
-  // Patient portal: a patient can read only their own record — nothing else.
-  [PATIENT_ROLE]: ["self:read"],
+  // Patient portal: read own record + book own appointments — nothing else.
+  [PATIENT_ROLE]: ["self:read", "self:book"],
   // Separation of duties (SDR-0002): admin administers, clinicians treat,
   // front desk registers — admin deliberately holds NO patient permission.
   admin: [

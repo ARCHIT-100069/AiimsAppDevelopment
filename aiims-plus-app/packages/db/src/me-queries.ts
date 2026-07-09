@@ -8,6 +8,121 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import * as s from "./schema";
 import type { TenantDb } from "./tenant-context";
 
+export interface BookablePractitionerRow {
+  practitionerId: string;
+  name: string;
+  specialty: string | null;
+  facilityId: string;
+  facilityName: string;
+  departmentId: string;
+  departmentName: string;
+}
+
+/** Practitioners a patient can book with: active, with a department + facility. */
+export async function listBookablePractitioners(db: TenantDb): Promise<BookablePractitionerRow[]> {
+  return db
+    .select({
+      practitionerId: s.practitioner.id,
+      nameGiven: s.practitioner.nameGiven,
+      nameFamily: s.practitioner.nameFamily,
+      specialty: s.practitioner.specialtyDisplay,
+      facilityId: s.facility.id,
+      facilityName: s.facility.name,
+      departmentId: s.department.id,
+      departmentName: s.department.name,
+    })
+    .from(s.practitioner)
+    .innerJoin(s.department, eq(s.department.id, s.practitioner.departmentId))
+    .innerJoin(s.facility, eq(s.facility.id, s.department.facilityId))
+    .where(and(eq(s.practitioner.status, "active"), isNull(s.practitioner.deletedAt)))
+    .orderBy(s.practitioner.nameFamily)
+    .then((rows) =>
+      rows.map((r) => ({
+        practitionerId: r.practitionerId,
+        name: `${r.nameGiven} ${r.nameFamily}`.trim(),
+        specialty: r.specialty,
+        facilityId: r.facilityId,
+        facilityName: r.facilityName,
+        departmentId: r.departmentId,
+        departmentName: r.departmentName,
+      })),
+    );
+}
+
+export interface MyVisitRow {
+  id: string;
+  status: string;
+  chiefComplaint: string | null;
+  periodStart: Date;
+  signedAt: Date | null;
+}
+
+/** The patient's past/current visits (encounters), newest first. */
+export async function listVisitsByPatient(db: TenantDb, patientId: string): Promise<MyVisitRow[]> {
+  return db
+    .select({
+      id: s.encounter.id,
+      status: s.encounter.status,
+      chiefComplaint: s.encounter.chiefComplaint,
+      periodStart: s.encounter.periodStart,
+      signedAt: s.encounter.signedAt,
+    })
+    .from(s.encounter)
+    .where(and(eq(s.encounter.patientId, patientId), isNull(s.encounter.deletedAt)))
+    .orderBy(desc(s.encounter.periodStart));
+}
+
+export interface MyVitalRow {
+  id: string;
+  code: string;
+  display: string;
+  valueNumeric: string | null;
+  unit: string | null;
+  valueText: string | null;
+  effectiveAt: Date;
+}
+
+/** The patient's vitals/observations (LOINC), newest first. */
+export async function listVitalsByPatient(db: TenantDb, patientId: string): Promise<MyVitalRow[]> {
+  return db
+    .select({
+      id: s.observation.id,
+      code: s.observation.code,
+      display: s.observation.display,
+      valueNumeric: s.observation.valueNumeric,
+      unit: s.observation.unit,
+      valueText: s.observation.valueText,
+      effectiveAt: s.observation.effectiveAt,
+    })
+    .from(s.observation)
+    .where(and(eq(s.observation.patientId, patientId), isNull(s.observation.deletedAt)))
+    .orderBy(desc(s.observation.effectiveAt));
+}
+
+export interface MyReportRow {
+  id: string;
+  status: "preliminary" | "final";
+  conclusion: string;
+  issuedAt: Date;
+}
+
+/** The patient's diagnostic reports (lab/imaging), newest first. */
+export async function listReportsByPatient(
+  db: TenantDb,
+  patientId: string,
+): Promise<MyReportRow[]> {
+  return db
+    .select({
+      id: s.diagnosticReport.id,
+      status: s.diagnosticReport.status,
+      conclusion: s.diagnosticReport.conclusion,
+      issuedAt: s.diagnosticReport.issuedAt,
+    })
+    .from(s.diagnosticReport)
+    .where(and(eq(s.diagnosticReport.patientId, patientId), isNull(s.diagnosticReport.deletedAt)))
+    .orderBy(desc(s.diagnosticReport.issuedAt));
+}
+
 export interface MyDiagnosisRow {
   id: string;
   encounterId: string;

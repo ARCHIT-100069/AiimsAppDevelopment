@@ -98,7 +98,12 @@ import {
   shareEncounterResponseSchema,
 } from "./invoices";
 import { codingSuggestRequestSchema, codingSuggestResponseSchema } from "./ai";
-import { mySummaryResponseSchema } from "./me";
+import {
+  mySummaryResponseSchema,
+  bookableOptionsResponseSchema,
+  bookMyAppointmentRequestSchema,
+  myAppointmentSchema,
+} from "./me";
 import { fhirPatientSchema } from "./fhir";
 import { fhirPractitionerSchema } from "./fhir-practitioner";
 import { fhirAppointmentSchema } from "./fhir-appointment";
@@ -885,9 +890,36 @@ export const openApiDocument = {
     "/v1/me/summary": {
       get: {
         summary:
-          "Patient portal — the signed-in patient's own profile, appointments, diagnoses, and invoices (self:read; scoped to the token's patient_id + tenant RLS)",
+          "Patient portal — the signed-in patient's own profile, appointments, diagnoses, invoices, visits, and reports (self:read; scoped to the token's patient_id + tenant RLS)",
         responses: {
           "200": jsonOk("The patient's own health summary", mySummaryResponseSchema),
+          ...standardErrors,
+        },
+      },
+    },
+
+    "/v1/me/practitioners": {
+      get: {
+        summary:
+          "Patient portal — practitioners the patient can book an appointment with (self:read)",
+        responses: {
+          "200": jsonOk("Bookable practitioners", bookableOptionsResponseSchema),
+          ...standardErrors,
+        },
+      },
+    },
+
+    "/v1/me/appointments": {
+      post: {
+        summary:
+          "Patient portal — book an appointment for oneself (self:book; patient id is taken from the token, never the body)",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(bookMyAppointmentRequestSchema) } },
+        },
+        responses: {
+          "201": jsonOk("The booked appointment", myAppointmentSchema),
+          "409": problemResponse("Slot unavailable (double-booking) or duplicate"),
           ...standardErrors,
         },
       },
