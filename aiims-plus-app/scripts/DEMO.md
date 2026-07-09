@@ -28,6 +28,16 @@ bash scripts/demo-walkthrough.sh
 Runs the whole golden path in ~5 seconds and prints each step. Re-runnable —
 reuses the same hospital, creates a fresh patient/visit each time.
 
+## Patient portal (self-service)
+
+Patients log in through the **same** window and land on their own **My Health**
+page — profile, appointments, diagnoses, and bills — and can see **only their
+own** record (enforced by `self:read` + tenant RLS; staff endpoints return 403).
+
+- Sign in as **`anaya` / `patient`** → lands on `/portal`.
+- Great contrast beat: log in as `doctor.a` (sees the whole ward) vs `anaya`
+  (sees only herself). Same platform, different lens.
+
 ## The story (6 beats, 3 roles — separation of duties)
 
 1. **Admin builds the hospital.** Organisation → facility → department, and puts

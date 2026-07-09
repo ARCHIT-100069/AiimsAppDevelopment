@@ -50,9 +50,15 @@ if [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://localhost:300
   ok "API already running"
 else
   log "starting API on :3000…"
-  ( pnpm --filter @aiims/api build >/dev/null && node apps/api/dist/main.js ) > /tmp/aiims-api.log 2>&1 &
+  ( pnpm --filter @aiims/api build >/dev/null && node --env-file=.env apps/api/dist/main.js ) > /tmp/aiims-api.log 2>&1 &
   wait_http "http://localhost:3000/healthz" "API" 60
 fi
+
+# patient portal: Keycloak role/mapper/user + Anaya's demo clinical history
+log "configuring patient portal (Keycloak + demo history)…"
+python3 scripts/setup_patient_portal.py || true
+bash scripts/seed-portal-history.sh || true
+ok "patient portal ready (anaya / patient)"
 
 # 4) web
 if [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://localhost:3001/login 2>/dev/null || echo 000)" = "200" ]; then

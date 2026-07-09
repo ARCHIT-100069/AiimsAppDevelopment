@@ -18,6 +18,10 @@ import { seedReference } from "./seed-reference";
 export const SEED = {
   tenantA: "0197a000-0000-7000-8000-00000000000a",
   tenantB: "0197a000-0000-7000-8000-00000000000b",
+  /** Stable demo patient (tenant A) for the patient portal — Keycloak user
+   *  `anaya` carries this id as its patient_id claim. */
+  demoPatientA: "0197a000-0000-7000-8000-0000000000c1",
+  demoPatientMrnA: "MRN-PORTAL-001",
   /** Keycloak user ids (= token `sub`) from realm-aiims.json. */
   keycloak: {
     doctorA: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
@@ -108,6 +112,18 @@ export async function seed(databaseUrl: string): Promise<void> {
     await seedTenant(client, SEED.tenantB, "demo-clinic-b", "Demo Clinic B (synthetic)", [
       { keycloakSub: SEED.keycloak.doctorB, displayName: "Dr. Bala Demo", roleCode: "doctor" },
     ]);
+
+    // Stable demo patient for the patient portal (tenant A). Profile only —
+    // clinical history is added via the API by scripts/seed-portal-history.sh so
+    // it goes through the real, audited write path. Keycloak user `anaya` uses
+    // this id as its patient_id claim.
+    await client.query(
+      `INSERT INTO clinical.patient
+         (id, tenant_id, mrn, name_given, name_family, gender, birth_date, abha_address)
+       VALUES ($1, $2, $3, 'Anaya', 'Sharma', 'female', '1994-03-12', 'anaya.sharma@abdm')
+       ON CONFLICT (id) DO NOTHING`,
+      [SEED.demoPatientA, SEED.tenantA, SEED.demoPatientMrnA],
+    );
 
     // Reference code systems: minimal dev set, replaceable by real imports (DDR-0012).
     await seedReference(client);

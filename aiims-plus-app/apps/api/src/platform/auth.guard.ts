@@ -10,9 +10,11 @@ import { Inject, Injectable, type CanActivate, type ExecutionContext } from "@ne
 import { Reflector } from "@nestjs/core";
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
 import type { AppConfig } from "@aiims/config";
-import { findActiveUserByKeycloakSub, roleCodesForUser } from "@aiims/db";
+import { findActiveUserByKeycloakSub, getPatientById, roleCodesForUser } from "@aiims/db";
 import {
+  PATIENT_ROLE,
   PLATFORM_ADMIN_ROLE,
+  type PatientId,
   type Principal,
   type TenantId,
   type UserId,
@@ -26,6 +28,8 @@ import { setPrincipal } from "./request-context";
 
 interface AiimsClaims extends JWTPayload {
   tenant_id?: string;
+  /** Patient-portal tokens carry the clinical.patient id they represent. */
+  patient_id?: string;
   realm_access?: { roles?: string[] };
 }
 
@@ -85,6 +89,31 @@ export class AuthGuard implements CanActivate {
     const tenantId = claims.tenant_id;
     if (!tenantId) {
       throw new UnauthenticatedError("Token lacks a tenant claim");
+    }
+
+    // Patient-portal login: the realm role `patient` + a `patient_id` claim.
+    // We verify the patient row exists UNDER the token's tenant RLS (so a token
+    // forged for another tenant's patient resolves nothing and is rejected),
+    // then scope the principal to that single patient. No app_user is involved.
+    if (claims.realm_access?.roles?.includes(PATIENT_ROLE)) {
+      const patientId = claims.patient_id;
+      if (!patientId) {
+        throw new UnauthenticatedError("Patient token lacks a patient_id claim");
+      }
+      const exists = await this.uow.withTenant({ tenantId, actorId: patientId }, async (db) =>
+        Boolean(await getPatientById(db, patientId)),
+      );
+      if (!exists) {
+        throw new UnauthenticatedError("No patient record for this token");
+      }
+      setPrincipal({
+        kind: "tenant",
+        actorId: patientId as unknown as UserId,
+        tenantId: tenantId as TenantId,
+        roles: [PATIENT_ROLE],
+        patientId: patientId as PatientId,
+      });
+      return true;
     }
 
     // Resolve the platform identity under the claimed tenant's RLS context.

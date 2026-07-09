@@ -8,7 +8,7 @@
  *
  * Enforcement (PEP) lives in NestJS guards; this package only decides.
  */
-import { PLATFORM_ADMIN_ROLE, type RoleCode } from "@aiims/domain-types";
+import { PATIENT_ROLE, PLATFORM_ADMIN_ROLE, type RoleCode } from "@aiims/domain-types";
 
 /** Roles that treat patients — used by the practitioner clinical-role check (decision i). */
 export const CLINICAL_ROLES = ["doctor", "nurse"] as const;
@@ -49,6 +49,8 @@ export const PERMISSIONS = [
   "encounter:share", // mock ABDM share-on-consent (closes the golden path)
   // Stage 7 — AI (operational-only, HITL). Clinicians may request suggestions.
   "ai:use",
+  // Patient portal — a patient reads ONLY their own record (/v1/me/*).
+  "self:read",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -57,8 +59,13 @@ export type Permission = (typeof PERMISSIONS)[number];
  * platform_admin administers the tenant REGISTRY only and holds no tenant
  * data permission; clinical roles read the directory, never manage it.
  */
-const ROLE_PERMISSIONS: Record<RoleCode | typeof PLATFORM_ADMIN_ROLE, readonly Permission[]> = {
+const ROLE_PERMISSIONS: Record<
+  RoleCode | typeof PLATFORM_ADMIN_ROLE | typeof PATIENT_ROLE,
+  readonly Permission[]
+> = {
   [PLATFORM_ADMIN_ROLE]: ["platform:tenant:manage"],
+  // Patient portal: a patient can read only their own record — nothing else.
+  [PATIENT_ROLE]: ["self:read"],
   // Separation of duties (SDR-0002): admin administers, clinicians treat,
   // front desk registers — admin deliberately holds NO patient permission.
   admin: [

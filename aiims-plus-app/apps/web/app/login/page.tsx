@@ -47,7 +47,7 @@ export default async function LoginPage({
           </div>
           <h2 className="text-xl font-semibold text-slate-900">Sign in</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Use your hospital staff account to continue.
+            Use your hospital account to continue — staff or patient.
           </p>
 
           {error ? (

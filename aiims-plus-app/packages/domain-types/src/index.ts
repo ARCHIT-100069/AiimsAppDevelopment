@@ -19,6 +19,9 @@ export type UserId = z.infer<typeof userIdSchema>;
 export const noteIdSchema = uuidSchema.brand<"NoteId">();
 export type NoteId = z.infer<typeof noteIdSchema>;
 
+export const patientIdSchema = uuidSchema.brand<"PatientId">();
+export type PatientId = z.infer<typeof patientIdSchema>;
+
 /** ISO-8601 timestamp (API layer uses timestamptz — DB Arch §4). */
 export const isoTimestampSchema = z.iso.datetime({ offset: true });
 
@@ -34,6 +37,12 @@ export interface Principal {
   readonly tenantId: TenantId;
   /** RBAC role codes (SDR-0002). */
   readonly roles: readonly string[];
+  /**
+   * Patient-portal logins only: the `clinical.patient` this token represents.
+   * Present iff `roles` includes "patient". Scopes /v1/me/* to this row (in
+   * addition to tenant RLS) so a patient sees only their own record.
+   */
+  readonly patientId?: PatientId;
 }
 
 /**
@@ -56,3 +65,6 @@ export const PLATFORM_ADMIN_ROLE = "platform_admin" as const;
 /** Tenant role codes (platform.role seed). */
 export const ROLE_CODES = ["admin", "doctor", "nurse", "front_desk"] as const;
 export type RoleCode = (typeof ROLE_CODES)[number];
+
+/** Patient-portal realm role (not a tenant-staff RoleCode). */
+export const PATIENT_ROLE = "patient" as const;

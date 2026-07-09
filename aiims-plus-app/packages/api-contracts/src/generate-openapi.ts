@@ -98,6 +98,7 @@ import {
   shareEncounterResponseSchema,
 } from "./invoices";
 import { codingSuggestRequestSchema, codingSuggestResponseSchema } from "./ai";
+import { mySummaryResponseSchema } from "./me";
 import { fhirPatientSchema } from "./fhir";
 import { fhirPractitionerSchema } from "./fhir-practitioner";
 import { fhirAppointmentSchema } from "./fhir-appointment";
@@ -876,6 +877,17 @@ export const openApiDocument = {
           "502": problemResponse(
             "AI plane/provider unavailable — care is never blocked (AIDR-0014)",
           ),
+          ...standardErrors,
+        },
+      },
+    },
+
+    "/v1/me/summary": {
+      get: {
+        summary:
+          "Patient portal — the signed-in patient's own profile, appointments, diagnoses, and invoices (self:read; scoped to the token's patient_id + tenant RLS)",
+        responses: {
+          "200": jsonOk("The patient's own health summary", mySummaryResponseSchema),
           ...standardErrors,
         },
       },

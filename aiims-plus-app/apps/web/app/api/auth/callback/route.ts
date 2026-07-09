@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/login?error=auth", req.url));
   }
 
+  let isPatient = false;
   try {
     const tokens = await exchangeCode(code, verifier);
     const claims = decodeClaims(tokens.access_token);
@@ -27,11 +28,13 @@ export async function GET(req: NextRequest) {
       roles: claims.realm_access?.roles ?? [],
     });
     await writeIdToken(tokens.id_token);
+    // Patients land in their own portal; staff land on the clinical worklist.
+    isPatient = (claims.realm_access?.roles ?? []).includes("patient");
   } catch {
     return NextResponse.redirect(new URL("/login?error=token", req.url));
   } finally {
     jar.delete("pkce_verifier");
     jar.delete("oidc_state");
   }
-  return NextResponse.redirect(new URL("/patients", req.url));
+  return NextResponse.redirect(new URL(isPatient ? "/portal" : "/patients", req.url));
 }

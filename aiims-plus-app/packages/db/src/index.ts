@@ -29,3 +29,4 @@ export * from "./practitioner-queries";
 export * from "./scheduling-queries";
 export * from "./emr-queries";
 export * from "./billing-queries";
+export * from "./me-queries";
