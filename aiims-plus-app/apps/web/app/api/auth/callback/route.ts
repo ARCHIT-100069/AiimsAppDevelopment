@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { decodeClaims, exchangeCode } from "../../../lib/oidc";
-import { writeSession } from "../../../lib/session";
+import { writeSession, writeIdToken } from "../../../lib/session";
 
 /** OIDC redirect target: exchange code → tokens, seal them into the session. */
 export async function GET(req: NextRequest) {
@@ -25,8 +25,8 @@ export async function GET(req: NextRequest) {
       expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
       displayName: claims.name ?? "Clinician",
       roles: claims.realm_access?.roles ?? [],
-      idToken: tokens.id_token,
     });
+    await writeIdToken(tokens.id_token);
   } catch {
     return NextResponse.redirect(new URL("/login?error=token", req.url));
   } finally {
