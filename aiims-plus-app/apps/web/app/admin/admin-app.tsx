@@ -67,7 +67,26 @@ const NAV: NavItem[] = [
   { key: "audit", label: "Audit Logs", group: "System" },
   { key: "integrations", label: "Integrations", group: "System" },
   { key: "settings", label: "Hospital Settings", group: "System" },
+  { key: "portals", label: "Department Portals", group: "System" },
   { key: "profile", label: "My Profile", group: "Account" },
+];
+
+const DEPT_PORTALS: [string, string][] = [
+  ["billing", "Billing & Accounts"],
+  ["pharmacy", "Pharmacy"],
+  ["laboratory", "Laboratory"],
+  ["radiology", "Radiology"],
+  ["er", "Emergency (ER)"],
+  ["beds", "Bed & Ward"],
+  ["ambulance", "Ambulance"],
+  ["inventory", "Inventory & Store"],
+  ["procurement", "Procurement"],
+  ["ot", "Operation Theatre"],
+  ["bloodbank", "Blood Bank"],
+  ["cssd", "CSSD (Sterilization)"],
+  ["mrd", "Medical Records (MRD)"],
+  ["management", "Management Dashboard"],
+  ["superadmin", "Super Admin"],
 ];
 
 const fmt = (iso: string) =>
@@ -231,6 +250,27 @@ export function AdminApp({ data }: { data: AdminData }) {
                 <dd className="text-slate-800">{data.roles.join(", ")}</dd>
               </div>
             </dl>
+          </Card>
+        );
+      case "portals":
+        return (
+          <Card title="Department Portals">
+            <p className="mb-4 text-sm text-slate-600">
+              Open any hospital department&apos;s workspace. Each portal covers what that team runs
+              day to day.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {DEPT_PORTALS.map(([slug, label]) => (
+                <a
+                  key={slug}
+                  href={`/portals/${slug}`}
+                  className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 hover:bg-teal-50 hover:text-teal-700"
+                >
+                  {label}
+                  <span aria-hidden>→</span>
+                </a>
+              ))}
+            </div>
           </Card>
         );
       case "patients":
