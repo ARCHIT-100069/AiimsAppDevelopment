@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { Ripple } from "@/components/ui/ripple";
 
 /* ------------------------------ shared primitives ------------------------- */
 export function Card({
@@ -226,11 +227,12 @@ export function Splash({ greeting }: { greeting: string }) {
   if (gone) return null;
   return (
     <div
-      className={`fixed inset-0 z-50 grid place-items-center hero-gradient transition-opacity duration-500 ${
+      className={`fixed inset-0 z-50 grid place-items-center overflow-hidden hero-gradient transition-opacity duration-500 ${
         fade ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
     >
-      <div className="text-center">
+      <Ripple mainCircleSize={240} numCircles={8} />
+      <div className="relative z-10 text-center">
         <p className="text-sm font-medium text-teal-900/70">Welcome back</p>
         <h1 className="mt-2 text-4xl font-bold text-slate-900">Hey {greeting}</h1>
         <div className="mx-auto mt-6 h-8 w-8 animate-spin rounded-full border-2 border-white/70 border-t-teal-700" />

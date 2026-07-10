@@ -113,6 +113,44 @@ body {
   padding-bottom: 18px;
 }
 
+/* --- Interactive component keyframes ------------------------------------- */
+/* concentric ring pulse (Ripple) */
+@keyframes hb-ripple {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: var(--ripple-o, 0.2);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.04);
+    opacity: calc(var(--ripple-o, 0.2) * 0.5);
+  }
+}
+/* 3D word flip-in (Text3DFlip) */
+@keyframes hb-flip3d {
+  0% {
+    transform: rotateX(90deg);
+    opacity: 0;
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+}
+.hb-flip {
+  display: inline-block;
+  transform-origin: center bottom;
+  animation: hb-flip3d 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+/* edge fade mask for marquees */
+.hb-marquee-mask {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
 /* Accessible focus ring everywhere */
 *:focus-visible {
   outline: 2px solid var(--brand-500);
