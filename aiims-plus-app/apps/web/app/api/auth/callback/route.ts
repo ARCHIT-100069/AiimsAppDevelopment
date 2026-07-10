@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { decodeClaims, exchangeCode } from "../../../lib/oidc";
+import { homeFor } from "../../../lib/roles";
 import { writeSession, writeIdToken } from "../../../lib/session";
 
 /** OIDC redirect target: exchange code → tokens, seal them into the session. */
@@ -16,25 +17,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/login?error=auth", req.url));
   }
 
-  let isPatient = false;
+  let home = "/patients";
   try {
     const tokens = await exchangeCode(code, verifier);
     const claims = decodeClaims(tokens.access_token);
+    const roles = claims.realm_access?.roles ?? [];
     await writeSession({
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
       expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
       displayName: claims.name ?? "Clinician",
-      roles: claims.realm_access?.roles ?? [],
+      roles,
     });
     await writeIdToken(tokens.id_token);
-    // Patients land in their own portal; staff land on the clinical worklist.
-    isPatient = (claims.realm_access?.roles ?? []).includes("patient");
+    // Each role lands in its own console (patient → portal, admin → admin, …).
+    home = homeFor(roles);
   } catch {
     return NextResponse.redirect(new URL("/login?error=token", req.url));
   } finally {
     jar.delete("pkce_verifier");
     jar.delete("oidc_state");
   }
-  return NextResponse.redirect(new URL(isPatient ? "/portal" : "/patients", req.url));
+  return NextResponse.redirect(new URL(home, req.url));
 }

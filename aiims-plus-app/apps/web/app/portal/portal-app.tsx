@@ -43,23 +43,23 @@ type SectionKey =
   | "feedback"
   | "settings";
 
-const NAV: { key: SectionKey; label: string; icon: string; group: string }[] = [
-  { key: "dashboard", label: "Home Dashboard", icon: "🏠", group: "Overview" },
-  { key: "profile", label: "My Profile", icon: "👤", group: "Overview" },
-  { key: "appointments", label: "Appointments", icon: "📅", group: "Care" },
-  { key: "doctors", label: "My Doctors", icon: "🩺", group: "Care" },
-  { key: "records", label: "Medical Records", icon: "📋", group: "Care" },
-  { key: "medications", label: "Medications", icon: "💊", group: "Care" },
-  { key: "labs", label: "Lab Reports", icon: "🧪", group: "Results" },
-  { key: "imaging", label: "Imaging", icon: "🩻", group: "Results" },
-  { key: "vitals", label: "Vitals", icon: "❤️", group: "Results" },
-  { key: "billing", label: "Billing", icon: "🧾", group: "Admin" },
-  { key: "documents", label: "Documents", icon: "📎", group: "Admin" },
-  { key: "notifications", label: "Notifications", icon: "🔔", group: "Admin" },
-  { key: "emergency", label: "Emergency", icon: "🚑", group: "More" },
-  { key: "privacy", label: "Privacy & Consent", icon: "🔒", group: "More" },
-  { key: "feedback", label: "Feedback", icon: "💬", group: "More" },
-  { key: "settings", label: "Settings", icon: "⚙️", group: "More" },
+const NAV: { key: SectionKey; label: string; group: string }[] = [
+  { key: "dashboard", label: "Home Dashboard", group: "Overview" },
+  { key: "profile", label: "My Profile", group: "Overview" },
+  { key: "appointments", label: "Appointments", group: "Care" },
+  { key: "doctors", label: "My Doctors", group: "Care" },
+  { key: "records", label: "Medical Records", group: "Care" },
+  { key: "medications", label: "Medications", group: "Care" },
+  { key: "labs", label: "Lab Reports", group: "Results" },
+  { key: "imaging", label: "Imaging", group: "Results" },
+  { key: "vitals", label: "Vitals", group: "Results" },
+  { key: "billing", label: "Billing", group: "Admin" },
+  { key: "documents", label: "Documents", group: "Admin" },
+  { key: "notifications", label: "Notifications", group: "Admin" },
+  { key: "emergency", label: "Emergency", group: "More" },
+  { key: "privacy", label: "Privacy & Consent", group: "More" },
+  { key: "feedback", label: "Feedback", group: "More" },
+  { key: "settings", label: "Settings", group: "More" },
 ];
 
 /* -------------------------------- primitives ------------------------------ */
@@ -153,7 +153,7 @@ export function PortalApp({
       {/* Sidebar */}
       <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
         <div className="flex items-center gap-2 px-5 py-4 text-lg font-semibold text-teal-700">
-          <span aria-hidden>✚</span> AIIMS+
+          AIIMS+
           <span className="text-sm font-normal text-slate-400">Portal</span>
         </div>
         <nav className="flex-1 overflow-y-auto px-3 pb-4">
@@ -172,7 +172,6 @@ export function PortalApp({
                       : "text-slate-600 hover:bg-slate-50"
                   }`}
                 >
-                  <span aria-hidden>{n.icon}</span>
                   {n.label}
                 </button>
               ))}
@@ -274,7 +273,7 @@ function Dashboard({
   return (
     <>
       <div>
-        <h2 className="text-2xl font-bold text-slate-900">Hello, {me.profile.nameGiven} 👋</h2>
+        <h2 className="text-2xl font-bold text-slate-900">Hello, {me.profile.nameGiven}</h2>
         <p className="mt-1 text-sm text-slate-500">Here’s a snapshot of your health.</p>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -689,7 +688,7 @@ function Emergency({ me }: { me: MySummaryResponse }) {
           href="tel:108"
           className="mt-4 inline-block rounded-lg bg-red-600 px-5 py-2.5 font-semibold text-white"
         >
-          📞 Call 108
+          Call 108
         </a>
       </div>
       <Card title="Emergency card">
@@ -748,7 +747,7 @@ function Feedback() {
     <Card title="Share feedback">
       {sent ? (
         <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-          Thanks for your feedback! 💚
+          Thanks for your feedback!
         </p>
       ) : (
         <form
@@ -806,7 +805,7 @@ function Settings() {
           rel="noreferrer"
           className="block rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
         >
-          Manage account &amp; password ↗
+          Manage account &amp; password
         </a>
         <form action="/api/auth/logout" method="post" className="mt-3">
           <button className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-red-600 hover:bg-red-50">

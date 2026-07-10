@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { readSession } from "./lib/session";
+import { homeFor } from "./lib/roles";
 
-/** Root: send authenticated users to the worklist, others to login. */
+/** Root: send each authenticated role to its console; others to login. */
 export default async function Home() {
   const session = await readSession();
-  redirect(session ? "/patients" : "/login");
+  redirect(session ? homeFor(session.roles) : "/login");
 }

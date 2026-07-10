@@ -117,6 +117,30 @@ def main():
     req("POST", f"/admin/realms/{REALM}/users/{uid}/role-mappings/realm", tok,
         body=[{"id": role["id"], "name": "patient"}])
     print("anaya: password set + patient role granted")
+
+    # 4) staff realm roles for WEB routing only. The API still authorises from
+    # the DB (roleCodesForUser) — these Keycloak realm roles just let the web BFF
+    # send each staff user to the right console (admin → /admin, doctor →
+    # /doctor). Mirrors the seeded DB roles.
+    staff_roles = {
+        "admin.a": "admin", "admin.c": "admin",
+        "doctor.a": "doctor", "doctor.b": "doctor",
+        "frontdesk.a": "front_desk",
+    }
+    for role_name in set(staff_roles.values()):
+        st, _ = req("GET", f"/admin/realms/{REALM}/roles/{role_name}", tok)
+        if st == 404:
+            req("POST", f"/admin/realms/{REALM}/roles", tok,
+                body={"name": role_name, "description": f"Web console routing role ({role_name})"})
+            print(f"created realm role: {role_name}")
+    for username, role_name in staff_roles.items():
+        _, us = req("GET", f"/admin/realms/{REALM}/users?username={username}&exact=true", tok)
+        if not us:
+            continue
+        _, role = req("GET", f"/admin/realms/{REALM}/roles/{role_name}", tok)
+        req("POST", f"/admin/realms/{REALM}/users/{us[0]['id']}/role-mappings/realm", tok,
+            body=[{"id": role["id"], "name": role_name}])
+    print("staff realm roles assigned (admin/doctor/front_desk)")
     print("\nPatient portal ready — sign in as  anaya / patient")
 
 
