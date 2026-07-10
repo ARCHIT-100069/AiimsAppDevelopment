@@ -4,3 +4,4 @@ export * from "./reference";
 export * from "./clinical";
 export * from "./orders";
 export * from "./billing";
+export * from "./pharmacy";

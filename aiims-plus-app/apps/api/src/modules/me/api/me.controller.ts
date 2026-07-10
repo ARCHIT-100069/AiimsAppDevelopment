@@ -12,6 +12,8 @@ import {
   listBookablePractitioners,
   listDiagnosesByPatient,
   listInvoicesByPatient,
+  listPrescriptionItems,
+  listPrescriptionsByPatient,
   listReportsByPatient,
   listVisitsByPatient,
   listVitalsByPatient,
@@ -50,14 +52,33 @@ export class MeController {
         const patient = await getPatientById(db, patientId);
         if (!patient) throw new NotFoundError("Patient not found");
 
-        const [appointments, diagnoses, invoices, visits, reports, vitals] = await Promise.all([
-          searchAppointments(db, { patientId, limit: 20 }),
-          listDiagnosesByPatient(db, patientId),
-          listInvoicesByPatient(db, patientId),
-          listVisitsByPatient(db, patientId),
-          listReportsByPatient(db, patientId),
-          listVitalsByPatient(db, patientId),
-        ]);
+        const [appointments, diagnoses, invoices, visits, reports, vitals, prescriptions] =
+          await Promise.all([
+            searchAppointments(db, { patientId, limit: 20 }),
+            listDiagnosesByPatient(db, patientId),
+            listInvoicesByPatient(db, patientId),
+            listVisitsByPatient(db, patientId),
+            listReportsByPatient(db, patientId),
+            listVitalsByPatient(db, patientId),
+            listPrescriptionsByPatient(db, patientId),
+          ]);
+        // Flatten prescription items into a medications list.
+        const medications = (
+          await Promise.all(
+            prescriptions.map(async (p) => {
+              const items = await listPrescriptionItems(db, p.id);
+              return items.map((it) => ({
+                id: it.id,
+                name: `${it.drugName} ${it.strength}`,
+                dose: it.dose,
+                frequency: it.frequency,
+                duration: it.duration,
+                status: p.status,
+                prescribedAt: p.createdAt.toISOString(),
+              }));
+            }),
+          )
+        ).flat();
 
         return {
           profile: {
@@ -120,6 +141,7 @@ export class MeController {
             valueText: v.valueText ?? null,
             effectiveAt: v.effectiveAt.toISOString(),
           })),
+          medications,
         };
       },
     );

@@ -53,6 +53,12 @@ export const PERMISSIONS = [
   "self:read",
   // …and books an appointment for themselves (server forces their own id).
   "self:book",
+  // Pharmacy module — formulary + stock, prescribing, and dispensing.
+  "pharmacy:read", // view drug master + stock + prescriptions
+  "pharmacy:manage", // add drugs, receive stock
+  "pharmacy:dispense", // dispense a prescription (draws stock down)
+  "prescription:write", // a prescriber writes a prescription
+  "prescription:read", // read prescriptions
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -85,6 +91,11 @@ const ROLE_PERMISSIONS: Record<
     "encounter:read",
     "result:read",
     "billing:read",
+    // Admin oversees pharmacy operations (and, in this build, runs the desk).
+    "pharmacy:read",
+    "pharmacy:manage",
+    "pharmacy:dispense",
+    "prescription:read",
   ],
   doctor: [
     "org:read",
@@ -108,6 +119,10 @@ const ROLE_PERMISSIONS: Record<
     "encounter:share",
     // Operational AI assistance (advisory, HITL — never auto-applied).
     "ai:use",
+    // A doctor prescribes medications and reads prescriptions.
+    "prescription:write",
+    "prescription:read",
+    "pharmacy:read",
   ],
   nurse: [
     "org:read",

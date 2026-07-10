@@ -30,3 +30,4 @@ export * from "./scheduling-queries";
 export * from "./emr-queries";
 export * from "./billing-queries";
 export * from "./me-queries";
+export * from "./pharmacy-queries";

@@ -70,6 +70,16 @@ export const myVitalSchema = z.object({
   effectiveAt: z.string(),
 });
 
+export const myMedicationSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  dose: z.string(),
+  frequency: z.string(),
+  duration: z.string(),
+  status: z.string(),
+  prescribedAt: z.string(),
+});
+
 export const mySummaryResponseSchema = z.object({
   profile: myProfileSchema,
   appointments: z.array(myAppointmentSchema),
@@ -78,6 +88,7 @@ export const mySummaryResponseSchema = z.object({
   visits: z.array(myVisitSchema),
   reports: z.array(myReportSchema),
   vitals: z.array(myVitalSchema),
+  medications: z.array(myMedicationSchema),
 });
 
 /** Bookable practitioner option shown to the patient. */
@@ -111,6 +122,7 @@ export type MyInvoice = z.infer<typeof myInvoiceSchema>;
 export type MyVisit = z.infer<typeof myVisitSchema>;
 export type MyReport = z.infer<typeof myReportSchema>;
 export type MyVital = z.infer<typeof myVitalSchema>;
+export type MyMedication = z.infer<typeof myMedicationSchema>;
 export type MySummaryResponse = z.infer<typeof mySummaryResponseSchema>;
 export type BookablePractitioner = z.infer<typeof bookablePractitionerSchema>;
 export type BookableOptionsResponse = z.infer<typeof bookableOptionsResponseSchema>;

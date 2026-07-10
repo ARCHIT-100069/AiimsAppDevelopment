@@ -104,6 +104,16 @@ import {
   bookMyAppointmentRequestSchema,
   myAppointmentSchema,
 } from "./me";
+import {
+  createDrugRequestSchema,
+  listDrugsResponseSchema,
+  drugResponseSchema,
+  addStockRequestSchema,
+  createPrescriptionRequestSchema,
+  prescriptionResponseSchema,
+  listPrescriptionsResponseSchema,
+  dispenseResponseSchema,
+} from "./pharmacy";
 import { fhirPatientSchema } from "./fhir";
 import { fhirPractitionerSchema } from "./fhir-practitioner";
 import { fhirAppointmentSchema } from "./fhir-appointment";
@@ -893,6 +903,79 @@ export const openApiDocument = {
           "Patient portal — the signed-in patient's own profile, appointments, diagnoses, invoices, visits, and reports (self:read; scoped to the token's patient_id + tenant RLS)",
         responses: {
           "200": jsonOk("The patient's own health summary", mySummaryResponseSchema),
+          ...standardErrors,
+        },
+      },
+    },
+
+    "/v1/drugs": {
+      get: {
+        summary: "Pharmacy — drug master with on-hand stock (pharmacy:read)",
+        responses: {
+          "200": jsonOk("Drugs with stock", listDrugsResponseSchema),
+          ...standardErrors,
+        },
+      },
+      post: {
+        summary: "Pharmacy — add a drug to the formulary (pharmacy:manage)",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(createDrugRequestSchema) } },
+        },
+        responses: {
+          "201": jsonOk("The created drug", drugResponseSchema),
+          "409": problemResponse("Drug already exists"),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/drugs/{id}/stock": {
+      post: {
+        summary: "Pharmacy — receive a stock batch for a drug (pharmacy:manage)",
+        parameters: [uuidPathParam],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(addStockRequestSchema) } },
+        },
+        responses: {
+          "201": jsonOk("Updated drug stock", drugResponseSchema),
+          "404": problemResponse("Drug not found"),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/prescriptions": {
+      get: {
+        summary: "Pharmacy — prescriptions (queue); filter by status (prescription:read)",
+        parameters: [
+          { name: "status", in: "query", schema: { enum: ["active", "dispensed", "cancelled"] } },
+        ],
+        responses: {
+          "200": jsonOk("Prescriptions", listPrescriptionsResponseSchema),
+          ...standardErrors,
+        },
+      },
+      post: {
+        summary: "Prescriber — write a prescription for a patient (prescription:write)",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(createPrescriptionRequestSchema) } },
+        },
+        responses: {
+          "201": jsonOk("The written prescription", prescriptionResponseSchema),
+          "404": problemResponse("Patient or drug not found"),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/prescriptions/{id}/dispense": {
+      post: {
+        summary: "Pharmacy — dispense a prescription; draws stock down FEFO (pharmacy:dispense)",
+        parameters: [uuidPathParam],
+        responses: {
+          "200": jsonOk("Dispensed", dispenseResponseSchema),
+          "404": problemResponse("Prescription not found"),
+          "409": problemResponse("Insufficient stock or already dispensed"),
           ...standardErrors,
         },
       },
