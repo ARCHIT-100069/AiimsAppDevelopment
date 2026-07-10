@@ -137,6 +137,10 @@ export function MockSection({
           <Empty>{note}</Empty>
         )}
       </Card>
+      <p className="flex items-center gap-1.5 px-1 text-xs text-slate-400">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400" />
+        Example data — this section activates when its module goes live.
+      </p>
     </>
   );
 }

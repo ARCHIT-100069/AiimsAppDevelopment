@@ -131,6 +131,55 @@ function PatientSearch({ initial }: { initial: Patient[] }) {
   );
 }
 
+/** Real entry into the working EMR: open a patient's chart / the OPD schedule. */
+function ClinicalLauncher({
+  patients,
+  note,
+  primary,
+}: {
+  patients: Patient[];
+  note: string;
+  primary?: { label: string; href: string };
+}) {
+  return (
+    <Card title="Clinical workspace">
+      <p className="mb-3 text-sm text-slate-600">{note}</p>
+      {primary ? (
+        <a
+          href={primary.href}
+          className="mb-4 inline-block rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+        >
+          {primary.label}
+        </a>
+      ) : null}
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        Open a patient chart
+      </p>
+      {patients.length === 0 ? (
+        <Empty>No patients on record.</Empty>
+      ) : (
+        <ul className="divide-y divide-slate-100">
+          {patients.slice(0, 12).map((p) => (
+            <Row
+              key={p.id}
+              title={`${p.nameGiven} ${p.nameFamily}`}
+              sub={`${p.mrn} · ${p.gender}`}
+              right={
+                <a
+                  href={`/patients/${p.id}`}
+                  className="text-sm font-medium text-teal-700 hover:underline"
+                >
+                  Open →
+                </a>
+              }
+            />
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
 export function DoctorApp({ data }: { data: DoctorData }) {
   const today = new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
   const todays = data.appointments.filter((a) => istDay(a.startAt) === today);
@@ -207,6 +256,32 @@ export function DoctorApp({ data }: { data: DoctorData }) {
         );
       case "search":
         return <PatientSearch initial={data.patients} />;
+      case "encounters":
+        return (
+          <ClinicalLauncher
+            patients={data.patients}
+            note="Consultations open from the OPD schedule — check a patient in to start and sign an encounter."
+            primary={{ label: "Go to OPD schedule", href: "/appointments" }}
+          />
+        );
+      case "records":
+        return (
+          <ClinicalLauncher
+            patients={data.patients}
+            note="Open a patient's chart to review their record and history."
+          />
+        );
+      case "notes":
+      case "vitals":
+      case "diagnoses":
+      case "lab":
+        return (
+          <ClinicalLauncher
+            patients={data.patients}
+            note="These are recorded inside an encounter. Open the patient's chart, then their active encounter to document."
+            primary={{ label: "Go to OPD schedule", href: "/appointments" }}
+          />
+        );
       case "profile":
         return (
           <Card title="My profile">
