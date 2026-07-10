@@ -286,6 +286,7 @@ export function AdminApp({ data }: { data: AdminData }) {
     <AppShell
       appName="AIIMS+"
       roleLabel="Admin Console"
+      greeting="Admin"
       userName={data.userName}
       nav={NAV}
       renderSection={render}

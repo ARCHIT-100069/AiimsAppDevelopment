@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BookablePractitioner, MySummaryResponse } from "@aiims/api-contracts";
-import { MockSection } from "../lib/app-shell";
+import { MockSection, Splash } from "../lib/app-shell";
 import { patientMock } from "../lib/mock";
 
 /* ---------------------------------- utils --------------------------------- */
@@ -152,6 +152,7 @@ export function PortalApp({
 
   return (
     <div className="app-bg min-h-screen lg:flex">
+      <Splash greeting="Patient" />
       {/* Sidebar */}
       <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
         <div className="flex items-center gap-2 px-5 py-4 text-lg font-semibold text-teal-700">

@@ -233,6 +233,7 @@ export function DoctorApp({ data }: { data: DoctorData }) {
     <AppShell
       appName="AIIMS+"
       roleLabel="Doctor Workspace"
+      greeting="Doctor"
       userName={data.userName}
       nav={NAV}
       renderSection={render}
