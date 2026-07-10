@@ -487,7 +487,7 @@ function Profile({ me }: { me: MySummaryResponse }) {
   const age = ageFrom(p.birthDate);
   const initials = `${p.nameGiven[0] ?? ""}${p.nameFamily[0] ?? ""}`;
   const activeDx = me.diagnoses.filter((d) => d.clinicalStatus === "active").length;
-  const meds = patientMock.medications.items?.length ?? 0;
+  const meds = me.medications.length;
   const lastVisit = me.visits[0];
 
   const chips = [age !== null ? `${age} yrs` : null, p.gender, "Blood group O+"].filter(
@@ -817,8 +817,15 @@ function Doctors({ practitioners }: { practitioners: BookablePractitioner[] }) {
 }
 
 function Prescriptions({ me }: { me: MySummaryResponse }) {
-  const meds = patientMock.medications.items ?? [];
+  const meds = me.medications;
   const dx = me.diagnoses[0];
+  if (meds.length === 0) {
+    return (
+      <Card title="Medications">
+        <Empty>No medications prescribed yet. Your prescriptions will appear here.</Empty>
+      </Card>
+    );
+  }
   return (
     <div className="receipt p-6">
       <div className="mb-4 flex items-center gap-3 rounded-2xl bg-gradient-to-br from-teal-50 to-sky-50 p-3">
@@ -849,9 +856,12 @@ function Prescriptions({ me }: { me: MySummaryResponse }) {
       </div>
       <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-4">
         {meds.map((m) => (
-          <div key={m.title}>
-            <p className="text-sm font-medium text-slate-800">{m.title}</p>
-            <p className="text-xs text-slate-500">{m.sub}</p>
+          <div key={m.id}>
+            <p className="text-sm font-medium text-slate-800">{m.name}</p>
+            <p className="text-xs text-slate-500">
+              {m.dose} · {m.frequency} · {m.duration}
+              {m.status === "dispensed" ? " · dispensed" : ""}
+            </p>
           </div>
         ))}
       </div>

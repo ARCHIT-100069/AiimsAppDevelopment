@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AppShell,
   Badge,
@@ -131,6 +131,159 @@ function PatientSearch({ initial }: { initial: Patient[] }) {
   );
 }
 
+interface DrugOpt {
+  id: string;
+  name: string;
+  strength: string;
+  form: string;
+  totalQty: number;
+}
+/** Real prescribing: write a prescription (patient + drug lines) → pharmacy queue. */
+function PrescribeForm({ patients }: { patients: Patient[] }) {
+  const [drugs, setDrugs] = useState<DrugOpt[]>([]);
+  const [patientId, setPatientId] = useState(patients[0]?.id ?? "");
+  const [drugId, setDrugId] = useState("");
+  const [dose, setDose] = useState("");
+  const [frequency, setFrequency] = useState("");
+  const [duration, setDuration] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/bff/drugs")
+      .then((r) => (r.ok ? r.json() : { data: [] }))
+      .then((d) => {
+        setDrugs(d.data ?? []);
+        setDrugId(d.data?.[0]?.id ?? "");
+      });
+  }, []);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!patientId || !drugId) return;
+    setBusy(true);
+    setMsg(null);
+    const res = await fetch("/api/bff/prescriptions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        patientId,
+        items: [{ drugId, dose, frequency, duration, quantity: Number(quantity) }],
+      }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      setMsg({ ok: true, t: "Prescription sent to the pharmacy queue." });
+      setDose("");
+      setFrequency("");
+      setDuration("");
+      setQuantity("");
+    } else {
+      const b = (await res.json().catch(() => ({}))) as { detail?: string };
+      setMsg({ ok: false, t: b.detail ?? "Could not write prescription." });
+    }
+  }
+
+  if (drugs.length === 0) {
+    return (
+      <Card title="Write a prescription">
+        <Empty>No drugs in the formulary yet — ask pharmacy to add drugs first.</Empty>
+      </Card>
+    );
+  }
+  return (
+    <Card title="Write a prescription">
+      <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2">
+        <label className="text-sm sm:col-span-2">
+          <span className="text-slate-500">Patient</span>
+          <select
+            value={patientId}
+            onChange={(e) => setPatientId(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+          >
+            {patients.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nameGiven} {p.nameFamily} · {p.mrn}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm sm:col-span-2">
+          <span className="text-slate-500">Drug</span>
+          <select
+            value={drugId}
+            onChange={(e) => setDrugId(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+          >
+            {drugs.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name} {d.strength} ({d.form}) · {d.totalQty} in stock
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm">
+          <span className="text-slate-500">Dose</span>
+          <input
+            required
+            placeholder="e.g. 500 mg"
+            value={dose}
+            onChange={(e) => setDose(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+          />
+        </label>
+        <label className="text-sm">
+          <span className="text-slate-500">Frequency</span>
+          <input
+            required
+            placeholder="e.g. BD"
+            value={frequency}
+            onChange={(e) => setFrequency(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+          />
+        </label>
+        <label className="text-sm">
+          <span className="text-slate-500">Duration</span>
+          <input
+            required
+            placeholder="e.g. 5 days"
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+          />
+        </label>
+        <label className="text-sm">
+          <span className="text-slate-500">Quantity</span>
+          <input
+            required
+            type="number"
+            min={1}
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+          />
+        </label>
+        {msg ? (
+          <p
+            className={`sm:col-span-2 rounded-lg px-3 py-2 text-sm ${msg.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}
+          >
+            {msg.t}
+          </p>
+        ) : null}
+        <div className="sm:col-span-2">
+          <button
+            disabled={busy}
+            className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+          >
+            {busy ? "Writing…" : "Write prescription"}
+          </button>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
 /** Real entry into the working EMR: open a patient's chart / the OPD schedule. */
 function ClinicalLauncher({
   patients,
@@ -256,6 +409,8 @@ export function DoctorApp({ data }: { data: DoctorData }) {
         );
       case "search":
         return <PatientSearch initial={data.patients} />;
+      case "prescriptions":
+        return <PrescribeForm patients={data.patients} />;
       case "encounters":
         return (
           <ClinicalLauncher
