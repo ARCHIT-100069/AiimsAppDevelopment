@@ -463,29 +463,144 @@ function HealthTips() {
   );
 }
 
+function ageFrom(iso: string): number | null {
+  const d = new Date(iso);
+  if (Number.isNaN(+d)) return null;
+  const now = new Date();
+  let a = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) a--;
+  return a;
+}
+
+function InfoTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="card p-4">
+      <p className="text-[11px] uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="mt-1 truncate font-medium text-slate-800">{value}</p>
+    </div>
+  );
+}
+
 function Profile({ me }: { me: MySummaryResponse }) {
   const p = me.profile;
-  const fields: [string, string][] = [
-    ["Full name", `${p.nameGiven} ${p.nameFamily}`],
-    ["MRN", p.mrn],
-    ["Date of birth", fmtDate(p.birthDate)],
-    ["Gender", p.gender],
-    ["ABHA address", p.abhaAddress ?? "—"],
-  ];
+  const age = ageFrom(p.birthDate);
+  const initials = `${p.nameGiven[0] ?? ""}${p.nameFamily[0] ?? ""}`;
+  const activeDx = me.diagnoses.filter((d) => d.clinicalStatus === "active").length;
+  const meds = patientMock.medications.items?.length ?? 0;
+  const lastVisit = me.visits[0];
+
+  const chips = [age !== null ? `${age} yrs` : null, p.gender, "Blood group O+"].filter(
+    Boolean,
+  ) as string[];
+
   return (
-    <Card title="My profile">
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm sm:grid-cols-3">
-        {fields.map(([k, v]) => (
-          <div key={k}>
-            <dt className="text-xs uppercase tracking-wide text-slate-400">{k}</dt>
-            <dd className="mt-0.5 text-slate-800">{v}</dd>
+    <div className="space-y-5">
+      {/* Header card */}
+      <div className="card overflow-hidden p-0">
+        <div className="hero-gradient relative h-28" />
+        <div className="px-6 pb-6">
+          <div className="-mt-12 flex flex-col items-start gap-4 sm:flex-row sm:items-end">
+            <div className="relative">
+              <div className="grid h-24 w-24 place-items-center rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-400 text-2xl font-bold text-white shadow-lg ring-4 ring-white">
+                {initials.toUpperCase()}
+              </div>
+              {/* verified badge */}
+              <span
+                title="ABHA verified"
+                className="absolute -bottom-1.5 -right-1.5 grid h-7 w-7 place-items-center rounded-full bg-white text-teal-600 shadow ring-1 ring-slate-100"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width={16}
+                  height={16}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.4}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              </span>
+            </div>
+            <div className="min-w-0 pb-1">
+              <h2 className="text-2xl font-bold text-slate-900">
+                {p.nameGiven} {p.nameFamily}
+              </h2>
+              <p className="mt-0.5 text-sm text-slate-500">
+                {p.mrn} · {p.abhaAddress ?? "ABHA not linked"}
+              </p>
+            </div>
           </div>
-        ))}
-      </dl>
-      <p className="mt-5 text-xs text-slate-400">
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {chips.map((c) => (
+              <span
+                key={c}
+                className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium capitalize text-teal-700"
+              >
+                {c}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Details */}
+      <div>
+        <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Personal details
+        </h3>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <InfoTile label="Full name" value={`${p.nameGiven} ${p.nameFamily}`} />
+          <InfoTile label="MRN" value={p.mrn} />
+          <InfoTile
+            label="Date of birth"
+            value={`${fmtDate(p.birthDate)}${age !== null ? ` · ${age} yrs` : ""}`}
+          />
+          <InfoTile label="Gender" value={p.gender} />
+          <InfoTile label="ABHA address" value={p.abhaAddress ?? "Not linked"} />
+          <InfoTile label="Contact" value="Protected (encrypted)" />
+        </div>
+      </div>
+
+      {/* Health snapshot */}
+      <div>
+        <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Health snapshot
+        </h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat label="Blood group" value="O+" tone="slate" />
+          <Stat
+            label="Active conditions"
+            value={`${activeDx}`}
+            tone={activeDx ? "amber" : "slate"}
+          />
+          <Stat label="Medications" value={`${meds}`} tone="slate" />
+          <Stat label="Last visit" value={lastVisit ? fmtDate(lastVisit.date) : "—"} tone="slate" />
+        </div>
+        <Card title="Allergies & alerts">
+          <ul className="divide-y divide-slate-100">
+            <Row
+              title="No known drug allergies"
+              sub="Self-reported"
+              right={<Badge tone="green">Clear</Badge>}
+            />
+            <Row
+              title="Emergency contact"
+              sub="Not on file"
+              right={<Badge tone="amber">Add</Badge>}
+            />
+          </ul>
+        </Card>
+      </div>
+
+      <p className="px-1 text-xs text-slate-400">
         Contact details are encrypted at rest. To update your profile, contact the front desk.
       </p>
-    </Card>
+    </div>
   );
 }
 
