@@ -5,11 +5,12 @@ import {
   Badge,
   Card,
   Empty,
-  Placeholder,
+  MockSection,
   Row,
   Stat,
   type NavItem,
 } from "../lib/app-shell";
+import { adminMock } from "../lib/mock";
 
 interface Org {
   id: string;
@@ -233,31 +234,10 @@ export function AdminApp({ data }: { data: AdminData }) {
           </Card>
         );
       case "patients":
-        return (
-          <Placeholder
-            title="Patient Management"
-            note="Patient records are owned by front desk and clinicians. Admin holds no patient-data access by design (separation of duties)."
-          />
-        );
+        return <MockSection title="Patient Management" data={adminMock.patients} />;
       default: {
-        const notes: Record<string, string> = {
-          beds: "Ward and bed occupancy management will appear here.",
-          records: "Hospital-wide medical-records administration will appear here.",
-          pharmacy: "Pharmacy stock, dispensing and prescriptions will appear here.",
-          lab: "Laboratory orders, samples and results workflow will appear here.",
-          radiology: "Imaging orders, modalities and reports will appear here.",
-          billing: "Invoices, payments and revenue reports will appear here.",
-          insurance: "Insurance policies, pre-auth and claims will appear here.",
-          inventory: "Consumables, assets and purchase orders will appear here.",
-          ambulance: "Ambulance fleet, dispatch and trips will appear here.",
-          reports: "Operational and financial analytics will appear here.",
-          notifications: "Broadcast announcements and alerts will appear here.",
-          audit: "The tamper-evident audit trail viewer will appear here.",
-          integrations: "ABDM, payment gateway, SMS and email integrations will appear here.",
-          settings: "Hospital-level configuration will appear here.",
-        };
         const label = NAV.find((n) => n.key === key)?.label ?? "Section";
-        return <Placeholder title={label} note={notes[key] ?? "Coming soon."} />;
+        return <MockSection title={label} data={adminMock[key]} />;
       }
     }
   };

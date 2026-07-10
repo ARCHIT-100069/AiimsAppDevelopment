@@ -6,11 +6,12 @@ import {
   Badge,
   Card,
   Empty,
-  Placeholder,
+  MockSection,
   Row,
   Stat,
   type NavItem,
 } from "../lib/app-shell";
+import { doctorMock } from "../lib/mock";
 
 interface Patient {
   id: string;
@@ -222,26 +223,8 @@ export function DoctorApp({ data }: { data: DoctorData }) {
           </Card>
         );
       default: {
-        const notes: Record<string, string> = {
-          encounters: "Open an appointment from Today's list to start a consultation.",
-          records: "A patient's full medical record opens from Patient Search.",
-          notes: "Clinical notes for the active encounter will appear here.",
-          prescriptions: "Prescribing and medication history will appear here.",
-          lab: "Lab orders you place and their results will appear here.",
-          radiology: "Imaging orders and reports will appear here.",
-          vitals: "Vitals trends and charts will appear here.",
-          diagnoses: "ICD-10 diagnoses you record will appear here.",
-          certificates: "Fitness and medical certificates will appear here.",
-          admissions: "Admission and discharge workflow will appear here.",
-          referrals: "Referrals in and out will appear here.",
-          billing: "Read-only billing for your encounters will appear here.",
-          notifications: "Your alerts and messages will appear here.",
-          schedule: "Your availability templates and slots will appear here.",
-          analytics: "Your consultation and outcome metrics will appear here.",
-          settings: "Personal preferences will appear here.",
-        };
         const label = NAV.find((n) => n.key === key)?.label ?? "Section";
-        return <Placeholder title={label} note={notes[key] ?? "Coming soon."} />;
+        return <MockSection title={label} data={doctorMock[key]} />;
       }
     }
   };

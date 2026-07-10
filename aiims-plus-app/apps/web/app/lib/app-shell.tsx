@@ -87,6 +87,59 @@ export function Placeholder({ title, note }: { title: string; note: string }) {
   );
 }
 
+export interface MockItem {
+  title: string;
+  sub?: string;
+  badge?: string;
+  tone?: string;
+}
+export interface MockSectionData {
+  stats?: [string, string][];
+  items?: MockItem[];
+}
+
+/** Renders example data (stat tiles + a list) for a section without a backend. */
+export function MockSection({
+  title,
+  data,
+  note = "Coming soon.",
+}: {
+  title: string;
+  data?: MockSectionData;
+  note?: string;
+}) {
+  if (!data || (!data.stats?.length && !data.items?.length)) {
+    return <Placeholder title={title} note={note} />;
+  }
+  return (
+    <>
+      {data.stats?.length ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {data.stats.map(([label, value]) => (
+            <Stat key={label} label={label} value={value} tone="slate" />
+          ))}
+        </div>
+      ) : null}
+      <Card title={title}>
+        {data.items?.length ? (
+          <ul className="divide-y divide-slate-100">
+            {data.items.map((it, i) => (
+              <Row
+                key={i}
+                title={it.title}
+                sub={it.sub}
+                right={it.badge ? <Badge tone={it.tone}>{it.badge}</Badge> : undefined}
+              />
+            ))}
+          </ul>
+        ) : (
+          <Empty>{note}</Empty>
+        )}
+      </Card>
+    </>
+  );
+}
+
 /* --------------------------------- shell ---------------------------------- */
 export interface NavItem {
   key: string;

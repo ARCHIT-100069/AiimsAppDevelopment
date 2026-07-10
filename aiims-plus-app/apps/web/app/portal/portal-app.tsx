@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BookablePractitioner, MySummaryResponse } from "@aiims/api-contracts";
+import { MockSection } from "../lib/app-shell";
+import { patientMock } from "../lib/mock";
 
 /* ---------------------------------- utils --------------------------------- */
 // A FIXED timeZone keeps these strings identical on the server and the client,
@@ -225,26 +227,13 @@ export function PortalApp({
           {active === "doctors" && <Doctors practitioners={practitioners} />}
           {active === "records" && <Records me={me} />}
           {active === "medications" && (
-            <ComingSoon
-              title="Medications"
-              note="No active prescriptions on file. Medications your doctor prescribes will appear here."
-            />
+            <MockSection title="Medications" data={patientMock.medications} />
           )}
           {active === "labs" && <Labs me={me} />}
-          {active === "imaging" && (
-            <ComingSoon
-              title="Imaging"
-              note="No imaging studies on file. X-ray, CT, MRI and ultrasound reports will appear here."
-            />
-          )}
+          {active === "imaging" && <MockSection title="Imaging" data={patientMock.imaging} />}
           {active === "vitals" && <Vitals me={me} />}
           {active === "billing" && <Billing me={me} />}
-          {active === "documents" && (
-            <ComingSoon
-              title="Documents"
-              note="No documents uploaded yet. Discharge summaries and uploaded files will appear here."
-            />
-          )}
+          {active === "documents" && <MockSection title="Documents" data={patientMock.documents} />}
           {active === "notifications" && (
             <Notifications me={me} upcoming={upcoming} outstanding={outstanding} />
           )}
@@ -564,22 +553,19 @@ function Records({ me }: { me: MySummaryResponse }) {
 }
 
 function Labs({ me }: { me: MySummaryResponse }) {
+  if (me.reports.length === 0) return <MockSection title="Lab reports" data={patientMock.labs} />;
   return (
     <Card title="Lab reports">
-      {me.reports.length === 0 ? (
-        <Empty>No lab reports yet.</Empty>
-      ) : (
-        <ul className="divide-y divide-slate-100">
-          {me.reports.map((r) => (
-            <Row
-              key={r.id}
-              title={r.conclusion}
-              sub={`Issued ${fmtDate(r.issuedAt)}`}
-              right={<Badge tone={r.status === "final" ? "green" : "amber"}>{r.status}</Badge>}
-            />
-          ))}
-        </ul>
-      )}
+      <ul className="divide-y divide-slate-100">
+        {me.reports.map((r) => (
+          <Row
+            key={r.id}
+            title={r.conclusion}
+            sub={`Issued ${fmtDate(r.issuedAt)}`}
+            right={<Badge tone={r.status === "final" ? "green" : "amber"}>{r.status}</Badge>}
+          />
+        ))}
+      </ul>
     </Card>
   );
 }
@@ -818,13 +804,6 @@ function Settings() {
 }
 
 /* --------------------------------- helpers -------------------------------- */
-function ComingSoon({ title, note }: { title: string; note: string }) {
-  return (
-    <Card title={title}>
-      <Empty>{note}</Empty>
-    </Card>
-  );
-}
 function Link({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
   return (
     <button onClick={onClick} className="text-sm font-medium text-teal-700 hover:underline">
