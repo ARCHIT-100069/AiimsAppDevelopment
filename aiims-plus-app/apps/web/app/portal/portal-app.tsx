@@ -226,9 +226,7 @@ export function PortalApp({
           )}
           {active === "doctors" && <Doctors practitioners={practitioners} />}
           {active === "records" && <Records me={me} />}
-          {active === "medications" && (
-            <MockSection title="Medications" data={patientMock.medications} />
-          )}
+          {active === "medications" && <Prescriptions me={me} />}
           {active === "labs" && <Labs me={me} />}
           {active === "imaging" && <MockSection title="Imaging" data={patientMock.imaging} />}
           {active === "vitals" && <Vitals me={me} />}
@@ -259,49 +257,208 @@ function Dashboard({
   outstanding: MySummaryResponse["invoices"];
   onGo: (s: SectionKey) => void;
 }) {
+  const next = upcoming[0];
+  const quick: { key: SectionKey; label: string; icon: keyof typeof ICONS }[] = [
+    { key: "medications", label: "Medicines", icon: "pill" },
+    { key: "appointments", label: "My Queue", icon: "ticket" },
+    { key: "labs", label: "Lab Reports", icon: "flask" },
+    { key: "billing", label: "Billing", icon: "receipt" },
+  ];
   return (
     <>
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Hello, {me.profile.nameGiven}</h2>
-        <p className="mt-1 text-sm text-slate-500">Here’s a snapshot of your health.</p>
+      <SearchBar onGo={onGo} />
+
+      {/* Hero appointment */}
+      <div className="hero-gradient rounded-[26px] p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-teal-900/70">
+              {next ? "Your Appointment" : `Hello, ${me.profile.nameGiven}`}
+            </p>
+            <h2 className="mt-1 text-2xl font-bold leading-tight text-slate-900">
+              {next ? (next.reasonText ?? "Consultation") : "No upcoming visit"}
+            </h2>
+          </div>
+          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white/50 text-lg font-bold text-teal-700">
+            {me.profile.nameGiven[0]}
+            {me.profile.nameFamily[0]}
+          </div>
+        </div>
+        {next ? (
+          <div className="mt-4 space-y-1 rounded-2xl bg-slate-900/85 p-3 text-sm text-white">
+            <div className="flex items-center gap-2">
+              {ICONS.cal}
+              {fmtDateTime(next.startAt)}
+            </div>
+            <div className="flex items-center gap-2 text-white/75">
+              {ICONS.ticket}
+              A-03 · APT-{next.id.slice(0, 8).toUpperCase()}
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onGo("appointments")}
+            className="mt-4 rounded-full bg-slate-900 px-5 py-2 text-sm font-medium text-white"
+          >
+            Book an appointment
+          </button>
+        )}
       </div>
+
+      {/* Quick actions */}
+      <div className="grid grid-cols-4 gap-3">
+        {quick.map((q) => (
+          <button
+            type="button"
+            key={q.label}
+            onClick={() => onGo(q.key)}
+            className="qa-tile flex flex-col items-center gap-2 px-2 py-4"
+          >
+            <span className="text-teal-700">{ICONS[q.icon]}</span>
+            <span className="text-xs font-medium text-slate-600">{q.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Stat strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Upcoming" value={`${upcoming.length}`} />
         <Stat label="Diagnoses" value={`${me.diagnoses.length}`} tone="slate" />
         <Stat label="Lab reports" value={`${me.reports.length}`} tone="slate" />
         <Stat
           label="Due bills"
-          value={outstanding.length ? `${outstanding.length}` : "0"}
+          value={`${outstanding.length}`}
           tone={outstanding.length ? "amber" : "slate"}
         />
       </div>
-      <Card
-        title="Next appointment"
-        action={<Link onClick={() => onGo("appointments")}>View all</Link>}
-      >
-        {upcoming.length === 0 ? (
-          <Empty>No upcoming appointments.</Empty>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-slate-800">{fmtDateTime(upcoming[0]!.startAt)}</p>
-              <p className="text-sm text-slate-500">{upcoming[0]!.reasonText ?? "Consultation"}</p>
-            </div>
-            <Badge tone="teal">{upcoming[0]!.status.replace("_", " ")}</Badge>
-          </div>
-        )}
-      </Card>
-      <Card title="Recent diagnosis" action={<Link onClick={() => onGo("records")}>Records</Link>}>
-        {me.diagnoses.length === 0 ? (
-          <Empty>No diagnoses recorded.</Empty>
-        ) : (
-          <p className="text-slate-800">
-            {me.diagnoses[0]!.display}{" "}
-            <span className="text-sm text-slate-400">({me.diagnoses[0]!.code})</span>
-          </p>
-        )}
-      </Card>
+
+      <HealthTips />
     </>
+  );
+}
+
+/* --------------------------------- icons ---------------------------------- */
+const ICONS = {
+  search: svg("M11 4a7 7 0 105 12l4 4 1.5-1.5-4-4A7 7 0 0011 4z"),
+  cal: svg("M7 2v2M17 2v2M3 8h18M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z"),
+  ticket: svg("M4 7h16v4a2 2 0 000 4v2H4v-2a2 2 0 000-4V7z"),
+  pill: svg("M10.5 13.5l3-3M8 16a4 4 0 010-6l2-2a4 4 0 116 6l-2 2a4 4 0 01-6 0z"),
+  flask: svg("M9 3h6M10 3v6l-5 9a1 1 0 001 1h12a1 1 0 001-1l-5-9V3"),
+  receipt: svg("M6 3h12v18l-2-1.2L14 21l-2-1.2L10 21l-2-1.2L6 21V3zM9 8h6M9 12h6"),
+} as const;
+
+function svg(d: string) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={18}
+      height={18}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d={d} />
+    </svg>
+  );
+}
+
+/* Interactive search that jumps to a section. */
+function SearchBar({ onGo }: { onGo: (s: SectionKey) => void }) {
+  const [q, setQ] = useState("");
+  const matches = q
+    ? NAV.filter((n) => n.label.toLowerCase().includes(q.toLowerCase())).slice(0, 5)
+    : [];
+  return (
+    <div className="relative">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (matches[0]) {
+            onGo(matches[0].key);
+            setQ("");
+          }
+        }}
+        className="search-field flex items-center gap-3 px-5 py-3"
+      >
+        <span className="text-slate-400">{ICONS.search}</span>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Need help?"
+          className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+        />
+      </form>
+      {matches.length > 0 ? (
+        <div className="glass absolute z-20 mt-2 w-full overflow-hidden rounded-2xl p-1">
+          {matches.map((m) => (
+            <button
+              type="button"
+              key={m.key}
+              onMouseDown={() => {
+                onGo(m.key);
+                setQ("");
+              }}
+              className="block w-full rounded-xl px-4 py-2 text-left text-sm text-slate-700 hover:bg-white/70"
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+const TIPS = [
+  {
+    tag: "Article",
+    title: "Recovery Fuel",
+    short: "Refuel with protein + carbs within 60 mins.",
+    body: "After illness or exertion, a balanced snack within an hour helps your body repair. Aim for a mix of protein (eggs, dal, curd) and complex carbs (roti, rice, fruit), and stay hydrated with water or ORS.",
+  },
+  {
+    tag: "Article",
+    title: "Protect Your Health",
+    short: "Vaccinations and routine check-ups keep you healthy.",
+    body: "Staying up to date on vaccines and annual check-ups helps catch issues early. Speak to your doctor about the flu shot, and screenings appropriate for your age and history.",
+  },
+  {
+    tag: "Tip",
+    title: "Hydration Matters",
+    short: "Aim for 6–8 glasses of water a day.",
+    body: "Good hydration supports temperature control, digestion and energy. In fever or hot weather, increase fluids and watch for signs of dehydration like dark urine or dizziness.",
+  },
+];
+
+function HealthTips() {
+  const [open, setOpen] = useState<number | null>(null);
+  return (
+    <div>
+      <h3 className="mb-3 text-lg font-bold text-slate-900">Health Tips</h3>
+      <div className="space-y-3">
+        {TIPS.map((t, i) => (
+          <button
+            type="button"
+            key={t.title}
+            onClick={() => setOpen(open === i ? null : i)}
+            className="card flex w-full items-start gap-4 p-4 text-left"
+          >
+            <div className="tip-img h-16 w-16 shrink-0 rounded-2xl" />
+            <div className="min-w-0">
+              <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700">
+                {t.tag}
+              </span>
+              <p className="mt-1 font-semibold text-slate-800">{t.title}</p>
+              <p className="text-sm text-slate-500">{open === i ? t.body : t.short}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -489,23 +646,100 @@ function BookCard({ practitioners }: { practitioners: BookablePractitioner[] }) 
 }
 
 function Doctors({ practitioners }: { practitioners: BookablePractitioner[] }) {
+  const [filter, setFilter] = useState<"all" | "general" | "specialist">("all");
+  const isGeneral = (p: BookablePractitioner) =>
+    !p.specialty || /general|medicine|opd/i.test(`${p.departmentName} ${p.specialty ?? ""}`);
+  const shown = practitioners.filter((p) =>
+    filter === "all" ? true : filter === "general" ? isGeneral(p) : !isGeneral(p),
+  );
+  const chips: [typeof filter, string, number][] = [
+    ["all", "All", practitioners.length],
+    ["general", "General", practitioners.filter(isGeneral).length],
+    ["specialist", "Specialist", practitioners.filter((p) => !isGeneral(p)).length],
+  ];
   return (
-    <Card title="My doctors">
-      {practitioners.length === 0 ? (
-        <Empty>No doctors on record yet.</Empty>
-      ) : (
-        <ul className="divide-y divide-slate-100">
-          {practitioners.map((p) => (
-            <Row
-              key={p.practitionerId}
-              title={p.name}
-              sub={`${p.departmentName}${p.specialty ? ` · ${p.specialty}` : ""} · ${p.facilityName}`}
-              right={<Badge tone="teal">Available</Badge>}
-            />
-          ))}
-        </ul>
-      )}
-    </Card>
+    <>
+      <div className="flex gap-2">
+        {chips.map(([key, label, count]) => (
+          <button
+            type="button"
+            key={key}
+            onClick={() => setFilter(key)}
+            className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              filter === key ? "bg-white text-slate-900 shadow" : "bg-white/50 text-slate-500"
+            }`}
+          >
+            {label}
+            <span
+              className={`grid h-5 min-w-5 place-items-center rounded-full px-1 text-xs ${
+                filter === key ? "bg-teal-600 text-white" : "bg-slate-200 text-slate-600"
+              }`}
+            >
+              {count}
+            </span>
+          </button>
+        ))}
+      </div>
+      <Card title="My doctors">
+        {shown.length === 0 ? (
+          <Empty>No doctors in this category.</Empty>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {shown.map((p) => (
+              <Row
+                key={p.practitionerId}
+                title={p.name}
+                sub={`${p.departmentName}${p.specialty ? ` · ${p.specialty}` : ""} · ${p.facilityName}`}
+                right={<Badge tone="teal">Available</Badge>}
+              />
+            ))}
+          </ul>
+        )}
+      </Card>
+    </>
+  );
+}
+
+function Prescriptions({ me }: { me: MySummaryResponse }) {
+  const meds = patientMock.medications.items ?? [];
+  const dx = me.diagnoses[0];
+  return (
+    <div className="receipt p-6">
+      <div className="mb-4 flex items-center gap-3 rounded-2xl bg-gradient-to-br from-teal-50 to-sky-50 p-3">
+        <div className="grid h-12 w-12 place-items-center rounded-xl bg-white text-sm font-bold text-teal-700">
+          MR
+        </div>
+        <div>
+          <p className="font-semibold text-slate-800">Dr. Meera Rao</p>
+          <p className="text-xs text-slate-500">Internal Medicine · 15 min · Standard Check</p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="h-2 w-2 rounded-full bg-teal-500" />
+        <h3 className="font-semibold text-slate-800">Diagnosis</h3>
+      </div>
+      <p className="mt-2 text-sm leading-relaxed text-slate-600">
+        {dx
+          ? `${dx.display} (${dx.code}). Treated symptomatically; continue monitoring and complete the full course.`
+          : "Acute upper respiratory infection (J06.9). Treated symptomatically; rest, fluids, and monitor temperature."}
+      </p>
+
+      <div className="my-4 border-t border-dashed border-slate-200" />
+
+      <div className="flex items-center gap-2">
+        <span className="h-2 w-2 rounded-full bg-teal-500" />
+        <h3 className="font-semibold text-slate-800">Prescriptions</h3>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-4">
+        {meds.map((m) => (
+          <div key={m.title}>
+            <p className="text-sm font-medium text-slate-800">{m.title}</p>
+            <p className="text-xs text-slate-500">{m.sub}</p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -804,13 +1038,6 @@ function Settings() {
 }
 
 /* --------------------------------- helpers -------------------------------- */
-function Link({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
-  return (
-    <button onClick={onClick} className="text-sm font-medium text-teal-700 hover:underline">
-      {children}
-    </button>
-  );
-}
 function Toggle({ label, on, set }: { label: string; on: boolean; set: (v: boolean) => void }) {
   return (
     <button
