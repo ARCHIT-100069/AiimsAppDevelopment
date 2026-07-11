@@ -81,8 +81,8 @@ export default async function LoginPage({
         </div>
       </aside>
 
-      {/* Sign-in card */}
-      <main className="app-bg relative flex items-center justify-center overflow-hidden p-6">
+      {/* Sign-in side */}
+      <main className="app-bg relative flex flex-col items-center justify-center gap-6 overflow-hidden p-6">
         <Ripple
           mainCircleSize={200}
           numCircles={7}
@@ -116,7 +116,66 @@ export default async function LoginPage({
             Protected by single sign-on. Accounts are provisioned by your administrator.
           </p>
         </div>
+
+        {/* Trust strip — builds confidence for a health platform */}
+        <div className="relative z-10 w-full max-w-sm space-y-4">
+          <div className="grid grid-cols-3 gap-2 text-center">
+            {[
+              ["1,20,000+", "patients cared for"],
+              ["200+", "doctors"],
+              ["99.9%", "uptime"],
+            ].map(([n, l]) => (
+              <div key={l} className="card p-3">
+                <p className="text-lg font-bold text-teal-700">{n}</p>
+                <p className="text-[11px] leading-tight text-slate-500">{l}</p>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {[
+              ["lock", "256-bit encrypted"],
+              ["shield", "Tamper-evident audit"],
+              ["check", "ABDM aligned"],
+              ["check", "DPDP compliant"],
+            ].map(([icon, label]) => (
+              <span
+                key={label}
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600"
+              >
+                <TrustIcon kind={icon} />
+                {label}
+              </span>
+            ))}
+          </div>
+          <p className="text-center text-xs text-slate-400">
+            Your records are encrypted at rest and every access is logged.
+          </p>
+        </div>
       </main>
     </div>
+  );
+}
+
+function TrustIcon({ kind }: { kind: string }) {
+  const paths: Record<string, string> = {
+    lock: "M6 10V7a6 6 0 1112 0v3M5 10h14v11H5zM12 15v3",
+    shield: "M12 3l7 3v6c0 5-3 7-7 9-4-2-7-4-7-9V6z",
+    check: "M20 6L9 17l-5-5",
+  };
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={14}
+      height={14}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-teal-600"
+      aria-hidden
+    >
+      <path d={paths[kind]} />
+    </svg>
   );
 }
