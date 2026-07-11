@@ -420,18 +420,21 @@ const TIPS = [
     title: "Recovery Fuel",
     short: "Refuel with protein + carbs within 60 mins.",
     body: "After illness or exertion, a balanced snack within an hour helps your body repair. Aim for a mix of protein (eggs, dal, curd) and complex carbs (roti, rice, fruit), and stay hydrated with water or ORS.",
+    img: "/images/tip-food.jpg",
   },
   {
     tag: "Article",
     title: "Protect Your Health",
     short: "Vaccinations and routine check-ups keep you healthy.",
     body: "Staying up to date on vaccines and annual check-ups helps catch issues early. Speak to your doctor about the flu shot, and screenings appropriate for your age and history.",
+    img: "/images/tip-checkup.jpg",
   },
   {
     tag: "Tip",
     title: "Hydration Matters",
     short: "Aim for 6–8 glasses of water a day.",
     body: "Good hydration supports temperature control, digestion and energy. In fever or hot weather, increase fluids and watch for signs of dehydration like dark urine or dizziness.",
+    img: "/images/tip-wellness.jpg",
   },
 ];
 
@@ -448,7 +451,7 @@ function HealthTips() {
             onClick={() => setOpen(open === i ? null : i)}
             className="card flex w-full items-start gap-4 p-4 text-left"
           >
-            <div className="tip-img h-16 w-16 shrink-0 rounded-2xl" />
+            <img src={t.img} alt="" className="h-16 w-16 shrink-0 rounded-2xl object-cover" />
             <div className="min-w-0">
               <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700">
                 {t.tag}

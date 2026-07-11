@@ -74,6 +74,14 @@ export default async function LoginPage({
               </li>
             ))}
           </ul>
+          {/* Care photo (CC0 / public domain) */}
+          <div className="mt-8 overflow-hidden rounded-2xl border border-white/20 shadow-2xl">
+            <img
+              src="/images/care-hero.jpg"
+              alt="A doctor consulting with a patient"
+              className="h-44 w-full max-w-md object-cover"
+            />
+          </div>
         </div>
         <div className="relative z-10">
           <Marquee />
