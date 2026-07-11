@@ -653,19 +653,60 @@ function Appointments({
   );
 }
 
+interface Slot {
+  startAt: string;
+  endAt: string;
+}
+const timeIST = (iso: string) =>
+  new Date(iso).toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Kolkata",
+  });
+/** Next 14 days as {value:yyyy-mm-dd, label} for the date chips. */
+function nextDays(n: number): { value: string; label: string; dow: string }[] {
+  const out: { value: string; label: string; dow: string }[] = [];
+  for (let i = 0; i < n; i++) {
+    const d = new Date(Date.now() + i * 864e5);
+    const value = d.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }); // yyyy-mm-dd
+    out.push({
+      value,
+      label: d.toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        timeZone: "Asia/Kolkata",
+      }),
+      dow: d.toLocaleDateString("en-IN", { weekday: "short", timeZone: "Asia/Kolkata" }),
+    });
+  }
+  return out;
+}
+
 function BookCard({ practitioners }: { practitioners: BookablePractitioner[] }) {
   const router = useRouter();
+  const days = nextDays(14);
   const [pracId, setPracId] = useState(practitioners[0]?.practitionerId ?? "");
-  const [when, setWhen] = useState("");
+  const [date, setDate] = useState(days[0]?.value ?? "");
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [slot, setSlot] = useState<string>("");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const canBook = pracId && when && !busy;
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  useEffect(() => {
+    if (!pracId || !date) return;
+    setLoadingSlots(true);
+    setSlot("");
+    fetch(`/api/bff/me/slots?practitionerId=${pracId}&date=${date}`)
+      .then((r) => (r.ok ? r.json() : { slots: [] }))
+      .then((d) => setSlots(d.slots ?? []))
+      .finally(() => setLoadingSlots(false));
+  }, [pracId, date]);
+
+  async function confirm() {
     const prac = practitioners.find((p) => p.practitionerId === pracId);
-    if (!prac || !when) return;
+    if (!prac || !slot) return;
     setBusy(true);
     setMsg(null);
     try {
@@ -676,18 +717,22 @@ function BookCard({ practitioners }: { practitioners: BookablePractitioner[] }) 
           practitionerId: prac.practitionerId,
           facilityId: prac.facilityId,
           departmentId: prac.departmentId,
-          startAt: new Date(when).toISOString(),
+          startAt: slot,
           reasonText: reason || undefined,
         }),
       });
       if (res.ok) {
-        setMsg({ ok: true, text: "Appointment booked!" });
-        setWhen("");
+        setMsg({ ok: true, text: `Appointment confirmed for ${timeIST(slot)}.` });
+        setSlot("");
         setReason("");
+        // refresh available slots + the rest of the portal
+        fetch(`/api/bff/me/slots?practitionerId=${pracId}&date=${date}`)
+          .then((r) => (r.ok ? r.json() : { slots: [] }))
+          .then((d) => setSlots(d.slots ?? []));
         router.refresh();
       } else {
         const body = (await res.json().catch(() => ({}))) as { detail?: string };
-        setMsg({ ok: false, text: body.detail ?? "Could not book — please try another time." });
+        setMsg({ ok: false, text: body.detail ?? "That slot is no longer available." });
       }
     } catch {
       setMsg({ ok: false, text: "Network error — please try again." });
@@ -703,60 +748,105 @@ function BookCard({ practitioners }: { practitioners: BookablePractitioner[] }) 
       </Card>
     );
   }
+  const prac = practitioners.find((p) => p.practitionerId === pracId);
   return (
     <Card title="Book an appointment">
-      <form onSubmit={submit} className="space-y-3">
-        <label className="block text-sm">
-          <span className="text-slate-500">Doctor</span>
-          <select
-            value={pracId}
-            onChange={(e) => setPracId(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+      {/* Step 1 — doctor */}
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        1 · Doctor
+      </p>
+      <select
+        value={pracId}
+        onChange={(e) => setPracId(e.target.value)}
+        className="mb-4 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+      >
+        {practitioners.map((p) => (
+          <option key={p.practitionerId} value={p.practitionerId}>
+            {p.name} · {p.departmentName}
+            {p.specialty ? ` (${p.specialty})` : ""}
+          </option>
+        ))}
+      </select>
+
+      {/* Step 2 — date chips */}
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">2 · Date</p>
+      <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+        {days.map((d) => (
+          <button
+            type="button"
+            key={d.value}
+            onClick={() => setDate(d.value)}
+            className={`shrink-0 rounded-xl border px-3 py-2 text-center text-sm ${
+              date === d.value
+                ? "border-teal-600 bg-teal-600 text-white"
+                : "border-slate-200 bg-white text-slate-600 hover:border-teal-300"
+            }`}
           >
-            {practitioners.map((p) => (
-              <option key={p.practitionerId} value={p.practitionerId}>
-                {p.name} · {p.departmentName}
-                {p.specialty ? ` (${p.specialty})` : ""}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm">
-          <span className="text-slate-500">Date &amp; time</span>
-          <input
-            type="datetime-local"
-            value={when}
-            onChange={(e) => setWhen(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-slate-500">Reason (optional)</span>
+            <span className="block text-[11px] opacity-80">{d.dow}</span>
+            <span className="font-medium">{d.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Step 3 — slots */}
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        3 · Available time
+      </p>
+      {loadingSlots ? (
+        <p className="py-4 text-sm text-slate-400">Checking availability…</p>
+      ) : slots.length === 0 ? (
+        <p className="py-4 text-sm text-slate-400">
+          No free slots for {prac?.name} on this day. Try another date.
+        </p>
+      ) : (
+        <div className="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {slots.map((s) => (
+            <button
+              type="button"
+              key={s.startAt}
+              onClick={() => setSlot(s.startAt)}
+              className={`rounded-lg border px-2 py-2 text-sm ${
+                slot === s.startAt
+                  ? "border-teal-600 bg-teal-600 text-white"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-teal-300"
+              }`}
+            >
+              {timeIST(s.startAt)}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Step 4 — reason + confirm */}
+      {slot ? (
+        <>
           <input
             type="text"
             value={reason}
             maxLength={200}
-            placeholder="e.g. fever and cough"
+            placeholder="Reason (optional) — e.g. fever and cough"
             onChange={(e) => setReason(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+            className="mb-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
           />
-        </label>
-        {msg ? (
-          <p
-            className={`rounded-lg px-3 py-2 text-sm ${
-              msg.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
-            }`}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={confirm}
+            className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
           >
-            {msg.text}
-          </p>
-        ) : null}
-        <button
-          disabled={!canBook}
-          className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+            {busy ? "Confirming…" : `Confirm ${timeIST(slot)} with ${prac?.name}`}
+          </button>
+        </>
+      ) : null}
+      {msg ? (
+        <p
+          className={`mt-3 rounded-lg px-3 py-2 text-sm ${
+            msg.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+          }`}
         >
-          {busy ? "Booking…" : "Book appointment"}
-        </button>
-      </form>
+          {msg.text}
+        </p>
+      ) : null}
     </Card>
   );
 }

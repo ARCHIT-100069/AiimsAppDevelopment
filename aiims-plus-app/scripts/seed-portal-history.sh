@@ -37,6 +37,11 @@ SUB=$(uuid); USR=$(api POST /v1/users "$ADMIN" "{\"keycloakSub\":\"$SUB\",\"disp
 api POST "/v1/users/$USR/roles" "$ADMIN" '{"roleCode":"doctor"}' >/dev/null
 PRAC=$(api POST /v1/practitioners "$ADMIN" "{\"appUserId\":\"$USR\",\"registrationNo\":\"MCI-$(date +%s)\",\"departmentId\":\"$DEPT\",\"nameGiven\":\"Meera\",\"nameFamily\":\"Rao\"}" | jget id)
 
+# Availability template so patients see real bookable slots (Mon–Sat 09:00–13:00, 15-min).
+for dow in 1 2 3 4 5 6; do
+  api POST /v1/practitioner-availability "$ADMIN" "{\"practitionerId\":\"$PRAC\",\"facilityId\":\"$FAC\",\"dayOfWeek\":$dow,\"startTime\":\"09:00\",\"endTime\":\"13:00\",\"slotMinutes\":15}" >/dev/null
+done
+
 START="$(python3 -c 'import datetime;print((datetime.datetime.utcnow()+datetime.timedelta(days=3)).replace(microsecond=0).isoformat()+"Z")')"
 END="$(python3 -c 'import sys,datetime;print((datetime.datetime.fromisoformat(sys.argv[1].replace("Z",""))+datetime.timedelta(minutes=15)).isoformat()+"Z")' "$START")"
 APPT=$(api POST /v1/appointments "$FRONT" "{\"patientId\":\"$PATIENT_ID\",\"practitionerId\":\"$PRAC\",\"facilityId\":\"$FAC\",\"departmentId\":\"$DEPT\",\"startAt\":\"$START\",\"endAt\":\"$END\",\"appointmentType\":\"routine\",\"reasonText\":\"Fever and cough, 3 days\"}" "Idempotency-Key: $(uuid)" | jget id)

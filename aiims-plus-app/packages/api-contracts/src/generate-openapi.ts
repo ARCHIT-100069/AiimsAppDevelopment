@@ -53,6 +53,7 @@ import {
   listAvailabilityResponseSchema,
   slotsResponseSchema,
 } from "./availability";
+const mySlotsResponseSchema = slotsResponseSchema;
 import { queueResponseSchema } from "./queue";
 import {
   encounterResponseSchema,
@@ -992,6 +993,25 @@ export const openApiDocument = {
       },
     },
 
+    "/v1/me/slots": {
+      get: {
+        summary:
+          "Patient portal — available appointment slots for a practitioner on a date (self:read)",
+        parameters: [
+          {
+            name: "practitionerId",
+            in: "query",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+          { name: "date", in: "query", required: true, schema: { type: "string", format: "date" } },
+        ],
+        responses: {
+          "200": jsonOk("Available slots", mySlotsResponseSchema),
+          ...standardErrors,
+        },
+      },
+    },
     "/v1/me/appointments": {
       post: {
         summary:

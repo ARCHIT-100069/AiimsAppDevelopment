@@ -6,8 +6,9 @@
  * audit in one transaction, forcing the patient id from the token — never the
  * request body.
  */
-import { Body, Controller, Get, HttpCode, Post } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, Post, Query } from "@nestjs/common";
 import {
+  computeFreeSlots,
   getPatientById,
   listBookablePractitioners,
   listDiagnosesByPatient,
@@ -24,6 +25,7 @@ import {
   type BookableOptionsResponse,
   type MyAppointment,
   type MySummaryResponse,
+  type SlotsResponse,
 } from "@aiims/api-contracts";
 import type { Principal } from "@aiims/domain-types";
 import { NotFoundError } from "../../../common/errors";
@@ -155,6 +157,29 @@ export class MeController {
       (db) => listBookablePractitioners(db),
     );
     return { practitioners };
+  }
+
+  @Get("slots")
+  @RequirePermission("self:read")
+  async slots(
+    @CurrentPrincipal() principal: Principal,
+    @Query("practitionerId") practitionerId?: string,
+    @Query("date") date?: string,
+  ): Promise<SlotsResponse> {
+    const uuid = /^[0-9a-f-]{36}$/i;
+    const day = /^\d{4}-\d{2}-\d{2}$/;
+    if (!practitionerId || !uuid.test(practitionerId) || !date || !day.test(date)) {
+      return { practitionerId: practitionerId ?? "", date: date ?? "", slots: [] };
+    }
+    const slots = await this.uow.withTenant(
+      { tenantId: principal.tenantId, actorId: principal.actorId },
+      (db) => computeFreeSlots(db, practitionerId, date),
+    );
+    return {
+      practitionerId,
+      date,
+      slots: slots.map((s) => ({ startAt: s.startAt.toISOString(), endAt: s.endAt.toISOString() })),
+    };
   }
 
   @Post("appointments")
