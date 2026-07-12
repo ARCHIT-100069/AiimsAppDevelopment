@@ -115,6 +115,11 @@ import {
   listPrescriptionsResponseSchema,
   dispenseResponseSchema,
 } from "./pharmacy";
+import {
+  createFeedbackRequestSchema,
+  feedbackResponseSchema,
+  listFeedbackResponseSchema,
+} from "./feedback";
 import { fhirPatientSchema } from "./fhir";
 import { fhirPractitionerSchema } from "./fhir-practitioner";
 import { fhirAppointmentSchema } from "./fhir-appointment";
@@ -1023,6 +1028,30 @@ export const openApiDocument = {
         responses: {
           "201": jsonOk("The booked appointment", myAppointmentSchema),
           "409": problemResponse("Slot unavailable (double-booking) or duplicate"),
+          ...standardErrors,
+        },
+      },
+    },
+
+    "/v1/me/feedback": {
+      post: {
+        summary:
+          "Patient portal — submit satisfaction feedback about one's own care (self:feedback; patient id is taken from the token, never the body)",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(createFeedbackRequestSchema) } },
+        },
+        responses: {
+          "201": jsonOk("The submitted feedback", feedbackResponseSchema),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/feedback": {
+      get: {
+        summary: "Quality — list patient-satisfaction feedback for the tenant (feedback:read)",
+        responses: {
+          "200": jsonOk("Patient feedback", listFeedbackResponseSchema),
           ...standardErrors,
         },
       },

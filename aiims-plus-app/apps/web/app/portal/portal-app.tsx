@@ -1179,38 +1179,122 @@ function Privacy() {
   );
 }
 
+const FEEDBACK_CATEGORIES = [
+  ["overall", "Overall"],
+  ["doctor", "Doctor"],
+  ["nursing", "Nursing"],
+  ["cleanliness", "Cleanliness"],
+  ["billing", "Billing"],
+  ["facilities", "Facilities"],
+] as const;
+
 function Feedback() {
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [category, setCategory] = useState<string>("overall");
   const [text, setText] = useState("");
   const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!rating || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/bff/me/feedback", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          rating,
+          category,
+          comment: text.trim() || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error(`Could not send feedback (${res.status})`);
+      setSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send feedback");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (sent) {
+    return (
+      <Card title="Share feedback">
+        <p className="rounded-lg bg-green-50 px-3 py-3 text-sm text-green-700">
+          Thank you — your feedback helps us improve care for everyone. 💚
+        </p>
+      </Card>
+    );
+  }
+
   return (
     <Card title="Share feedback">
-      {sent ? (
-        <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-          Thanks for your feedback!
-        </p>
-      ) : (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (text.trim()) setSent(true);
-          }}
-          className="space-y-3"
+      <form onSubmit={submit} className="space-y-4">
+        <div>
+          <p className="mb-1.5 text-sm font-medium text-slate-700">How was your experience?</p>
+          <div className="flex gap-1" onMouseLeave={() => setHover(0)}>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                aria-label={`${n} star${n > 1 ? "s" : ""}`}
+                onMouseEnter={() => setHover(n)}
+                onClick={() => setRating(n)}
+                className="text-3xl leading-none transition-transform hover:scale-110"
+              >
+                <span className={(hover || rating) >= n ? "text-amber-400" : "text-slate-300"}>
+                  ★
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-1.5 text-sm font-medium text-slate-700">What is this about?</p>
+          <div className="flex flex-wrap gap-2">
+            {FEEDBACK_CATEGORIES.map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setCategory(value)}
+                className={`rounded-full border px-3 py-1 text-sm ${
+                  category === value
+                    ? "border-teal-600 bg-teal-50 font-medium text-teal-700"
+                    : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={4}
+          placeholder="Tell us more (optional)…"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+        />
+
+        {error ? (
+          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        ) : null}
+
+        <button
+          disabled={!rating || busy}
+          className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
         >
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={4}
-            placeholder="Tell us about your experience…"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-          />
-          <button
-            disabled={!text.trim()}
-            className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
-          >
-            Send feedback
-          </button>
-        </form>
-      )}
+          {busy ? "Sending…" : "Send feedback"}
+        </button>
+      </form>
     </Card>
   );
 }

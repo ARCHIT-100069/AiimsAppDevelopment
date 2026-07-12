@@ -22,7 +22,9 @@ import {
 } from "@aiims/db";
 import {
   bookMyAppointmentRequestSchema,
+  createFeedbackRequestSchema,
   type BookableOptionsResponse,
+  type FeedbackResponse,
   type MyAppointment,
   type MySummaryResponse,
   type SlotsResponse,
@@ -214,6 +216,35 @@ export class MeController {
       status: a.status,
       appointmentType: a.appointmentType,
       reasonText: a.reasonText ?? null,
+    };
+  }
+
+  @Post("feedback")
+  @HttpCode(201)
+  @RequirePermission("self:feedback")
+  async submitFeedback(
+    @CurrentPrincipal() principal: Principal,
+    @Body() rawBody: unknown,
+  ): Promise<FeedbackResponse> {
+    const patientId = principal.patientId;
+    if (!patientId) throw new NotFoundError("No patient record for this token");
+    const req = createFeedbackRequestSchema.parse(rawBody);
+
+    // The patient id comes from the TOKEN — a patient rates only their own care.
+    const row = await this.me.submitFeedback(principal, {
+      patientId,
+      rating: req.rating,
+      category: req.category,
+      comment: req.comment,
+      encounterId: req.encounterId,
+    });
+
+    return {
+      id: row.id,
+      rating: row.rating,
+      category: row.category,
+      comment: row.comment,
+      createdAt: row.createdAt.toISOString(),
     };
   }
 }

@@ -8,10 +8,12 @@
 import { Injectable } from "@nestjs/common";
 import {
   insertAppointment,
+  insertFeedback,
   insertOutboxEvent,
   isExclusionViolation,
   newId,
   type AppointmentRow,
+  type FeedbackRow,
 } from "@aiims/db";
 import { APPOINTMENT_BOOKED_V1 } from "@aiims/event-schemas";
 import type { Principal } from "@aiims/domain-types";
@@ -27,6 +29,14 @@ export interface SelfBookInput {
   startAt: Date;
   endAt: Date;
   reasonText?: string;
+}
+
+export interface SelfFeedbackInput {
+  patientId: string;
+  rating: number;
+  category: string;
+  comment?: string;
+  encounterId?: string;
 }
 
 @Injectable()
@@ -84,5 +94,33 @@ export class MeService {
       }
       throw err;
     }
+  }
+
+  /**
+   * A patient submits satisfaction feedback about their own care. Append-only:
+   * insert + tamper-evident audit in one tenant transaction. The patient id is
+   * always the caller's own (from the token) — never the request body.
+   */
+  async submitFeedback(principal: Principal, input: SelfFeedbackInput): Promise<FeedbackRow> {
+    const actor = { tenantId: principal.tenantId, actorId: principal.actorId };
+    return this.uow.withTenant(actor, async (db) => {
+      const row = await insertFeedback(db, {
+        id: newId(),
+        tenantId: principal.tenantId,
+        patientId: input.patientId,
+        encounterId: input.encounterId ?? null,
+        rating: input.rating,
+        category: input.category,
+        comment: input.comment ?? null,
+      });
+      await this.audit.append(db, actor, {
+        eventId: newId(),
+        action: "feedback.submit",
+        resourceType: "patient_feedback",
+        resourceId: row.id,
+        occurredAt: new Date(),
+      });
+      return row;
+    });
   }
 }

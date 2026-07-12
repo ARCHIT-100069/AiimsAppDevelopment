@@ -19,6 +19,7 @@ import { BillingModule } from "./modules/billing/billing.module";
 import { AiModule } from "./modules/ai/ai.module";
 import { MeModule } from "./modules/me/me.module";
 import { PharmacyModule } from "./modules/pharmacy/pharmacy.module";
+import { FeedbackModule } from "./modules/feedback/feedback.module";
 import { TenancyModule } from "./modules/tenancy/tenancy.module";
 import { AuthGuard } from "./platform/auth.guard";
 import { AuthzGuard } from "./platform/authz.guard";
@@ -39,6 +40,7 @@ import { PlatformModule } from "./platform/platform.module";
     AiModule,
     MeModule,
     PharmacyModule,
+    FeedbackModule,
   ],
   controllers: [HealthController],
   providers: [

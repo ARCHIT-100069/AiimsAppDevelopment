@@ -53,6 +53,10 @@ export const PERMISSIONS = [
   "self:read",
   // …and books an appointment for themselves (server forces their own id).
   "self:book",
+  // …and submits satisfaction feedback about their own care.
+  "self:feedback",
+  // Feedback / quality — staff read of patient-satisfaction data (NABH).
+  "feedback:read",
   // Pharmacy module — formulary + stock, prescribing, and dispensing.
   "pharmacy:read", // view drug master + stock + prescriptions
   "pharmacy:manage", // add drugs, receive stock
@@ -73,7 +77,7 @@ const ROLE_PERMISSIONS: Record<
 > = {
   [PLATFORM_ADMIN_ROLE]: ["platform:tenant:manage"],
   // Patient portal: read own record + book own appointments — nothing else.
-  [PATIENT_ROLE]: ["self:read", "self:book"],
+  [PATIENT_ROLE]: ["self:read", "self:book", "self:feedback"],
   // Separation of duties (SDR-0002): admin administers, clinicians treat,
   // front desk registers — admin deliberately holds NO patient permission.
   admin: [
@@ -96,6 +100,8 @@ const ROLE_PERMISSIONS: Record<
     "pharmacy:manage",
     "pharmacy:dispense",
     "prescription:read",
+    // Admin/quality reviews patient-satisfaction feedback (NABH).
+    "feedback:read",
   ],
   doctor: [
     "org:read",
