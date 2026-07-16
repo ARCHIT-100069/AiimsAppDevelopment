@@ -66,6 +66,8 @@ export const PERMISSIONS = [
   // Laboratory module — worklist + result entry (structured analyte lines).
   "lab:read", // view the lab worklist + results
   "lab:result", // file a lab result against an order
+  // Management — read-only leadership analytics (aggregate rollups, no PHI).
+  "management:read",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -108,6 +110,8 @@ const ROLE_PERMISSIONS: Record<
     // Admin runs the laboratory desk in this build: worklist + result entry.
     "lab:read",
     "lab:result",
+    // Admin/leadership sees the management analytics dashboard.
+    "management:read",
   ],
   doctor: [
     "org:read",

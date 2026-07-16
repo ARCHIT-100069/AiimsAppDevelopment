@@ -5,6 +5,7 @@ import { portalBySlug } from "../../lib/portals";
 import { PortalView } from "./portal-view";
 import { PharmacyPortal } from "../pharmacy/pharmacy-portal";
 import { LabPortal } from "../laboratory/lab-portal";
+import { ManagementPortal } from "../management/management-portal";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,9 @@ export default async function DepartmentPortalPage({
   }
   if (slug === "laboratory") {
     return <LabPortal userName={session.displayName} greeting={greeting} />;
+  }
+  if (slug === "management") {
+    return <ManagementPortal userName={session.displayName} greeting={greeting} />;
   }
 
   const config = portalBySlug(slug);

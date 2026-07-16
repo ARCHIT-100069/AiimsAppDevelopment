@@ -33,3 +33,4 @@ export * from "./me-queries";
 export * from "./pharmacy-queries";
 export * from "./feedback-queries";
 export * from "./lab-queries";
+export * from "./management-queries";

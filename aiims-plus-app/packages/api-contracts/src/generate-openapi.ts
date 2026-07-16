@@ -125,6 +125,7 @@ import {
   labResultResponseSchema,
   listLabWorklistResponseSchema,
 } from "./laboratory";
+import { managementOverviewSchema } from "./management";
 import { fhirPatientSchema } from "./fhir";
 import { fhirPractitionerSchema } from "./fhir-practitioner";
 import { fhirAppointmentSchema } from "./fhir-appointment";
@@ -1091,6 +1092,17 @@ export const openApiDocument = {
         responses: {
           "201": jsonOk("The filed lab result", labResultResponseSchema),
           "404": problemResponse("Order not found"),
+          ...standardErrors,
+        },
+      },
+    },
+
+    "/v1/management/overview": {
+      get: {
+        summary:
+          "Management — leadership analytics rollup (OPD, revenue, lab, pharmacy, satisfaction); no PHI (management:read)",
+        responses: {
+          "200": jsonOk("Management overview", managementOverviewSchema),
           ...standardErrors,
         },
       },
