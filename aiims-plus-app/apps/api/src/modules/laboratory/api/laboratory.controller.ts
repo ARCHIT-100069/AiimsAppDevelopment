@@ -25,11 +25,14 @@ export class LaboratoryController {
   async worklist(
     @CurrentPrincipal() principal: Principal,
     @Query("facilityId") facilityId?: string,
+    @Query("category") category?: string,
   ): Promise<{ data: LabWorklistItem[] }> {
     if (!facilityId || !UUID.test(facilityId)) {
       throw new DomainError("facilityId query parameter is required");
     }
-    return { data: await this.lab.worklist(principal, facilityId) };
+    const cat =
+      category === "imaging" || category === "other" || category === "lab" ? category : "lab";
+    return { data: await this.lab.worklist(principal, facilityId, cat) };
   }
 
   @Post("orders/:id/result")

@@ -33,7 +33,11 @@ export interface LabWorklistRow {
  * outstanding); non-null ⇒ resulted. Facility scoping comes from the order's
  * encounter.
  */
-export async function listLabWorklist(db: TenantDb, facilityId: string): Promise<LabWorklistRow[]> {
+export async function listLabWorklist(
+  db: TenantDb,
+  facilityId: string,
+  category: "lab" | "imaging" | "other" = "lab",
+): Promise<LabWorklistRow[]> {
   return db
     .select({
       orderId: s.serviceRequest.id,
@@ -73,7 +77,7 @@ export async function listLabWorklist(db: TenantDb, facilityId: string): Promise
         eq(s.diagnosticReport.serviceRequestId, s.serviceRequest.id),
       ),
     )
-    .where(eq(s.encounter.facilityId, facilityId))
+    .where(and(eq(s.encounter.facilityId, facilityId), eq(s.serviceRequest.category, category)))
     .orderBy(desc(s.serviceRequest.createdAt));
 }
 

@@ -274,7 +274,15 @@
       "Skill(dataviz)",
       "Skill(dataviz:*)",
       "Bash(node scripts/validate_palette.js \"#2a78d6,#1baf7a,#eda100,#008300\" --mode light)",
-      "Bash(node cdp.mjs admin.a admin \"/portals/management::Overview\" mgmt-dash.png)"
+      "Bash(node cdp.mjs admin.a admin \"/portals/management::Overview\" mgmt-dash.png)",
+      "Bash(sed -n '/@Post\\(\":id\\\\/orders\"\\)/,/^  }/p' apps/api/src/modules/emr/api/emr.controller.ts)",
+      "Bash(sed -n '/export interface InsertServiceRequestInput\\\\|export async function insertServiceRequest/,/^}/p' packages/db/src/emr-queries.ts)",
+      "Bash(sed -n '/async placeOrder/,/^  }/p' apps/api/src/modules/emr/application/emr.service.ts)",
+      "Bash(sed -n '/toOrderResponse/,/^}/p' apps/api/src/modules/emr/api/emr.mappers.ts)",
+      "Bash(curl -s -o /dev/null -w \"health: %{http_code}\\\\n\" http://localhost:3000/health)",
+      "Bash(node cdp.mjs admin.a admin \"/portals/radiology::Pending Studies\" rad-pending.png)",
+      "Bash(node cdp.mjs admin.a admin \"/portals/radiology::Pending Studies\" rad-pending2.png)",
+      "Bash(node cdp.mjs anaya patient \"/portal::Imaging\" patient-imaging.png)"
     ],
     "additionalDirectories": [
       "/Users/architgosain/Projects/AIIMS-APP-DEV/aiims-plus-app/src/schema",

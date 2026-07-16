@@ -137,6 +137,7 @@ export class MeController {
               status: r.status,
               conclusion: r.conclusion,
               issuedAt: r.issuedAt.toISOString(),
+              category: r.category,
               lines: (await listLabResultLines(db, r.id)).map((l) => ({
                 analyte: l.analyte,
                 value: l.value,

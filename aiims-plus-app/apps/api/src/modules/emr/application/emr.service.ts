@@ -370,6 +370,7 @@ export class EmrService {
         encounterId,
         patientId: enc.patientId,
         code: req.code,
+        category: req.category,
         priority: req.priority,
         note: req.note ?? null,
         requesterId,

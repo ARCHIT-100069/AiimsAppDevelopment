@@ -1,3 +1,4 @@
+import { type NextRequest } from "next/server";
 import { apiFetch } from "../../../../lib/api";
 import { relay } from "../../../../lib/proxy-response";
 
@@ -15,9 +16,11 @@ async function firstFacilityId(): Promise<string | null> {
   return null;
 }
 
-/** Facility-wide lab worklist. Facility is resolved server-side. */
-export async function GET() {
+/** Facility-wide diagnostics worklist. Facility is resolved server-side;
+ *  ?category=lab|imaging picks the department (defaults to lab). */
+export async function GET(req: NextRequest) {
   const facilityId = await firstFacilityId();
   if (!facilityId) return Response.json({ data: [] });
-  return relay(await apiFetch(`/v1/lab/worklist?facilityId=${facilityId}`));
+  const category = new URL(req.url).searchParams.get("category") ?? "lab";
+  return relay(await apiFetch(`/v1/lab/worklist?facilityId=${facilityId}&category=${category}`));
 }

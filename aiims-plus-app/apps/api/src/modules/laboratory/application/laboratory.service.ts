@@ -42,10 +42,14 @@ export class LaboratoryService {
     private readonly audit: AuditService,
   ) {}
 
-  async worklist(principal: Principal, facilityId: string): Promise<LabWorklistItem[]> {
+  async worklist(
+    principal: Principal,
+    facilityId: string,
+    category: "lab" | "imaging" | "other" = "lab",
+  ): Promise<LabWorklistItem[]> {
     const rows = await this.uow.withTenant(
       { tenantId: principal.tenantId, actorId: principal.actorId },
-      (db) => listLabWorklist(db, facilityId),
+      (db) => listLabWorklist(db, facilityId, category),
     );
     return rows.map((r) => ({
       orderId: r.orderId,

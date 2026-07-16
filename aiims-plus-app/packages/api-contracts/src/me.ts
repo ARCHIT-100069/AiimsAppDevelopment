@@ -66,6 +66,7 @@ export const myReportSchema = z.object({
   status: z.string(),
   conclusion: z.string(),
   issuedAt: z.string(),
+  category: z.enum(["lab", "imaging", "other"]),
   lines: z.array(myReportLineSchema),
 });
 

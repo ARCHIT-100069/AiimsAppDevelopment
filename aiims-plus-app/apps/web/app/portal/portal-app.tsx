@@ -229,7 +229,7 @@ export function PortalApp({
           {active === "records" && <Records me={me} />}
           {active === "medications" && <Prescriptions me={me} />}
           {active === "labs" && <Labs me={me} />}
-          {active === "imaging" && <MockSection title="Imaging" data={patientMock.imaging} />}
+          {active === "imaging" && <Imaging me={me} />}
           {active === "vitals" && <Vitals me={me} />}
           {active === "billing" && <Billing me={me} />}
           {active === "documents" && <MockSection title="Documents" data={patientMock.documents} />}
@@ -1005,8 +1005,29 @@ function Records({ me }: { me: MySummaryResponse }) {
   );
 }
 
+function Imaging({ me }: { me: MySummaryResponse }) {
+  const studies = me.reports.filter((r) => r.category === "imaging");
+  if (studies.length === 0) return <MockSection title="Imaging" data={patientMock.imaging} />;
+  return (
+    <Card title="Imaging studies">
+      <ul className="space-y-4">
+        {studies.map((r) => (
+          <li key={r.id} className="rounded-xl border border-slate-100 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <p className="font-medium text-slate-800">{r.conclusion}</p>
+              <Badge tone={r.status === "final" ? "green" : "amber"}>{r.status}</Badge>
+            </div>
+            <p className="mt-0.5 text-xs text-slate-400">Reported {fmtDate(r.issuedAt)}</p>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
 function Labs({ me }: { me: MySummaryResponse }) {
-  if (me.reports.length === 0) return <MockSection title="Lab reports" data={patientMock.labs} />;
+  const labs = me.reports.filter((r) => r.category !== "imaging");
+  if (labs.length === 0) return <MockSection title="Lab reports" data={patientMock.labs} />;
   const flagTone: Record<string, string> = {
     normal: "slate",
     high: "amber",
@@ -1016,7 +1037,7 @@ function Labs({ me }: { me: MySummaryResponse }) {
   return (
     <Card title="Lab reports">
       <ul className="space-y-4">
-        {me.reports.map((r) => (
+        {labs.map((r) => (
           <li key={r.id} className="rounded-xl border border-slate-100 p-4">
             <div className="flex items-start justify-between gap-3">
               <p className="font-medium text-slate-800">{r.conclusion}</p>

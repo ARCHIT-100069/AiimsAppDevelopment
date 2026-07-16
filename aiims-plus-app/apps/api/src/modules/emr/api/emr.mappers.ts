@@ -95,6 +95,7 @@ export function toOrderResponse(o: ServiceRequestRow): OrderResponse {
     patientId: o.patientId,
     code: { system: o.codeSystem, code: o.code, display: o.display },
     intent: o.intent,
+    category: o.category,
     status: o.status,
     priority: o.priority,
     note: o.note,

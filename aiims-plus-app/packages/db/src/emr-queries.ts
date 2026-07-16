@@ -337,6 +337,7 @@ export interface ServiceRequestRow {
   code: string;
   display: string;
   intent: "order";
+  category: "lab" | "imaging" | "other";
   status: "active" | "completed" | "revoked";
   priority: "routine" | "urgent" | "stat";
   note: string | null;
@@ -353,6 +354,7 @@ const srColumns = {
   code: s.serviceRequest.code,
   display: s.serviceRequest.display,
   intent: s.serviceRequest.intent,
+  category: s.serviceRequest.category,
   status: s.serviceRequest.status,
   priority: s.serviceRequest.priority,
   note: s.serviceRequest.note,
@@ -369,6 +371,7 @@ export async function insertServiceRequest(
     encounterId: string;
     patientId: string;
     code: Coding;
+    category?: "lab" | "imaging" | "other";
     priority: "routine" | "urgent" | "stat";
     note?: string | null;
     requesterId: string;
@@ -384,6 +387,7 @@ export async function insertServiceRequest(
       codeSystem: input.code.system,
       code: input.code.code,
       display: input.code.display,
+      category: input.category ?? "lab",
       priority: input.priority,
       note: input.note ?? null,
       requesterId: input.requesterId,

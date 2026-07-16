@@ -9,10 +9,12 @@ import { codingSchema } from "./coding";
 
 export const ORDER_PRIORITIES = ["routine", "urgent", "stat"] as const;
 export const ORDER_STATUSES = ["active", "completed", "revoked"] as const;
+export const ORDER_CATEGORIES = ["lab", "imaging", "other"] as const;
 export const REPORT_STATUSES = ["preliminary", "final"] as const;
 
 export const createOrderRequestSchema = z.object({
   code: codingSchema,
+  category: z.enum(ORDER_CATEGORIES).default("lab"),
   priority: z.enum(ORDER_PRIORITIES).default("routine"),
   note: z.string().trim().min(1).max(1000).optional(),
 });
@@ -24,6 +26,7 @@ export const orderResponseSchema = z.object({
   patientId: uuidSchema,
   code: codingSchema,
   intent: z.literal("order"),
+  category: z.enum(ORDER_CATEGORIES),
   status: z.enum(ORDER_STATUSES),
   priority: z.enum(ORDER_PRIORITIES),
   note: z.string().nullable(),

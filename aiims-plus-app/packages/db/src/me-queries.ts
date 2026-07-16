@@ -104,6 +104,7 @@ export interface MyReportRow {
   status: "preliminary" | "final";
   conclusion: string;
   issuedAt: Date;
+  category: "lab" | "imaging" | "other";
 }
 
 /** The patient's diagnostic reports (lab/imaging), newest first. */
@@ -117,8 +118,16 @@ export async function listReportsByPatient(
       status: s.diagnosticReport.status,
       conclusion: s.diagnosticReport.conclusion,
       issuedAt: s.diagnosticReport.issuedAt,
+      category: s.serviceRequest.category,
     })
     .from(s.diagnosticReport)
+    .innerJoin(
+      s.serviceRequest,
+      and(
+        eq(s.serviceRequest.tenantId, s.diagnosticReport.tenantId),
+        eq(s.serviceRequest.id, s.diagnosticReport.serviceRequestId),
+      ),
+    )
     .where(and(eq(s.diagnosticReport.patientId, patientId), isNull(s.diagnosticReport.deletedAt)))
     .orderBy(desc(s.diagnosticReport.issuedAt));
 }

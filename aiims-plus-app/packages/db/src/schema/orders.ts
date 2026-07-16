@@ -16,6 +16,7 @@ export const serviceRequest = orders.table("service_request", {
   code: text("code").notNull(),
   display: text("display").notNull(),
   intent: text("intent").$type<"order">().notNull().default("order"),
+  category: text("category").$type<"lab" | "imaging" | "other">().notNull().default("lab"),
   status: text("status").$type<"active" | "completed" | "revoked">().notNull().default("active"),
   priority: text("priority").$type<"routine" | "urgent" | "stat">().notNull().default("routine"),
   note: text("note"),
