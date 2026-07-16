@@ -120,6 +120,11 @@ import {
   feedbackResponseSchema,
   listFeedbackResponseSchema,
 } from "./feedback";
+import {
+  fileLabResultRequestSchema,
+  labResultResponseSchema,
+  listLabWorklistResponseSchema,
+} from "./laboratory";
 import { fhirPatientSchema } from "./fhir";
 import { fhirPractitionerSchema } from "./fhir-practitioner";
 import { fhirAppointmentSchema } from "./fhir-appointment";
@@ -1052,6 +1057,40 @@ export const openApiDocument = {
         summary: "Quality — list patient-satisfaction feedback for the tenant (feedback:read)",
         responses: {
           "200": jsonOk("Patient feedback", listFeedbackResponseSchema),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/lab/worklist": {
+      get: {
+        summary:
+          "Laboratory — facility-wide worklist of lab orders (pending + resulted) (lab:read)",
+        parameters: [
+          {
+            name: "facilityId",
+            in: "query",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        responses: {
+          "200": jsonOk("Lab worklist", listLabWorklistResponseSchema),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/lab/orders/{id}/result": {
+      post: {
+        summary:
+          "Laboratory — file a result (conclusion + structured analyte lines) against an order and close it (lab:result)",
+        parameters: [uuidPathParam],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: toSchema(fileLabResultRequestSchema) } },
+        },
+        responses: {
+          "201": jsonOk("The filed lab result", labResultResponseSchema),
+          "404": problemResponse("Order not found"),
           ...standardErrors,
         },
       },

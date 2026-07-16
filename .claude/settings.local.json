@@ -249,10 +249,17 @@
       "Bash(kill 18158)",
       "Bash(nohup node --env-file=.env apps/api/dist/main.js)",
       "Bash(echo \"restarted, pid $!\")",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/health)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/health)",
+      "Bash(pnpm --filter @aiims/api-contracts openapi)",
+      "Bash(curl -s http://localhost:9222/json/version)",
+      "Bash(python3 -c 'import sys,json;print\\(json.load\\(sys.stdin\\).get\\(\"Browser\",\"none\"\\)\\)')",
+      "Bash(DATABASE_URL_MIGRATOR=\"postgres://postgres:postgres@localhost:5432/aiims\" pnpm --filter @aiims/db migrate)",
+      "Bash(awk '{print $2, $11, $12, $13}')",
+      "Bash(grep -n \"main.js\\\\|apps/api\\\\|--env-file\\\\|nohup\\\\|&\\\\s*$\\\\|log\\\\b\" scripts/dev-up.sh)"
     ],
     "additionalDirectories": [
-      "/Users/architgosain/Projects/AIIMS-APP-DEV/aiims-plus-app/src/schema"
+      "/Users/architgosain/Projects/AIIMS-APP-DEV/aiims-plus-app/src/schema",
+      "/Users/architgosain/Projects/AIIMS-APP-DEV/aiims-plus-app/apps/api/src/modules/emr/application"
     ]
   }
 }

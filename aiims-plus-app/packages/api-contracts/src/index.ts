@@ -19,6 +19,7 @@ export * from "./ai";
 export * from "./me";
 export * from "./pharmacy";
 export * from "./feedback";
+export * from "./laboratory";
 export * from "./fhir";
 export * from "./fhir-practitioner";
 export * from "./fhir-appointment";

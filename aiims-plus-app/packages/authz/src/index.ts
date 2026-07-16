@@ -63,6 +63,9 @@ export const PERMISSIONS = [
   "pharmacy:dispense", // dispense a prescription (draws stock down)
   "prescription:write", // a prescriber writes a prescription
   "prescription:read", // read prescriptions
+  // Laboratory module — worklist + result entry (structured analyte lines).
+  "lab:read", // view the lab worklist + results
+  "lab:result", // file a lab result against an order
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -102,6 +105,9 @@ const ROLE_PERMISSIONS: Record<
     "prescription:read",
     // Admin/quality reviews patient-satisfaction feedback (NABH).
     "feedback:read",
+    // Admin runs the laboratory desk in this build: worklist + result entry.
+    "lab:read",
+    "lab:result",
   ],
   doctor: [
     "org:read",
@@ -129,6 +135,8 @@ const ROLE_PERMISSIONS: Record<
     "prescription:write",
     "prescription:read",
     "pharmacy:read",
+    // A doctor reads the lab worklist + results for their patients.
+    "lab:read",
   ],
   nurse: [
     "org:read",
@@ -142,6 +150,8 @@ const ROLE_PERMISSIONS: Record<
     "encounter:document",
     "result:read",
     "billing:read",
+    // Nurse reads the lab worklist + results.
+    "lab:read",
   ],
   front_desk: [
     "org:read",

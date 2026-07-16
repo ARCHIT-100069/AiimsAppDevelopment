@@ -46,3 +46,16 @@ export const diagnosticReport = orders.table("diagnostic_report", {
   retentionClass: text("retention_class"),
   retentionUntil: timestamp("retention_until", { withTimezone: true }),
 });
+
+/** Structured analyte lines on a lab report (0019_laboratory). Append-only. */
+export const labResultLine = orders.table("lab_result_line", {
+  id: uuid("id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  reportId: uuid("report_id").notNull(),
+  analyte: text("analyte").notNull(),
+  value: text("value").notNull(),
+  unit: text("unit"),
+  referenceRange: text("reference_range"),
+  flag: text("flag").$type<"normal" | "high" | "low" | "critical">().notNull().default("normal"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
