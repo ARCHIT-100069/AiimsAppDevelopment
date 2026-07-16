@@ -138,30 +138,108 @@ interface DrugOpt {
   form: string;
   totalQty: number;
 }
-/** Real prescribing: write a prescription (patient + drug lines) → pharmacy queue. */
+/* Deterministic prescribing aids (NOT AI — standard clinical shorthand). */
+const FREQ_OPTIONS = [
+  { code: "OD", label: "OD — once daily", perDay: 1 },
+  { code: "BD", label: "BD — twice daily", perDay: 2 },
+  { code: "TDS", label: "TDS — thrice daily", perDay: 3 },
+  { code: "QID", label: "QID — four times daily", perDay: 4 },
+  { code: "HS", label: "HS — at bedtime", perDay: 1 },
+  { code: "SOS", label: "SOS — as needed", perDay: 1 },
+  { code: "STAT", label: "STAT — at once", perDay: 1 },
+] as const;
+const WHEN_OPTIONS = ["After food", "Before food", "With food", "Empty stomach"] as const;
+const DURATION_OPTIONS = [
+  { label: "3 days", days: 3 },
+  { label: "5 days", days: 5 },
+  { label: "7 days", days: 7 },
+  { label: "10 days", days: 10 },
+  { label: "14 days", days: 14 },
+  { label: "1 month", days: 30 },
+] as const;
+
+interface RxLine {
+  drugId: string;
+  name: string;
+  strength: string;
+  form: string;
+  dose: string;
+  freq: string; // FREQ code
+  when: string;
+  durationDays: number;
+  quantity: number;
+}
+
+const perDayFor = (code: string) => FREQ_OPTIONS.find((f) => f.code === code)?.perDay ?? 1;
+const suggestQty = (form: string, freqCode: string, days: number) => {
+  // Countable forms (tablet/capsule): perDay × days. Others: 1 unit (bottle/tube).
+  const countable = /tablet|capsule/i.test(form);
+  return countable ? Math.max(1, perDayFor(freqCode) * days) : 1;
+};
+
+/** Digital prescription pad: search the formulary, add drugs with structured
+ *  dose/frequency/timing/duration suggestions, auto quantity → pharmacy queue. */
 function PrescribeForm({ patients }: { patients: Patient[] }) {
   const [drugs, setDrugs] = useState<DrugOpt[]>([]);
   const [patientId, setPatientId] = useState(patients[0]?.id ?? "");
-  const [drugId, setDrugId] = useState("");
-  const [dose, setDose] = useState("");
-  const [frequency, setFrequency] = useState("");
-  const [duration, setDuration] = useState("");
-  const [quantity, setQuantity] = useState("");
+  const [query, setQuery] = useState("");
+  const [lines, setLines] = useState<RxLine[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
 
   useEffect(() => {
     fetch("/api/bff/drugs")
       .then((r) => (r.ok ? r.json() : { data: [] }))
-      .then((d) => {
-        setDrugs(d.data ?? []);
-        setDrugId(d.data?.[0]?.id ?? "");
-      });
+      .then((d) => setDrugs(d.data ?? []));
   }, []);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!patientId || !drugId) return;
+  const matches = query.trim()
+    ? drugs
+        .filter((d) => `${d.name} ${d.strength}`.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 6)
+    : [];
+
+  function addDrug(d: DrugOpt) {
+    if (lines.some((l) => l.drugId === d.id)) {
+      setQuery("");
+      return;
+    }
+    const freq = "BD";
+    const durationDays = 5;
+    setLines((ls) => [
+      ...ls,
+      {
+        drugId: d.id,
+        name: d.name,
+        strength: d.strength,
+        form: d.form,
+        dose: d.strength,
+        freq,
+        when: "After food",
+        durationDays,
+        quantity: suggestQty(d.form, freq, durationDays),
+      },
+    ]);
+    setQuery("");
+  }
+
+  function patch(idx: number, p: Partial<RxLine>) {
+    setLines((ls) =>
+      ls.map((l, i) => {
+        if (i !== idx) return l;
+        const next = { ...l, ...p };
+        // Re-suggest quantity whenever frequency or duration changes (unless the
+        // clinician typed a custom quantity via the quantity field itself).
+        if (("freq" in p || "durationDays" in p) && !("quantity" in p)) {
+          next.quantity = suggestQty(next.form, next.freq, next.durationDays);
+        }
+        return next;
+      }),
+    );
+  }
+
+  async function submit() {
+    if (!patientId || lines.length === 0 || busy) return;
     setBusy(true);
     setMsg(null);
     const res = await fetch("/api/bff/prescriptions", {
@@ -169,117 +247,191 @@ function PrescribeForm({ patients }: { patients: Patient[] }) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         patientId,
-        items: [{ drugId, dose, frequency, duration, quantity: Number(quantity) }],
+        items: lines.map((l) => ({
+          drugId: l.drugId,
+          dose: l.dose || l.strength,
+          frequency: l.freq,
+          duration: l.durationDays === 30 ? "1 month" : `${l.durationDays} days`,
+          quantity: l.quantity,
+          instructions: l.when,
+        })),
       }),
     });
     setBusy(false);
     if (res.ok) {
-      setMsg({ ok: true, t: "Prescription sent to the pharmacy queue." });
-      setDose("");
-      setFrequency("");
-      setDuration("");
-      setQuantity("");
+      setMsg({
+        ok: true,
+        t: `Prescription (${lines.length} drug${lines.length > 1 ? "s" : ""}) sent to the pharmacy queue.`,
+      });
+      setLines([]);
     } else {
       const b = (await res.json().catch(() => ({}))) as { detail?: string };
       setMsg({ ok: false, t: b.detail ?? "Could not write prescription." });
     }
   }
 
-  if (drugs.length === 0) {
-    return (
-      <Card title="Write a prescription">
-        <Empty>No drugs in the formulary yet — ask pharmacy to add drugs first.</Empty>
-      </Card>
-    );
-  }
   return (
     <Card title="Write a prescription">
-      <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2">
-        <label className="text-sm sm:col-span-2">
-          <span className="text-slate-500">Patient</span>
-          <select
-            value={patientId}
-            onChange={(e) => setPatientId(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
-          >
-            {patients.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nameGiven} {p.nameFamily} · {p.mrn}
-              </option>
+      <label className="block text-sm">
+        <span className="text-slate-500">Patient</span>
+        <select
+          value={patientId}
+          onChange={(e) => setPatientId(e.target.value)}
+          className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+        >
+          {patients.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.nameGiven} {p.nameFamily} · {p.mrn}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {/* Drug search + suggestions */}
+      <div className="relative mt-4">
+        <span className="text-sm text-slate-500">Add medicine</span>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={
+            drugs.length ? "Search the formulary — e.g. Paracetamol" : "No drugs in formulary yet"
+          }
+          disabled={drugs.length === 0}
+          className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+        />
+        {matches.length > 0 ? (
+          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+            {matches.map((d) => (
+              <li key={d.id}>
+                <button
+                  type="button"
+                  onClick={() => addDrug(d)}
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-teal-50"
+                >
+                  <span className="font-medium text-slate-800">
+                    {d.name} {d.strength}{" "}
+                    <span className="font-normal text-slate-400">({d.form})</span>
+                  </span>
+                  <span
+                    className={d.totalQty > 0 ? "text-xs text-slate-400" : "text-xs text-red-500"}
+                  >
+                    {d.totalQty} in stock
+                  </span>
+                </button>
+              </li>
             ))}
-          </select>
-        </label>
-        <label className="text-sm sm:col-span-2">
-          <span className="text-slate-500">Drug</span>
-          <select
-            value={drugId}
-            onChange={(e) => setDrugId(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
-          >
-            {drugs.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name} {d.strength} ({d.form}) · {d.totalQty} in stock
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-sm">
-          <span className="text-slate-500">Dose</span>
-          <input
-            required
-            placeholder="e.g. 500 mg"
-            value={dose}
-            onChange={(e) => setDose(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
-          />
-        </label>
-        <label className="text-sm">
-          <span className="text-slate-500">Frequency</span>
-          <input
-            required
-            placeholder="e.g. BD"
-            value={frequency}
-            onChange={(e) => setFrequency(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
-          />
-        </label>
-        <label className="text-sm">
-          <span className="text-slate-500">Duration</span>
-          <input
-            required
-            placeholder="e.g. 5 days"
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
-          />
-        </label>
-        <label className="text-sm">
-          <span className="text-slate-500">Quantity</span>
-          <input
-            required
-            type="number"
-            min={1}
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
-          />
-        </label>
-        {msg ? (
-          <p
-            className={`sm:col-span-2 rounded-lg px-3 py-2 text-sm ${msg.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}
-          >
-            {msg.t}
-          </p>
+          </ul>
         ) : null}
-        <div className="sm:col-span-2">
-          <button
-            disabled={busy}
-            className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
-          >
-            {busy ? "Writing…" : "Write prescription"}
-          </button>
-        </div>
-      </form>
+      </div>
+
+      {/* Prescription lines */}
+      {lines.length === 0 ? (
+        <p className="mt-4 rounded-lg border border-dashed border-slate-200 py-6 text-center text-sm text-slate-400">
+          Search above to add medicines to this prescription.
+        </p>
+      ) : (
+        <ul className="mt-4 space-y-3">
+          {lines.map((l, idx) => (
+            <li key={l.drugId} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+              <div className="flex items-center justify-between">
+                <p className="font-medium text-slate-800">
+                  {l.name} <span className="text-slate-400">{l.strength}</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setLines((ls) => ls.filter((_, i) => i !== idx))}
+                  className="text-xs text-red-500 hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <label className="text-xs text-slate-500">
+                  Dose
+                  <input
+                    value={l.dose}
+                    onChange={(e) => patch(idx, { dose: e.target.value })}
+                    className="mt-0.5 w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm text-slate-800"
+                  />
+                </label>
+                <label className="text-xs text-slate-500">
+                  Frequency
+                  <select
+                    value={l.freq}
+                    onChange={(e) => patch(idx, { freq: e.target.value })}
+                    className="mt-0.5 w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm text-slate-800"
+                  >
+                    {FREQ_OPTIONS.map((f) => (
+                      <option key={f.code} value={f.code}>
+                        {f.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs text-slate-500">
+                  Timing
+                  <select
+                    value={l.when}
+                    onChange={(e) => patch(idx, { when: e.target.value })}
+                    className="mt-0.5 w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm text-slate-800"
+                  >
+                    {WHEN_OPTIONS.map((w) => (
+                      <option key={w} value={w}>
+                        {w}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs text-slate-500">
+                  Duration
+                  <select
+                    value={l.durationDays}
+                    onChange={(e) => patch(idx, { durationDays: Number(e.target.value) })}
+                    className="mt-0.5 w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm text-slate-800"
+                  >
+                    {DURATION_OPTIONS.map((d) => (
+                      <option key={d.days} value={d.days}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                <span>Dispense qty</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={l.quantity}
+                  onChange={(e) => patch(idx, { quantity: Math.max(1, Number(e.target.value)) })}
+                  className="w-20 rounded-md border border-slate-200 px-2 py-1 text-sm text-slate-800"
+                />
+                <span className="text-slate-400">
+                  · {l.freq} · {l.when} ·{" "}
+                  {l.durationDays === 30 ? "1 month" : `${l.durationDays} days`}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {msg ? (
+        <p
+          className={`mt-3 rounded-lg px-3 py-2 text-sm ${msg.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}
+        >
+          {msg.t}
+        </p>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={submit}
+        disabled={busy || lines.length === 0}
+        className="mt-4 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+      >
+        {busy ? "Writing…" : `Write prescription${lines.length ? ` (${lines.length})` : ""}`}
+      </button>
     </Card>
   );
 }
