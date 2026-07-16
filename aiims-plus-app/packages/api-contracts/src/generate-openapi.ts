@@ -104,6 +104,7 @@ import {
   bookableOptionsResponseSchema,
   bookMyAppointmentRequestSchema,
   myAppointmentSchema,
+  myQueuePositionSchema,
 } from "./me";
 import {
   createDrugRequestSchema,
@@ -1019,6 +1020,16 @@ export const openApiDocument = {
         ],
         responses: {
           "200": jsonOk("Available slots", mySlotsResponseSchema),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/me/queue-position": {
+      get: {
+        summary:
+          "Patient portal — live OPD token: the patient's position in today's queue once checked in (self:read)",
+        responses: {
+          "200": jsonOk("Live queue position", myQueuePositionSchema),
           ...standardErrors,
         },
       },

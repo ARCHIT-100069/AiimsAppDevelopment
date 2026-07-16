@@ -27,6 +27,7 @@ import {
   type BookableOptionsResponse,
   type FeedbackResponse,
   type MyAppointment,
+  type MyQueuePosition,
   type MySummaryResponse,
   type SlotsResponse,
 } from "@aiims/api-contracts";
@@ -193,6 +194,14 @@ export class MeController {
       date,
       slots: slots.map((s) => ({ startAt: s.startAt.toISOString(), endAt: s.endAt.toISOString() })),
     };
+  }
+
+  @Get("queue-position")
+  @RequirePermission("self:read")
+  async queuePosition(@CurrentPrincipal() principal: Principal): Promise<MyQueuePosition> {
+    const patientId = principal.patientId;
+    if (!patientId) throw new NotFoundError("No patient record for this token");
+    return this.me.queuePosition(principal, patientId);
   }
 
   @Post("appointments")

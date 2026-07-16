@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { BookablePractitioner, MySummaryResponse } from "@aiims/api-contracts";
+import type {
+  BookablePractitioner,
+  MyQueuePosition,
+  MySummaryResponse,
+} from "@aiims/api-contracts";
 import { MockSection, Splash } from "../lib/app-shell";
 import { patientMock } from "../lib/mock";
 
@@ -246,6 +250,51 @@ export function PortalApp({
   );
 }
 
+/* --------------------------- live OPD token ------------------------------- */
+function LiveToken() {
+  const [pos, setPos] = useState<MyQueuePosition | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      fetch("/api/bff/me/queue-position")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => alive && setPos(d))
+        .catch(() => {});
+    void load();
+    // Refresh every 30s so the token count stays live while waiting.
+    const t = setInterval(load, 30_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
+
+  if (!pos || !pos.active) return null;
+  const ahead = pos.ahead ?? 0;
+  return (
+    <div className="flex items-center justify-between rounded-[26px] bg-teal-600 p-5 text-white shadow-lg">
+      <div>
+        <p className="text-sm font-medium text-teal-50/80">You&apos;re checked in</p>
+        <p className="mt-1 text-lg font-semibold">
+          {ahead === 0
+            ? "You're next — please be ready"
+            : `${ahead} patient${ahead > 1 ? "s" : ""} ahead of you`}
+        </p>
+        {pos.practitionerName ? (
+          <p className="text-sm text-teal-50/80">with Dr. {pos.practitionerName}</p>
+        ) : null}
+      </div>
+      <div className="grid h-20 w-20 shrink-0 place-items-center rounded-2xl bg-white/15 text-center">
+        <div>
+          <p className="text-[10px] uppercase tracking-wide text-teal-50/80">Token</p>
+          <p className="text-3xl font-bold leading-none">{pos.token}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* -------------------------------- sections -------------------------------- */
 function Dashboard({
   me,
@@ -268,6 +317,8 @@ function Dashboard({
   return (
     <>
       <SearchBar onGo={onGo} />
+
+      <LiveToken />
 
       {/* Hero appointment */}
       <div className="hero-gradient rounded-[26px] p-5">

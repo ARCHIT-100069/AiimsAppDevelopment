@@ -125,6 +125,17 @@ export const bookMyAppointmentRequestSchema = z.object({
   reasonText: z.string().trim().min(1).max(500).optional(),
 });
 
+/** Live OPD token — the patient's position in today's queue once checked in. */
+export const myQueuePositionSchema = z.object({
+  active: z.boolean(),
+  token: z.number().int().nullable(),
+  ahead: z.number().int().nullable(),
+  total: z.number().int().nullable(),
+  status: z.string().nullable(),
+  practitionerName: z.string().nullable(),
+});
+export type MyQueuePosition = z.infer<typeof myQueuePositionSchema>;
+
 export type MyProfile = z.infer<typeof myProfileSchema>;
 export type MyAppointment = z.infer<typeof myAppointmentSchema>;
 export type MyDiagnosis = z.infer<typeof myDiagnosisSchema>;
