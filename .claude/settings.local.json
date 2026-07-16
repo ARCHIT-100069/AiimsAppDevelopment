@@ -283,7 +283,8 @@
       "Bash(node cdp.mjs admin.a admin \"/portals/radiology::Pending Studies\" rad-pending.png)",
       "Bash(node cdp.mjs admin.a admin \"/portals/radiology::Pending Studies\" rad-pending2.png)",
       "Bash(node cdp.mjs anaya patient \"/portal::Imaging\" patient-imaging.png)",
-      "Bash(node cdp.mjs anaya patient \"/portal::Home Dashboard\" patient-token.png)"
+      "Bash(node cdp.mjs anaya patient \"/portal::Home Dashboard\" patient-token.png)",
+      "Bash(node cdp.mjs anaya patient \"/portal\" portal-en.png \"/portal::हिं\" portal-hi.png)"
     ],
     "additionalDirectories": [
       "/Users/architgosain/Projects/AIIMS-APP-DEV/aiims-plus-app/src/schema",

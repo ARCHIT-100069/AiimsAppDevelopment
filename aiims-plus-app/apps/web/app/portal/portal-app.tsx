@@ -9,6 +9,7 @@ import type {
 } from "@aiims/api-contracts";
 import { MockSection, Splash } from "../lib/app-shell";
 import { patientMock } from "../lib/mock";
+import { LanguageProvider, LanguageToggle, useI18n, useT } from "../lib/i18n";
 
 /* ---------------------------------- utils --------------------------------- */
 // A FIXED timeZone keeps these strings identical on the server and the client,
@@ -133,13 +134,22 @@ function Stat({ label, value, tone = "teal" }: { label: string; value: string; t
 }
 
 /* --------------------------------- portal --------------------------------- */
-export function PortalApp({
+export function PortalApp(props: { me: MySummaryResponse; practitioners: BookablePractitioner[] }) {
+  return (
+    <LanguageProvider>
+      <PortalAppInner {...props} />
+    </LanguageProvider>
+  );
+}
+
+function PortalAppInner({
   me,
   practitioners,
 }: {
   me: MySummaryResponse;
   practitioners: BookablePractitioner[];
 }) {
+  const t = useT();
   const [active, setActive] = useState<SectionKey>("dashboard");
   // Start at 0 so the FIRST render (server + client hydration) is identical;
   // switch to the real clock only after mount. This avoids a hydration mismatch
@@ -161,13 +171,13 @@ export function PortalApp({
       <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
         <div className="flex items-center gap-2 px-5 py-4 text-lg font-semibold text-teal-700">
           AIIMS+
-          <span className="text-sm font-normal text-slate-400">Portal</span>
+          <span className="text-sm font-normal text-slate-400">{t("Portal")}</span>
         </div>
         <nav className="flex-1 overflow-y-auto px-3 pb-4">
           {groups.map((g) => (
             <div key={g} className="mb-1 mt-3">
               <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                {g}
+                {t(g)}
               </p>
               {NAV.filter((n) => n.group === g).map((n) => (
                 <button
@@ -179,7 +189,7 @@ export function PortalApp({
                       : "text-slate-600 hover:bg-slate-50"
                   }`}
                 >
-                  {n.label}
+                  {t(n.label)}
                 </button>
               ))}
             </div>
@@ -198,15 +208,16 @@ export function PortalApp({
           >
             {NAV.map((n) => (
               <option key={n.key} value={n.key}>
-                {n.label}
+                {t(n.label)}
               </option>
             ))}
           </select>
           <h1 className="hidden text-lg font-semibold text-slate-800 lg:block">
-            {NAV.find((n) => n.key === active)?.label}
+            {t(NAV.find((n) => n.key === active)?.label ?? "")}
           </h1>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-500">
+            <LanguageToggle />
+            <span className="hidden text-sm text-slate-500 sm:inline">
               {me.profile.nameGiven} {me.profile.nameFamily}
             </span>
             <div className="grid h-8 w-8 place-items-center rounded-full bg-teal-100 text-sm font-semibold text-teal-700">
@@ -215,7 +226,7 @@ export function PortalApp({
             </div>
             <form action="/api/auth/logout" method="post">
               <button className="rounded-lg px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
-                Log out
+                {t("Log out")}
               </button>
             </form>
           </div>
@@ -252,6 +263,7 @@ export function PortalApp({
 
 /* --------------------------- live OPD token ------------------------------- */
 function LiveToken() {
+  const t = useT();
   const [pos, setPos] = useState<MyQueuePosition | null>(null);
 
   useEffect(() => {
@@ -275,19 +287,21 @@ function LiveToken() {
   return (
     <div className="flex items-center justify-between rounded-[26px] bg-teal-600 p-5 text-white shadow-lg">
       <div>
-        <p className="text-sm font-medium text-teal-50/80">You&apos;re checked in</p>
+        <p className="text-sm font-medium text-teal-50/80">{t("You're checked in")}</p>
         <p className="mt-1 text-lg font-semibold">
           {ahead === 0
-            ? "You're next — please be ready"
-            : `${ahead} patient${ahead > 1 ? "s" : ""} ahead of you`}
+            ? t("You're next — please be ready")
+            : `${ahead} ${ahead > 1 ? t("patients ahead of you") : t("patient ahead of you")}`}
         </p>
         {pos.practitionerName ? (
-          <p className="text-sm text-teal-50/80">with Dr. {pos.practitionerName}</p>
+          <p className="text-sm text-teal-50/80">
+            {t("with Dr.")} {pos.practitionerName}
+          </p>
         ) : null}
       </div>
       <div className="grid h-20 w-20 shrink-0 place-items-center rounded-2xl bg-white/15 text-center">
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-teal-50/80">Token</p>
+          <p className="text-[10px] uppercase tracking-wide text-teal-50/80">{t("Token")}</p>
           <p className="text-3xl font-bold leading-none">{pos.token}</p>
         </div>
       </div>
@@ -307,6 +321,7 @@ function Dashboard({
   outstanding: MySummaryResponse["invoices"];
   onGo: (s: SectionKey) => void;
 }) {
+  const t = useT();
   const next = upcoming[0];
   const quick: { key: SectionKey; label: string; icon: keyof typeof ICONS }[] = [
     { key: "medications", label: "Medicines", icon: "pill" },
@@ -325,10 +340,10 @@ function Dashboard({
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-sm font-medium text-teal-900/70">
-              {next ? "Your Appointment" : `Hello, ${me.profile.nameGiven}`}
+              {next ? t("Your Appointment") : `${t("Hello")}, ${me.profile.nameGiven}`}
             </p>
             <h2 className="mt-1 text-2xl font-bold leading-tight text-slate-900">
-              {next ? (next.reasonText ?? "Consultation") : "No upcoming visit"}
+              {next ? (next.reasonText ?? t("Consultation")) : t("No upcoming visit")}
             </h2>
           </div>
           <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white/50 text-lg font-bold text-teal-700">
@@ -353,7 +368,7 @@ function Dashboard({
             onClick={() => onGo("appointments")}
             className="mt-4 rounded-full bg-slate-900 px-5 py-2 text-sm font-medium text-white"
           >
-            Book an appointment
+            {t("Book an appointment")}
           </button>
         )}
       </div>
@@ -368,18 +383,18 @@ function Dashboard({
             className="qa-tile flex flex-col items-center gap-2 px-2 py-4"
           >
             <span className="text-teal-700">{ICONS[q.icon]}</span>
-            <span className="text-xs font-medium text-slate-600">{q.label}</span>
+            <span className="text-xs font-medium text-slate-600">{t(q.label)}</span>
           </button>
         ))}
       </div>
 
       {/* Stat strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Upcoming" value={`${upcoming.length}`} />
-        <Stat label="Diagnoses" value={`${me.diagnoses.length}`} tone="slate" />
-        <Stat label="Lab reports" value={`${me.reports.length}`} tone="slate" />
+        <Stat label={t("Upcoming")} value={`${upcoming.length}`} />
+        <Stat label={t("Diagnoses")} value={`${me.diagnoses.length}`} tone="slate" />
+        <Stat label={t("Lab reports")} value={`${me.reports.length}`} tone="slate" />
         <Stat
-          label="Due bills"
+          label={t("Due bills")}
           value={`${outstanding.length}`}
           tone={outstanding.length ? "amber" : "slate"}
         />
@@ -420,6 +435,7 @@ function svg(d: string) {
 
 /* Interactive search that jumps to a section. */
 function SearchBar({ onGo }: { onGo: (s: SectionKey) => void }) {
+  const t = useT();
   const [q, setQ] = useState("");
   const matches = q
     ? NAV.filter((n) => n.label.toLowerCase().includes(q.toLowerCase())).slice(0, 5)
@@ -440,7 +456,7 @@ function SearchBar({ onGo }: { onGo: (s: SectionKey) => void }) {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Need help?"
+          placeholder={t("Need help?")}
           className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
         />
       </form>
@@ -490,10 +506,11 @@ const TIPS = [
 ];
 
 function HealthTips() {
+  const t = useT();
   const [open, setOpen] = useState<number | null>(null);
   return (
     <div>
-      <h3 className="mb-3 text-lg font-bold text-slate-900">Health Tips</h3>
+      <h3 className="mb-3 text-lg font-bold text-slate-900">{t("Health Tips")}</h3>
       <div className="space-y-3">
         {TIPS.map((t, i) => (
           <button
@@ -1412,25 +1429,28 @@ function Feedback() {
 }
 
 function Settings() {
-  const [lang, setLang] = useState("English");
+  const t = useT();
+  const { lang, setLang } = useI18n();
   const [notify, setNotify] = useState(true);
   return (
     <>
-      <Card title="Preferences">
+      <Card title={t("Preferences")}>
         <label className="block text-sm">
-          <span className="text-slate-500">Language</span>
+          <span className="text-slate-500">{t("Language")}</span>
           <select
             value={lang}
-            onChange={(e) => setLang(e.target.value)}
+            onChange={(e) => setLang(e.target.value as "en" | "hi")}
             className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
           >
-            {["English", "हिन्दी", "தமிழ்", "বাংলা"].map((l) => (
-              <option key={l}>{l}</option>
-            ))}
+            <option value="en">English</option>
+            <option value="hi">हिन्दी (Hindi)</option>
           </select>
         </label>
+        <p className="mt-2 text-xs text-slate-400">
+          {t("The portal switches language instantly across the app.")}
+        </p>
         <div className="mt-3">
-          <Toggle label="Appointment reminders" on={notify} set={setNotify} />
+          <Toggle label={t("Appointment reminders")} on={notify} set={setNotify} />
         </div>
       </Card>
       <Card title="Account">
