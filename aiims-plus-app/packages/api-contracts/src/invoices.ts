@@ -54,6 +54,24 @@ export const listInvoicesResponseSchema = z.object({
 });
 export type ListInvoicesResponse = z.infer<typeof listInvoicesResponseSchema>;
 
+/** Cashier/billing-desk list item (tenant-wide, with patient name). */
+export const invoiceListItemSchema = z.object({
+  id: uuidSchema,
+  invoiceNumber: z.string(),
+  patientId: uuidSchema,
+  patientName: z.string(),
+  status: z.enum(INVOICE_STATUSES),
+  currency: z.string(),
+  total: moneySchema,
+  paymentMethod: z.string().nullable(),
+  issuedAt: isoTimestampSchema,
+  paidAt: isoTimestampSchema.nullable(),
+});
+export type InvoiceListItem = z.infer<typeof invoiceListItemSchema>;
+
+export const invoiceDeskResponseSchema = z.object({ data: z.array(invoiceListItemSchema) });
+export type InvoiceDeskResponse = z.infer<typeof invoiceDeskResponseSchema>;
+
 /** Settle an invoice via the (mock) payment gateway. Idempotency-Key required. */
 export const payInvoiceRequestSchema = z.object({
   method: z.enum(["mock", "cash", "card", "upi"]).default("mock"),

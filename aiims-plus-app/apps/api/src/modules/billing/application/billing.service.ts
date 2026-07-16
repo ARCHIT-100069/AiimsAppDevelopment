@@ -23,10 +23,12 @@ import {
   isUniqueViolation,
   issueInvoiceNumber,
   listInvoiceLines,
+  listInvoices,
   listServiceRequestsByEncounter,
   markInvoicePaidVersioned,
   newId,
   saveIdempotencyKey,
+  type InvoiceListRow,
   type InvoiceLineRow,
   type InvoiceRow,
   type TenantDb,
@@ -71,6 +73,16 @@ export class BillingService {
 
   private actor(principal: Principal): Actor {
     return { tenantId: principal.tenantId, actorId: principal.actorId };
+  }
+
+  /** Cashier/billing-desk list of tenant invoices (optionally by status). */
+  async list(
+    principal: Principal,
+    status?: "issued" | "paid" | "cancelled",
+  ): Promise<InvoiceListRow[]> {
+    return this.uow.withTenant(this.actor(principal), (db) =>
+      listInvoices(db, status ? { status } : {}),
+    );
   }
 
   async generate(

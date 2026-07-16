@@ -4,9 +4,50 @@
  * exchanged as decimal STRINGS (never float, DB §4). Payment marking is
  * versioned and status-guarded so a paid invoice cannot be re-paid.
  */
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import * as s from "./schema";
 import type { TenantDb } from "./tenant-context";
+
+/** Tenant-wide invoice list with patient names, for the cashier/billing desk. */
+export interface InvoiceListRow {
+  id: string;
+  invoiceNumber: string;
+  patientId: string;
+  patientName: string;
+  status: "issued" | "paid" | "cancelled";
+  currency: string;
+  total: string;
+  paymentMethod: string | null;
+  issuedAt: Date;
+  paidAt: Date | null;
+}
+export async function listInvoices(
+  db: TenantDb,
+  opts: { status?: "issued" | "paid" | "cancelled" } = {},
+): Promise<InvoiceListRow[]> {
+  return db
+    .select({
+      id: s.invoice.id,
+      invoiceNumber: s.invoice.invoiceNumber,
+      patientId: s.invoice.patientId,
+      patientName: sql<string>`${s.patient.nameGiven} || ' ' || ${s.patient.nameFamily}`,
+      status: s.invoice.status,
+      currency: s.invoice.currency,
+      total: s.invoice.total,
+      paymentMethod: s.invoice.paymentMethod,
+      issuedAt: s.invoice.issuedAt,
+      paidAt: s.invoice.paidAt,
+    })
+    .from(s.invoice)
+    .innerJoin(
+      s.patient,
+      and(eq(s.patient.tenantId, s.invoice.tenantId), eq(s.patient.id, s.invoice.patientId)),
+    )
+    .where(
+      and(isNull(s.invoice.deletedAt), opts.status ? eq(s.invoice.status, opts.status) : undefined),
+    )
+    .orderBy(desc(s.invoice.issuedAt));
+}
 
 /** Gap-free per-tenant invoice numbering (mirrors issueMrn). Format INV-%06d. */
 export async function issueInvoiceNumber(db: TenantDb, tenantId: string): Promise<string> {

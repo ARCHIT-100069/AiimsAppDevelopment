@@ -284,11 +284,19 @@
       "Bash(node cdp.mjs admin.a admin \"/portals/radiology::Pending Studies\" rad-pending2.png)",
       "Bash(node cdp.mjs anaya patient \"/portal::Imaging\" patient-imaging.png)",
       "Bash(node cdp.mjs anaya patient \"/portal::Home Dashboard\" patient-token.png)",
-      "Bash(node cdp.mjs anaya patient \"/portal\" portal-en.png \"/portal::हिं\" portal-hi.png)"
+      "Bash(node cdp.mjs anaya patient \"/portal\" portal-en.png \"/portal::हिं\" portal-hi.png)",
+      "Bash(awk '/^function PrescribeForm/,/^}$/' apps/web/app/doctor/doctor-app.tsx)",
+      "Bash(node cdp.mjs doctor.a doctor \"/doctor::Prescriptions\" rx-empty.png)",
+      "Bash(node rx-fill.mjs)",
+      "Bash(sed -n '/export interface InvoiceRow/,/}/p' packages/db/src/billing-queries.ts)",
+      "Bash(sed -n '/listInvoicesByPatient/,/^}/p' packages/db/src/me-queries.ts)",
+      "Bash(node cdp.mjs frontdesk.a frontdesk \"/portals/billing::Collect Payment\" billing-unpaid.png)",
+      "Bash(node billing-pay.mjs)"
     ],
     "additionalDirectories": [
       "/Users/architgosain/Projects/AIIMS-APP-DEV/aiims-plus-app/src/schema",
-      "/Users/architgosain/Projects/AIIMS-APP-DEV/aiims-plus-app/apps/api/src/modules/emr/application"
+      "/Users/architgosain/Projects/AIIMS-APP-DEV/aiims-plus-app/apps/api/src/modules/emr/application",
+      "/Users/architgosain/Projects/AIIMS-APP-DEV/aiims-plus-app/apps/web/app/api/bff/invoices/[id]"
     ]
   }
 }

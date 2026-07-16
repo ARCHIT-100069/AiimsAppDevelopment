@@ -94,6 +94,7 @@ import {
 import {
   generateInvoiceRequestSchema,
   invoiceResponseSchema,
+  invoiceDeskResponseSchema,
   payInvoiceRequestSchema,
   shareEncounterRequestSchema,
   shareEncounterResponseSchema,
@@ -847,6 +848,22 @@ export const openApiDocument = {
         responses: {
           "200": jsonOk("Invoice", invoiceResponseSchema),
           "404": problemResponse("No invoice for this encounter"),
+          ...standardErrors,
+        },
+      },
+    },
+    "/v1/invoices": {
+      get: {
+        summary: "Billing desk — list tenant invoices with patient names (billing:read)",
+        parameters: [
+          {
+            name: "status",
+            in: "query",
+            schema: { type: "string", enum: ["issued", "paid", "cancelled"] },
+          },
+        ],
+        responses: {
+          "200": jsonOk("Invoices", invoiceDeskResponseSchema),
           ...standardErrors,
         },
       },

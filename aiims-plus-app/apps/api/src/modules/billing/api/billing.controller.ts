@@ -13,12 +13,14 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
 } from "@nestjs/common";
 import {
   generateInvoiceRequestSchema,
   payInvoiceRequestSchema,
   shareEncounterRequestSchema,
   type InvoiceLine,
+  type InvoiceListItem,
   type InvoiceResponse,
   type ShareEncounterResponse,
 } from "@aiims/api-contracts";
@@ -93,6 +95,31 @@ export class BillingController {
   ): Promise<InvoiceResponse> {
     const { invoice, lines } = await this.billing.getByEncounter(principal, id);
     return toInvoiceResponse(invoice, lines);
+  }
+
+  @Get("invoices")
+  @RequirePermission("billing:read")
+  async list(
+    @CurrentPrincipal() principal: Principal,
+    @Query("status") status?: string,
+  ): Promise<{ data: InvoiceListItem[] }> {
+    const st =
+      status === "issued" || status === "paid" || status === "cancelled" ? status : undefined;
+    const rows = await this.billing.list(principal, st);
+    return {
+      data: rows.map((r) => ({
+        id: r.id,
+        invoiceNumber: r.invoiceNumber,
+        patientId: r.patientId,
+        patientName: r.patientName,
+        status: r.status,
+        currency: r.currency,
+        total: r.total,
+        paymentMethod: r.paymentMethod,
+        issuedAt: r.issuedAt.toISOString(),
+        paidAt: r.paidAt ? r.paidAt.toISOString() : null,
+      })),
+    };
   }
 
   @Get("invoices/:id")
