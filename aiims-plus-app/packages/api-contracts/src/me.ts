@@ -53,11 +53,20 @@ export const myVisitSchema = z.object({
   signed: z.boolean(),
 });
 
+export const myReportLineSchema = z.object({
+  analyte: z.string(),
+  value: z.string(),
+  unit: z.string().nullable(),
+  referenceRange: z.string().nullable(),
+  flag: z.enum(["normal", "high", "low", "critical"]),
+});
+
 export const myReportSchema = z.object({
   id: z.uuid(),
   status: z.string(),
   conclusion: z.string(),
   issuedAt: z.string(),
+  lines: z.array(myReportLineSchema),
 });
 
 export const myVitalSchema = z.object({

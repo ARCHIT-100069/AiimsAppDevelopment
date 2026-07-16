@@ -1007,16 +1007,56 @@ function Records({ me }: { me: MySummaryResponse }) {
 
 function Labs({ me }: { me: MySummaryResponse }) {
   if (me.reports.length === 0) return <MockSection title="Lab reports" data={patientMock.labs} />;
+  const flagTone: Record<string, string> = {
+    normal: "slate",
+    high: "amber",
+    low: "amber",
+    critical: "red",
+  };
   return (
     <Card title="Lab reports">
-      <ul className="divide-y divide-slate-100">
+      <ul className="space-y-4">
         {me.reports.map((r) => (
-          <Row
-            key={r.id}
-            title={r.conclusion}
-            sub={`Issued ${fmtDate(r.issuedAt)}`}
-            right={<Badge tone={r.status === "final" ? "green" : "amber"}>{r.status}</Badge>}
-          />
+          <li key={r.id} className="rounded-xl border border-slate-100 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <p className="font-medium text-slate-800">{r.conclusion}</p>
+              <Badge tone={r.status === "final" ? "green" : "amber"}>{r.status}</Badge>
+            </div>
+            <p className="mt-0.5 text-xs text-slate-400">Issued {fmtDate(r.issuedAt)}</p>
+            {r.lines.length > 0 ? (
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-slate-400">
+                      <th className="pb-1 font-medium">Test</th>
+                      <th className="pb-1 font-medium">Result</th>
+                      <th className="pb-1 font-medium">Reference</th>
+                      <th className="pb-1 font-medium">Flag</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {r.lines.map((l, i) => (
+                      <tr key={i}>
+                        <td className="py-1.5 text-slate-700">{l.analyte}</td>
+                        <td className="py-1.5 font-medium text-slate-800">
+                          {l.value}
+                          {l.unit ? ` ${l.unit}` : ""}
+                        </td>
+                        <td className="py-1.5 text-slate-500">{l.referenceRange ?? "—"}</td>
+                        <td className="py-1.5">
+                          {l.flag === "normal" ? (
+                            <span className="text-slate-400">normal</span>
+                          ) : (
+                            <Badge tone={flagTone[l.flag] ?? "slate"}>{l.flag}</Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </li>
         ))}
       </ul>
     </Card>

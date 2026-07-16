@@ -13,6 +13,7 @@ import {
   listBookablePractitioners,
   listDiagnosesByPatient,
   listInvoicesByPatient,
+  listLabResultLines,
   listPrescriptionItems,
   listPrescriptionsByPatient,
   listReportsByPatient,
@@ -130,12 +131,21 @@ export class MeController {
             date: v.periodStart.toISOString(),
             signed: v.signedAt !== null,
           })),
-          reports: reports.map((r) => ({
-            id: r.id,
-            status: r.status,
-            conclusion: r.conclusion,
-            issuedAt: r.issuedAt.toISOString(),
-          })),
+          reports: await Promise.all(
+            reports.map(async (r) => ({
+              id: r.id,
+              status: r.status,
+              conclusion: r.conclusion,
+              issuedAt: r.issuedAt.toISOString(),
+              lines: (await listLabResultLines(db, r.id)).map((l) => ({
+                analyte: l.analyte,
+                value: l.value,
+                unit: l.unit ?? null,
+                referenceRange: l.referenceRange ?? null,
+                flag: l.flag,
+              })),
+            })),
+          ),
           vitals: vitals.map((v) => ({
             id: v.id,
             code: v.code,
