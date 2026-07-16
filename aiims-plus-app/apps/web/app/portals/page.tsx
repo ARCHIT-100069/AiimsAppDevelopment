@@ -5,6 +5,9 @@ import { PORTALS } from "../lib/portals";
 
 export const dynamic = "force-dynamic";
 
+// Modules wired to the real backend end-to-end (vs. designed previews).
+const LIVE = new Set(["pharmacy", "laboratory", "radiology", "billing", "management"]);
+
 export default async function PortalsHub() {
   const session = await readSession();
   if (!session) redirect("/login");
@@ -33,30 +36,47 @@ export default async function PortalsHub() {
           Open any department&apos;s workspace. Each portal covers what that team runs day to day.
         </p>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {PORTALS.map((p) => (
-            <a
-              key={p.slug}
-              href={`/portals/${p.slug}`}
-              className="card group flex flex-col p-5 transition-transform hover:-translate-y-0.5"
-            >
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-teal-50 text-sm font-bold text-teal-700">
-                {p.name
-                  .replace(/\(.*?\)/g, "")
-                  .split(" ")
-                  .filter((w) => /^[a-z]/i.test(w) && w.toLowerCase() !== "portal")
-                  .slice(0, 2)
-                  .map((w) => w[0]!.toUpperCase())
-                  .join("")}
-              </div>
-              <h2 className="mt-3 font-semibold text-slate-800 group-hover:text-teal-700">
-                {p.name}
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">{p.tagline}</p>
-              <span className="mt-3 text-xs font-medium text-teal-700">
-                {p.nav.length} sections →
-              </span>
-            </a>
-          ))}
+          {[...PORTALS]
+            .sort((a, b) => Number(LIVE.has(b.slug)) - Number(LIVE.has(a.slug)))
+            .map((p) => {
+              const live = LIVE.has(p.slug);
+              return (
+                <a
+                  key={p.slug}
+                  href={`/portals/${p.slug}`}
+                  className="card group flex flex-col p-5 transition-transform hover:-translate-y-0.5"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="grid h-10 w-10 place-items-center rounded-xl bg-teal-50 text-sm font-bold text-teal-700">
+                      {p.name
+                        .replace(/\(.*?\)/g, "")
+                        .split(" ")
+                        .filter((w) => /^[a-z]/i.test(w) && w.toLowerCase() !== "portal")
+                        .slice(0, 2)
+                        .map((w) => w[0]!.toUpperCase())
+                        .join("")}
+                    </div>
+                    {live ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700">
+                        <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                        Live
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
+                        Preview
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="mt-3 font-semibold text-slate-800 group-hover:text-teal-700">
+                    {p.name}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">{p.tagline}</p>
+                  <span className="mt-3 text-xs font-medium text-teal-700">
+                    {live ? "Open workspace →" : `${p.nav.length} sections →`}
+                  </span>
+                </a>
+              );
+            })}
         </div>
       </main>
     </div>

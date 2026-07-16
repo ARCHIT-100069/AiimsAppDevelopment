@@ -103,10 +103,7 @@ const ROLE_SUMMARY: [string, string][] = [
     "admin",
     "Organisation, facilities, departments, staff & schedules. No patient-data access (separation of duties).",
   ],
-  [
-    "doctor",
-    "Consultations, clinical documentation, sign-off, orders, results, AI coding. Read patients.",
-  ],
+  ["doctor", "Consultations, clinical documentation, sign-off, orders, results. Read patients."],
   ["nurse", "Vitals & clinical documentation (no sign-off, no orders)."],
   ["front_desk", "Patient registration, appointment booking, check-in, billing & payments."],
   ["patient", "Reads only their own record; books their own appointments (self-service portal)."],
