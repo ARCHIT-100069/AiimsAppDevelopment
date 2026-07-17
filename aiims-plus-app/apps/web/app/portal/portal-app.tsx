@@ -553,7 +553,30 @@ function InfoTile({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** Deterministic barcode strip (Code128-look) rendered from the UHID string —
+ *  pure SVG, no library. Bar widths vary by char code so each UHID is distinct. */
+function Barcode({ value }: { value: string }) {
+  const bars: { x: number; w: number }[] = [];
+  let x = 0;
+  const seed = `${value}${value.length}`;
+  for (let i = 0; i < seed.length; i++) {
+    const c = seed.charCodeAt(i);
+    const w = 1 + (c % 3); // 1–3 px bars
+    const gap = 1 + ((c >> 2) % 2);
+    bars.push({ x, w });
+    x += w + gap;
+  }
+  return (
+    <svg viewBox={`0 0 ${x} 40`} className="h-10 w-full" preserveAspectRatio="none" aria-hidden>
+      {bars.map((b, i) => (
+        <rect key={i} x={b.x} y={0} width={b.w} height={40} fill="#0f172a" />
+      ))}
+    </svg>
+  );
+}
+
 function Profile({ me }: { me: MySummaryResponse }) {
+  const t = useT();
   const p = me.profile;
   const age = ageFrom(p.birthDate);
   const initials = `${p.nameGiven[0] ?? ""}${p.nameFamily[0] ?? ""}`;
@@ -561,119 +584,144 @@ function Profile({ me }: { me: MySummaryResponse }) {
   const meds = me.medications.length;
   const lastVisit = me.visits[0];
 
-  const chips = [age !== null ? `${age} yrs` : null, p.gender, "Blood group O+"].filter(
-    Boolean,
-  ) as string[];
-
   return (
     <div className="space-y-5">
-      {/* Header card */}
-      <div className="card overflow-hidden p-0">
-        <div className="hero-gradient relative h-28" />
-        <div className="px-6 pb-6">
-          <div className="-mt-12 flex flex-col items-start gap-4 sm:flex-row sm:items-end">
-            <div className="relative">
-              <div className="grid h-24 w-24 place-items-center rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-400 text-2xl font-bold text-white shadow-lg ring-4 ring-white">
-                {initials.toUpperCase()}
-              </div>
-              {/* verified badge */}
-              <span
-                title="ABHA verified"
-                className="absolute -bottom-1.5 -right-1.5 grid h-7 w-7 place-items-center rounded-full bg-white text-teal-600 shadow ring-1 ring-slate-100"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  width={16}
-                  height={16}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2.4}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden
-                >
-                  <path d="M20 6L9 17l-5-5" />
-                </svg>
-              </span>
-            </div>
-            <div className="min-w-0 pb-1">
-              <h2 className="text-2xl font-bold text-slate-900">
-                {p.nameGiven} {p.nameFamily}
-              </h2>
-              <p className="mt-0.5 text-sm text-slate-500">
-                {p.mrn} · {p.abhaAddress ?? "ABHA not linked"}
+      {/* Hospital patient health card */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between bg-gradient-to-r from-teal-700 to-emerald-600 px-5 py-3 text-white">
+          <div className="flex items-center gap-2">
+            <IconCrossMini />
+            <div>
+              <p className="text-sm font-semibold leading-tight">AIIMS+ {t("Hospital")}</p>
+              <p className="text-[11px] leading-tight text-teal-50/80">
+                {t("Patient Health Card")}
               </p>
             </div>
           </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {chips.map((c) => (
-              <span
-                key={c}
-                className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium capitalize text-teal-700"
-              >
-                {c}
-              </span>
-            ))}
+          <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-medium">
+            {t("ABHA verified")}
+          </span>
+        </div>
+        <div className="flex gap-4 p-5">
+          <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-teal-500 to-emerald-400 text-2xl font-bold text-white shadow ring-2 ring-white">
+            {initials.toUpperCase()}
           </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-lg font-bold leading-tight text-slate-900">
+              {p.nameGiven} {p.nameFamily}
+            </p>
+            <dl className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+              <CardField label={t("UHID")} value={p.mrn} mono />
+              <CardField
+                label={t("Age / Sex")}
+                value={`${age !== null ? `${age}` : "—"} / ${genderShort(p.gender)}`}
+              />
+              <CardField label={t("Date of birth")} value={fmtDate(p.birthDate)} />
+              <CardField label={t("Blood group")} value={t("Not recorded")} />
+              <div className="col-span-2">
+                <CardField
+                  label={t("ABHA address")}
+                  value={p.abhaAddress ?? t("Not linked")}
+                  mono
+                />
+              </div>
+            </dl>
+          </div>
+        </div>
+        {/* Machine-readable UHID */}
+        <div className="border-t border-slate-100 px-5 py-3">
+          <Barcode value={p.mrn} />
+          <p className="mt-1 text-center font-mono text-[11px] tracking-[0.3em] text-slate-500">
+            {p.mrn}
+          </p>
+        </div>
+        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-5 py-2 text-[11px] text-slate-400">
+          <span>
+            {t("Issued by")} AIIMS+ · {t("Present at every visit")}
+          </span>
+          <span>{t("Encrypted & DPDP-protected")}</span>
         </div>
       </div>
 
-      {/* Details */}
+      {/* Patient record — demographics */}
       <div>
         <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Personal details
+          {t("Patient record")}
         </h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <InfoTile label="Full name" value={`${p.nameGiven} ${p.nameFamily}`} />
-          <InfoTile label="MRN" value={p.mrn} />
+          <InfoTile label={t("Full name")} value={`${p.nameGiven} ${p.nameFamily}`} />
+          <InfoTile label={t("UHID")} value={p.mrn} />
           <InfoTile
-            label="Date of birth"
-            value={`${fmtDate(p.birthDate)}${age !== null ? ` · ${age} yrs` : ""}`}
+            label={t("Date of birth")}
+            value={`${fmtDate(p.birthDate)}${age !== null ? ` · ${age} ${t("yrs")}` : ""}`}
           />
-          <InfoTile label="Gender" value={p.gender} />
-          <InfoTile label="ABHA address" value={p.abhaAddress ?? "Not linked"} />
-          <InfoTile label="Contact" value="Protected (encrypted)" />
+          <InfoTile label={t("Gender")} value={p.gender} />
+          <InfoTile label={t("ABHA address")} value={p.abhaAddress ?? t("Not linked")} />
+          <InfoTile label={t("Contact")} value={t("Protected (encrypted)")} />
         </div>
       </div>
 
       {/* Health snapshot */}
       <div>
         <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Health snapshot
+          {t("Health snapshot")}
         </h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat label="Blood group" value="O+" tone="slate" />
           <Stat
-            label="Active conditions"
+            label={t("Active conditions")}
             value={`${activeDx}`}
             tone={activeDx ? "amber" : "slate"}
           />
-          <Stat label="Medications" value={`${meds}`} tone="slate" />
-          <Stat label="Last visit" value={lastVisit ? fmtDate(lastVisit.date) : "—"} tone="slate" />
+          <Stat label={t("Medications")} value={`${meds}`} tone="slate" />
+          <Stat label={t("Visits")} value={`${me.visits.length}`} tone="slate" />
+          <Stat
+            label={t("Last visit")}
+            value={lastVisit ? fmtDate(lastVisit.date) : "—"}
+            tone="slate"
+          />
         </div>
-        <Card title="Allergies & alerts">
+        <Card title={t("Allergies & alerts")}>
           <ul className="divide-y divide-slate-100">
             <Row
-              title="No known drug allergies"
-              sub="Self-reported"
-              right={<Badge tone="green">Clear</Badge>}
+              title={t("No known drug allergies")}
+              sub={t("Self-reported")}
+              right={<Badge tone="green">{t("Clear")}</Badge>}
             />
             <Row
-              title="Emergency contact"
-              sub="Not on file"
-              right={<Badge tone="amber">Add</Badge>}
+              title={t("Emergency contact")}
+              sub={t("Not on file")}
+              right={<Badge tone="amber">{t("Add")}</Badge>}
             />
           </ul>
         </Card>
       </div>
 
       <p className="px-1 text-xs text-slate-400">
-        Contact details are encrypted at rest. To update your profile, contact the front desk.
+        {t(
+          "Contact details are encrypted at rest. To update your profile, contact the front desk.",
+        )}
       </p>
     </div>
   );
 }
+
+function IconCrossMini() {
+  return (
+    <svg viewBox="0 0 24 24" width={22} height={22} fill="currentColor" aria-hidden>
+      <path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z" />
+    </svg>
+  );
+}
+function CardField({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[10px] uppercase tracking-wide text-slate-400">{label}</dt>
+      <dd className={`truncate text-slate-800 ${mono ? "font-mono text-[13px]" : ""}`}>{value}</dd>
+    </div>
+  );
+}
+const genderShort = (g: string) =>
+  g?.toLowerCase().startsWith("m") ? "M" : g?.toLowerCase().startsWith("f") ? "F" : g || "—";
 
 function Appointments({
   me,
@@ -1074,10 +1122,11 @@ function Records({ me }: { me: MySummaryResponse }) {
 }
 
 function Imaging({ me }: { me: MySummaryResponse }) {
+  const t = useT();
   const studies = me.reports.filter((r) => r.category === "imaging");
   if (studies.length === 0) return <MockSection title="Imaging" data={patientMock.imaging} />;
   return (
-    <Card title="Imaging studies">
+    <Card title={t("Imaging studies")}>
       <ul className="space-y-4">
         {studies.map((r) => (
           <li key={r.id} className="rounded-xl border border-slate-100 p-4">
@@ -1094,6 +1143,7 @@ function Imaging({ me }: { me: MySummaryResponse }) {
 }
 
 function Labs({ me }: { me: MySummaryResponse }) {
+  const t = useT();
   const labs = me.reports.filter((r) => r.category !== "imaging");
   if (labs.length === 0) return <MockSection title="Lab reports" data={patientMock.labs} />;
   const flagTone: Record<string, string> = {
@@ -1103,7 +1153,7 @@ function Labs({ me }: { me: MySummaryResponse }) {
     critical: "red",
   };
   return (
-    <Card title="Lab reports">
+    <Card title={t("Lab reports")}>
       <ul className="space-y-4">
         {labs.map((r) => (
           <li key={r.id} className="rounded-xl border border-slate-100 p-4">
@@ -1117,10 +1167,10 @@ function Labs({ me }: { me: MySummaryResponse }) {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-xs text-slate-400">
-                      <th className="pb-1 font-medium">Test</th>
-                      <th className="pb-1 font-medium">Result</th>
-                      <th className="pb-1 font-medium">Reference</th>
-                      <th className="pb-1 font-medium">Flag</th>
+                      <th className="pb-1 font-medium">{t("Test")}</th>
+                      <th className="pb-1 font-medium">{t("Result")}</th>
+                      <th className="pb-1 font-medium">{t("Reference")}</th>
+                      <th className="pb-1 font-medium">{t("Flag")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -1134,9 +1184,9 @@ function Labs({ me }: { me: MySummaryResponse }) {
                         <td className="py-1.5 text-slate-500">{l.referenceRange ?? "—"}</td>
                         <td className="py-1.5">
                           {l.flag === "normal" ? (
-                            <span className="text-slate-400">normal</span>
+                            <span className="text-slate-400">{t("normal")}</span>
                           ) : (
-                            <Badge tone={flagTone[l.flag] ?? "slate"}>{l.flag}</Badge>
+                            <Badge tone={flagTone[l.flag] ?? "slate"}>{t(l.flag)}</Badge>
                           )}
                         </td>
                       </tr>
@@ -1179,21 +1229,22 @@ function Vitals({ me }: { me: MySummaryResponse }) {
 }
 
 function Billing({ me }: { me: MySummaryResponse }) {
+  const t = useT();
   return (
-    <Card title="Bills & payments">
+    <Card title={t("Bills & payments")}>
       {me.invoices.length === 0 ? (
-        <Empty>No invoices yet.</Empty>
+        <Empty>{t("No invoices yet.")}</Empty>
       ) : (
         <ul className="divide-y divide-slate-100">
           {me.invoices.map((inv) => (
             <Row
               key={inv.invoiceNumber}
               title={inv.invoiceNumber}
-              sub={`Issued ${fmtDate(inv.issuedAt)}`}
+              sub={`${t("Issued")} ${fmtDate(inv.issuedAt)}`}
               right={
                 <div className="text-right">
                   <p className="font-semibold text-slate-900">₹{inv.total}</p>
-                  <Badge tone={inv.status === "paid" ? "green" : "amber"}>{inv.status}</Badge>
+                  <Badge tone={inv.status === "paid" ? "green" : "amber"}>{t(inv.status)}</Badge>
                 </div>
               }
             />
@@ -1318,6 +1369,7 @@ const FEEDBACK_CATEGORIES = [
 ] as const;
 
 function Feedback() {
+  const t = useT();
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [category, setCategory] = useState<string>("overall");
@@ -1352,19 +1404,21 @@ function Feedback() {
 
   if (sent) {
     return (
-      <Card title="Share feedback">
+      <Card title={t("Share feedback")}>
         <p className="rounded-lg bg-green-50 px-3 py-3 text-sm text-green-700">
-          Thank you — your feedback helps us improve care for everyone. 💚
+          {t("Thank you — your feedback helps us improve care for everyone. 💚")}
         </p>
       </Card>
     );
   }
 
   return (
-    <Card title="Share feedback">
+    <Card title={t("Share feedback")}>
       <form onSubmit={submit} className="space-y-4">
         <div>
-          <p className="mb-1.5 text-sm font-medium text-slate-700">How was your experience?</p>
+          <p className="mb-1.5 text-sm font-medium text-slate-700">
+            {t("How was your experience?")}
+          </p>
           <div className="flex gap-1" onMouseLeave={() => setHover(0)}>
             {[1, 2, 3, 4, 5].map((n) => (
               <button
@@ -1384,7 +1438,7 @@ function Feedback() {
         </div>
 
         <div>
-          <p className="mb-1.5 text-sm font-medium text-slate-700">What is this about?</p>
+          <p className="mb-1.5 text-sm font-medium text-slate-700">{t("What is this about?")}</p>
           <div className="flex flex-wrap gap-2">
             {FEEDBACK_CATEGORIES.map(([value, label]) => (
               <button
@@ -1397,7 +1451,7 @@ function Feedback() {
                     : "border-slate-200 text-slate-600 hover:bg-slate-50"
                 }`}
               >
-                {label}
+                {t(label)}
               </button>
             ))}
           </div>
@@ -1407,7 +1461,7 @@ function Feedback() {
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={4}
-          placeholder="Tell us more (optional)…"
+          placeholder={t("Tell us more (optional)…")}
           className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
         />
 
@@ -1421,7 +1475,7 @@ function Feedback() {
           disabled={!rating || busy}
           className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
         >
-          {busy ? "Sending…" : "Send feedback"}
+          {busy ? `${t("Sending")}…` : t("Send feedback")}
         </button>
       </form>
     </Card>
