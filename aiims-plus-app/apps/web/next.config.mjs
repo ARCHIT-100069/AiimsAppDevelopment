@@ -13,6 +13,14 @@ const isDev = process.env.NODE_ENV !== "production";
 // middleware — for now the sensitive JSON surface (the API) keeps its strict CSP.
 const scriptSrc = `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`;
 const connectSrc = `connect-src 'self'${isDev ? " ws: http:" : ""}`;
+// RP-initiated logout submits a POST that then REDIRECTS to Keycloak's
+// end-session endpoint. Browsers apply `form-action` to that redirect target, so
+// a bare `form-action 'self'` silently blocks the logout — the app cookies clear
+// but Keycloak's SSO session lives on, and the next sign-in re-authenticates the
+// SAME user. Allow the identity provider's origin as a form-action target.
+const kcOrigin = new URL(process.env.OIDC_ISSUER_URL ?? "http://localhost:8080/realms/aiims")
+  .origin;
+const formAction = `form-action 'self' ${kcOrigin}`;
 const securityHeaders = [
   { key: "Strict-Transport-Security", value: `max-age=${ONE_YEAR}; includeSubDomains; preload` },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -29,7 +37,7 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       "base-uri 'self'",
-      "form-action 'self'",
+      formAction,
       "frame-ancestors 'none'",
       "img-src 'self' data: blob:",
       "media-src 'self' blob:",
