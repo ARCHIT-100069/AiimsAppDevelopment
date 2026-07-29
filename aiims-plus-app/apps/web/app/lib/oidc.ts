@@ -7,6 +7,11 @@ import { createHash, randomBytes } from "node:crypto";
 
 const issuer = () => process.env.OIDC_ISSUER_URL ?? "http://localhost:8080/realms/aiims";
 const clientId = () => process.env.OIDC_CLIENT_ID ?? "aiims-web";
+// Public client that permits the direct password grant (used by the native
+// in-app sign-in form). Unlike the redirect flow, the password grant never
+// creates a Keycloak browser SSO session — so logging out and signing in as a
+// different user on the same device is instant (no lingering SSO to clear).
+const cliClientId = () => process.env.OIDC_CLI_CLIENT_ID ?? "aiims-cli";
 const redirectUri = () =>
   process.env.OIDC_REDIRECT_URI ?? "http://localhost:3001/api/auth/callback";
 
@@ -51,6 +56,27 @@ export async function exchangeCode(code: string, verifier: string): Promise<Toke
 
 export async function refresh(refreshToken: string): Promise<TokenSet> {
   return tokenRequest({ grant_type: "refresh_token", refresh_token: refreshToken });
+}
+
+/**
+ * Direct password grant against the CLI client — powers the native sign-in form.
+ * Throws on bad credentials (caller maps to a friendly error). No SSO cookie is
+ * set at Keycloak, so account-switching on one device is friction-free.
+ */
+export async function passwordGrant(username: string, password: string): Promise<TokenSet> {
+  const res = await fetch(`${issuer()}/protocol/openid-connect/token`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: cliClientId(),
+      grant_type: "password",
+      scope: "openid profile",
+      username,
+      password,
+    }),
+  });
+  if (!res.ok) throw new Error(`password grant failed: ${res.status}`);
+  return (await res.json()) as TokenSet;
 }
 
 async function tokenRequest(body: Record<string, string>): Promise<TokenSet> {

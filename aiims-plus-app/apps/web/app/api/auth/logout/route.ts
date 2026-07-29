@@ -1,30 +1,35 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { clearSession, readIdToken } from "../../../lib/session";
+import { clearSession, readIdToken, readSession } from "../../../lib/session";
 
 const issuer = () => process.env.OIDC_ISSUER_URL ?? "http://localhost:8080/realms/aiims";
 const clientId = () => process.env.OIDC_CLIENT_ID ?? "aiims-web";
 
 /**
- * RP-initiated logout (OIDC). Clearing our own session is not enough: Keycloak
- * keeps an SSO session, so the next "Sign in" would silently re-authenticate the
- * SAME user. We redirect the browser to Keycloak's end-session endpoint with the
- * id_token_hint (so no logout-confirmation prompt) and post_logout_redirect_uri
- * back to /login. The aiims-web client registers this URI (post.logout
- * .redirect.uris = "+"), so Keycloak ends the SSO session and returns cleanly —
- * letting the next user sign in as someone else.
+ * Logout. Two flows:
+ *  • Native password grant (the default) creates NO Keycloak browser SSO
+ *    session, so we simply clear our own cookies and return to /login. This is
+ *    instant and lets a different user sign in immediately on the same device.
+ *  • Redirect SSO login DID create a Keycloak session; for it we do an
+ *    RP-initiated logout (id_token_hint + post_logout_redirect_uri) so the SSO
+ *    session ends and the next sign-in isn't silently re-authenticated.
  */
 export async function POST(req: NextRequest) {
+  const session = await readSession();
   const idToken = await readIdToken();
   await clearSession();
 
-  const postLogout = new URL("/login", req.url).toString();
-  const params = new URLSearchParams({
-    post_logout_redirect_uri: postLogout,
-    client_id: clientId(),
-  });
-  if (idToken) params.set("id_token_hint", idToken);
+  const loginUrl = new URL("/login", req.url).toString();
 
-  return NextResponse.redirect(`${issuer()}/protocol/openid-connect/logout?${params}`, {
-    status: 303,
-  });
+  if (session?.viaSso && idToken) {
+    const params = new URLSearchParams({
+      post_logout_redirect_uri: loginUrl,
+      client_id: clientId(),
+      id_token_hint: idToken,
+    });
+    return NextResponse.redirect(`${issuer()}/protocol/openid-connect/logout?${params}`, {
+      status: 303,
+    });
+  }
+
+  return NextResponse.redirect(loginUrl, { status: 303 });
 }

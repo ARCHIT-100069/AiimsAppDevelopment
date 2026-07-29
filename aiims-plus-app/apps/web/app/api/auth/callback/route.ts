@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
       expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
       displayName: claims.name ?? "Clinician",
       roles,
+      viaSso: true,
     });
     await writeIdToken(tokens.id_token);
     // Each role lands in its own console (patient → portal, admin → admin, …).

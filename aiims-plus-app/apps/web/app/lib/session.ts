@@ -22,6 +22,10 @@ export interface Session {
   expiresAt: number;
   displayName: string;
   roles: string[];
+  /** True only for the redirect (SSO) login, which creates a Keycloak browser
+   *  session that logout must end. The native password grant sets no SSO
+   *  session, so its logout is a simple local cookie clear. */
+  viaSso?: boolean;
 }
 
 function sessionKey(): Buffer {
