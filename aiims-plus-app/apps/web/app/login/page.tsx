@@ -166,10 +166,18 @@ export default async function LoginPage({
             </div>
           </div>
 
+          {/* New patient */}
+          <p className="mt-5 border-t border-slate-100 pt-4 text-center text-sm text-slate-500">
+            New patient?{" "}
+            <a href="/register" className="font-medium text-teal-700 hover:underline">
+              Create an account
+            </a>
+          </p>
+
           {/* SSO fallback */}
           <a
             href="/api/auth/login"
-            className="mt-5 block text-center text-xs font-medium text-slate-500 hover:text-teal-700"
+            className="mt-3 block text-center text-xs font-medium text-slate-500 hover:text-teal-700"
           >
             Or use hospital single sign-on (SSO) →
           </a>
