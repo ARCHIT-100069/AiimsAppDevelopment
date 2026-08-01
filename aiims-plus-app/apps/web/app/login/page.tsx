@@ -7,8 +7,11 @@ const TRUST = [
   "Role-based access, isolated per hospital",
 ];
 
-// One-click demo accounts — each posts the native sign-in form with preset
-// credentials so you can hop between roles on the same device instantly.
+// One-click demo accounts embed credentials in the page, so they must NEVER be
+// shown by default — anyone hitting /login could otherwise become admin. They
+// render ONLY when explicitly opted in with DEMO_LOGIN=true (local demos). By
+// default the login page accepts real credentials only.
+const demoEnabled = process.env.DEMO_LOGIN === "true";
 const DEMO = [
   { label: "Patient", sub: "Anaya Sharma", u: "anaya", p: "patient", tone: "teal" },
   { label: "Doctor", sub: "Dr. Asha", u: "doctor.a", p: "doctor", tone: "slate" },
@@ -138,33 +141,36 @@ export default async function LoginPage({
             </button>
           </form>
 
-          {/* Quick demo access */}
-          <div className="mt-6">
-            <div className="mb-2 flex items-center gap-3 text-[11px] font-medium uppercase tracking-wide text-slate-400">
-              <span className="h-px flex-1 bg-slate-200" />
-              Quick demo access
-              <span className="h-px flex-1 bg-slate-200" />
+          {/* Quick demo access — only when explicitly opted in (DEMO_LOGIN=true).
+              Never shown by default: it would let anyone sign in as staff/admin. */}
+          {demoEnabled ? (
+            <div className="mt-6">
+              <div className="mb-2 flex items-center gap-3 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                <span className="h-px flex-1 bg-slate-200" />
+                Quick demo access
+                <span className="h-px flex-1 bg-slate-200" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {DEMO.map((d) => (
+                  <form key={d.u} action="/api/auth/password-login" method="post">
+                    <input type="hidden" name="username" value={d.u} />
+                    <input type="hidden" name="password" value={d.p} />
+                    <button
+                      type="submit"
+                      className={`w-full rounded-lg border px-3 py-2 text-left transition-colors ${
+                        d.tone === "teal"
+                          ? "border-teal-200 bg-teal-50 hover:bg-teal-100"
+                          : "border-slate-200 bg-white hover:bg-slate-50"
+                      }`}
+                    >
+                      <span className="block text-sm font-medium text-slate-800">{d.label}</span>
+                      <span className="block text-xs text-slate-400">{d.sub}</span>
+                    </button>
+                  </form>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {DEMO.map((d) => (
-                <form key={d.u} action="/api/auth/password-login" method="post">
-                  <input type="hidden" name="username" value={d.u} />
-                  <input type="hidden" name="password" value={d.p} />
-                  <button
-                    type="submit"
-                    className={`w-full rounded-lg border px-3 py-2 text-left transition-colors ${
-                      d.tone === "teal"
-                        ? "border-teal-200 bg-teal-50 hover:bg-teal-100"
-                        : "border-slate-200 bg-white hover:bg-slate-50"
-                    }`}
-                  >
-                    <span className="block text-sm font-medium text-slate-800">{d.label}</span>
-                    <span className="block text-xs text-slate-400">{d.sub}</span>
-                  </button>
-                </form>
-              ))}
-            </div>
-          </div>
+          ) : null}
 
           {/* New patient */}
           <p className="mt-5 border-t border-slate-100 pt-4 text-center text-sm text-slate-500">
