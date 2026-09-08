@@ -10,11 +10,14 @@ ENV KC_HOSTNAME_STRICT=false
 ENV KC_PROXY_HEADERS=xforwarded
 ENV KC_HEALTH_ENABLED=false
 ENV KC_METRICS_ENABLED=false
+# Single instance — the default clustered cache (Infinispan/JGroups) spends
+# real memory discovering peers that don't exist; run local-only caches.
+ENV KC_CACHE=local
 # Render's free/starter web-service plan caps the container at 512Mi. `start-dev`
 # re-augments (rebuilds) the server on every boot, which spikes well past that —
 # pre-build the optimized server at image-build time instead, then start it
 # directly (`start --optimized`) so boot only starts an already-built server.
-RUN /opt/keycloak/bin/kc.sh build
+RUN /opt/keycloak/bin/kc.sh build --cache=local
 ENV JAVA_OPTS_APPEND="-Xms64m -Xmx300m -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=200m"
 
 ENTRYPOINT ["/bin/sh", "-c", "/opt/keycloak/bin/kc.sh start --optimized --import-realm --hostname-strict=false --http-port=${PORT:-8080}"]
