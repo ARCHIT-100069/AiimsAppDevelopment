@@ -1,9 +1,10 @@
 # Keycloak service for hosted demo deploys (Render). Mirrors docker-compose.yml's
-# local dev setup (start-dev --import-realm against docker/keycloak/realm-aiims.json)
-# but binds to $PORT and trusts the platform's TLS-terminating proxy.
+# local dev setup but binds to $PORT and trusts the platform's TLS-terminating
+# proxy. Realm import happens post-boot via the Admin API (see
+# scripts/import-realm-remote.py), not --import-realm at startup: on a 512Mi
+# container the bulk import spiked memory past the limit every time during
+# boot; the same import against a warm, idle server does not.
 FROM quay.io/keycloak/keycloak:26.4
-
-COPY realm-aiims.json /opt/keycloak/data/import/realm-aiims.json
 
 ENV KC_HTTP_ENABLED=true
 ENV KC_HOSTNAME_STRICT=false
@@ -20,4 +21,4 @@ ENV KC_CACHE=local
 RUN /opt/keycloak/bin/kc.sh build
 ENV JAVA_OPTS_APPEND="-Xms64m -Xmx300m -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=200m"
 
-ENTRYPOINT ["/bin/sh", "-c", "/opt/keycloak/bin/kc.sh start --optimized --import-realm --hostname-strict=false --http-port=${PORT:-8080}"]
+ENTRYPOINT ["/bin/sh", "-c", "/opt/keycloak/bin/kc.sh start --optimized --hostname-strict=false --http-host=0.0.0.0 --http-port=${PORT:-8080}"]
