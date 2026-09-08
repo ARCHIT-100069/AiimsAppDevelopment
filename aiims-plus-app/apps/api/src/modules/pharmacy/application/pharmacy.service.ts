@@ -26,7 +26,7 @@ import {
   markPrescriptionStatus,
   newId,
   type DrugStockRow,
-  type PrescriptionRow,
+  type PrescriptionRowWithPatient,
   type TenantDb,
 } from "@aiims/db";
 import type {
@@ -174,7 +174,13 @@ export class PharmacyService {
           resourceId: id,
           occurredAt: new Date(),
         });
-        return this.view(db, presc);
+        // insertPrescription's RETURNING has no join, so the patient name
+        // (already fetched above to validate the patient exists) is attached
+        // here rather than re-queried.
+        return this.view(db, {
+          ...presc,
+          patientName: `${patient.nameGiven} ${patient.nameFamily}`,
+        });
       });
     } catch (err) {
       if (isForeignKeyViolation(err)) throw new NotFoundError("Patient or drug not found");
@@ -188,7 +194,13 @@ export class PharmacyService {
   ): Promise<PrescriptionResponse[]> {
     return this.uow.withTenant(this.actor(principal), async (db) => {
       const rows = await listPrescriptions(db, status);
-      return Promise.all(rows.map((r) => this.view(db, r)));
+      // Sequential: view() queries share this transaction's one pg client, so
+      // concurrent awaits on it are deprecated (pg#9 removes support).
+      const out: PrescriptionResponse[] = [];
+      for (const r of rows) {
+        out.push(await this.view(db, r));
+      }
+      return out;
     });
   }
 
@@ -258,11 +270,15 @@ export class PharmacyService {
     });
   }
 
-  private async view(db: TenantDb, presc: PrescriptionRow): Promise<PrescriptionResponse> {
+  private async view(
+    db: TenantDb,
+    presc: PrescriptionRowWithPatient,
+  ): Promise<PrescriptionResponse> {
     const items = await listPrescriptionItems(db, presc.id);
     return {
       id: presc.id,
       patientId: presc.patientId,
+      patientName: presc.patientName,
       encounterId: presc.encounterId,
       prescriberId: presc.prescriberId,
       status: presc.status,

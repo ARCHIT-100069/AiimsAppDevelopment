@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
-import { decodeClaims, exchangeCode } from "../../../lib/oidc";
+import { decodeClaims, exchangeCode, isDisabledStaffAccount } from "../../../lib/oidc";
 import { homeFor } from "../../../lib/roles";
 import { writeSession, writeIdToken } from "../../../lib/session";
 
@@ -22,6 +22,9 @@ export async function GET(req: NextRequest) {
     const tokens = await exchangeCode(code, verifier);
     const claims = decodeClaims(tokens.access_token);
     const roles = claims.realm_access?.roles ?? [];
+    if (await isDisabledStaffAccount(tokens.access_token, roles)) {
+      return NextResponse.redirect(new URL("/login?error=disabled", req.url));
+    }
     await writeSession({
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,

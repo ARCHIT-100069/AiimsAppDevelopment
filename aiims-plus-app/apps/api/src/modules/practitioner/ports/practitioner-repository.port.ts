@@ -10,6 +10,10 @@ export interface PractitionerSearch {
   q?: string;
   registrationNo?: string;
   departmentId?: string;
+  /** Restrict to practitioners whose linked login holds this role (e.g.
+   *  "doctor" — for booking pickers, where nurses/front-desk must not
+   *  appear alongside physicians). */
+  role?: string;
   limit: number;
   cursor?: { beforeCreatedAt: Date; beforeId: string };
 }

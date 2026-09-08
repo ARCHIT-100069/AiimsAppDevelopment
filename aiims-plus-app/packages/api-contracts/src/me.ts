@@ -67,6 +67,10 @@ export const myReportSchema = z.object({
   conclusion: z.string(),
   issuedAt: z.string(),
   category: z.enum(["lab", "imaging", "other"]),
+  /** Null until the ordering clinician reviews it (ADR-0022). Always
+   *  non-null in the patient's own view (unreviewed reports never reach it);
+   *  meaningful as a "pending review" signal in the staff-facing chart. */
+  reviewedAt: z.string().nullable(),
   lines: z.array(myReportLineSchema),
 });
 

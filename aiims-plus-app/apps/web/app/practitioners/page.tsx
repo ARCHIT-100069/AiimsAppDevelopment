@@ -6,7 +6,9 @@ import { AppShell, canManagePractitioners } from "../patients/shell";
 import { PractitionerList } from "./practitioner-list";
 
 export default async function PractitionersPage() {
-  if (!(await readSession())) redirect("/login");
+  const session = await readSession();
+  if (!session) redirect("/login");
+  if (session.roles.includes("patient")) redirect("/portal");
   const res = await apiFetch("/v1/practitioners?limit=50");
   const body: ListPractitionersResponse = res.ok
     ? await res.json()

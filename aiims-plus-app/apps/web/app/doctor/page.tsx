@@ -17,6 +17,28 @@ async function list<T>(path: string): Promise<T[]> {
   }
 }
 
+interface PractitionerLike {
+  nameGiven: string;
+  nameFamily: string;
+  registrationNo: string;
+  specialties: { display: string }[];
+  status: "active" | "inactive";
+  createdAt: string;
+}
+
+/** Best-effort match of the logged-in doctor to their clinical profile — the
+ *  registration number and specialty printed on their ID badge. There is no
+ *  "my practitioner record" endpoint, so this matches by display name against
+ *  the tenant's practitioner directory (practitioner names default to the
+ *  linked login's display name unless overridden). Missing gracefully. */
+async function fetchDoctorProfile(displayName: string): Promise<PractitionerLike | null> {
+  const practitioners = await list<PractitionerLike>("/v1/practitioners?limit=100");
+  const norm = (s: string) => s.trim().toLowerCase();
+  return (
+    practitioners.find((p) => norm(`${p.nameGiven} ${p.nameFamily}`) === norm(displayName)) ?? null
+  );
+}
+
 /** OPD queue is facility-scoped and returns { entries }. Resolve a facility first. */
 async function fetchQueue(): Promise<unknown[]> {
   const orgs = await list<{ id: string }>("/v1/organizations");
@@ -44,10 +66,11 @@ export default async function DoctorPage() {
   if (!session) redirect("/login");
   if (!session.roles.includes("doctor")) redirect(homeFor(session.roles));
 
-  const [patients, appointments, queue] = await Promise.all([
+  const [patients, appointments, queue, profile] = await Promise.all([
     list("/v1/patients?limit=25"),
     list("/v1/appointments"),
     fetchQueue(),
+    fetchDoctorProfile(session.displayName),
   ]);
 
   return (
@@ -58,6 +81,14 @@ export default async function DoctorPage() {
         patients: patients as never,
         appointments: appointments as never,
         queue: queue as never,
+        profile: profile
+          ? {
+              registrationNo: profile.registrationNo,
+              specialty: profile.specialties[0]?.display ?? null,
+              status: profile.status,
+              since: profile.createdAt,
+            }
+          : null,
       }}
     />
   );

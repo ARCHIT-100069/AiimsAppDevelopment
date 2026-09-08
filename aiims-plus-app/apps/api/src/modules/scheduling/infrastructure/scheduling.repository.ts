@@ -205,6 +205,7 @@ export class DrizzleSchedulingRepository implements SchedulingRepository {
       status: r.status,
       startAt: r.startAt,
       checkedInAt: r.checkedInAt,
+      encounterId: r.encounterId,
     }));
   }
 

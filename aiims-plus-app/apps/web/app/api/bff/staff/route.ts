@@ -62,11 +62,14 @@ export async function POST(req: NextRequest) {
   const appUserId = ((await userRes.json()) as { id: string }).id;
 
   // 3) DB role assignment.
-  await apiFetch(`/v1/users/${appUserId}/roles`, {
+  const roleRes = await apiFetch(`/v1/users/${appUserId}/roles`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ roleCode: role }),
   });
+  if (!roleRes.ok) {
+    return NextResponse.json({ error: "user", status: roleRes.status }, { status: 502 });
+  }
 
   // 4) Practitioner profile for clinical roles (best-effort: needs a department).
   let practitioner = false;

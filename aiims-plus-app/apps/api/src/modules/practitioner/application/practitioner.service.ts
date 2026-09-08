@@ -166,6 +166,7 @@ export class PractitionerService {
       q?: string;
       registrationNo?: string;
       departmentId?: string;
+      role?: string;
       limit: number;
       cursor?: Keyset;
     },
@@ -177,6 +178,7 @@ export class PractitionerService {
         ...(input.q ? { q: input.q } : {}),
         ...(input.registrationNo ? { registrationNo: input.registrationNo } : {}),
         ...(input.departmentId ? { departmentId: input.departmentId } : {}),
+        ...(input.role ? { role: input.role } : {}),
         ...(input.cursor ? { cursor: input.cursor } : {}),
       }),
     );

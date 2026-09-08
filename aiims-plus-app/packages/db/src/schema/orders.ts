@@ -40,6 +40,10 @@ export const diagnosticReport = orders.table("diagnostic_report", {
   attachmentId: uuid("attachment_id"),
   issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
   filedBy: uuid("filed_by").notNull(),
+  /** Set only when the ordering clinician reviews the result (0022) — the
+   *  patient portal never shows a report until this is non-null. */
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewedBy: uuid("reviewed_by"),
   version: integer("version").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

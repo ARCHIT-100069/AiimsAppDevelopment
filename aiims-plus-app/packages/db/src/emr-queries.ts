@@ -430,6 +430,8 @@ export interface DiagnosticReportRow {
   attachmentId: string | null;
   issuedAt: Date;
   filedBy: string;
+  reviewedAt: Date | null;
+  reviewedBy: string | null;
   version: number;
   createdAt: Date;
 }
@@ -444,6 +446,8 @@ const drColumns = {
   attachmentId: s.diagnosticReport.attachmentId,
   issuedAt: s.diagnosticReport.issuedAt,
   filedBy: s.diagnosticReport.filedBy,
+  reviewedAt: s.diagnosticReport.reviewedAt,
+  reviewedBy: s.diagnosticReport.reviewedBy,
   version: s.diagnosticReport.version,
   createdAt: s.diagnosticReport.createdAt,
 } as const;
@@ -491,6 +495,24 @@ export async function listResultsByEncounter(
       and(eq(s.diagnosticReport.encounterId, encounterId), isNull(s.diagnosticReport.deletedAt)),
     )
     .orderBy(desc(s.diagnosticReport.createdAt));
+}
+
+/** The ordering clinician reviews a filed result — only then does it reach
+ *  the patient portal (0022). Idempotent: reviewing an already-reviewed
+ *  report is a no-op, not an error. Optimistic concurrency: 0 rows ⇒ stale
+ *  version ⇒ 409 upstream. */
+export async function markResultReviewed(
+  db: TenantDb,
+  id: string,
+  expectedVersion: number,
+  reviewedBy: string,
+): Promise<DiagnosticReportRow | undefined> {
+  const [row] = await db
+    .update(s.diagnosticReport)
+    .set({ reviewedAt: new Date(), reviewedBy, version: expectedVersion + 1 })
+    .where(and(eq(s.diagnosticReport.id, id), eq(s.diagnosticReport.version, expectedVersion)))
+    .returning(drColumns);
+  return row;
 }
 
 /* ------------------------------ attachment ------------------------------- */

@@ -16,6 +16,7 @@ import type {
   ConditionRow,
   DiagnosticReportRow,
   EncounterRow,
+  LabResultLineRow,
   NoteRow,
   ObservationRow,
   ServiceRequestRow,
@@ -105,7 +106,9 @@ export function toOrderResponse(o: ServiceRequestRow): OrderResponse {
   };
 }
 
-export function toResultResponse(r: DiagnosticReportRow): ResultResponse {
+export function toResultResponse(
+  r: DiagnosticReportRow & { lines?: LabResultLineRow[] },
+): ResultResponse {
   return {
     id: r.id,
     serviceRequestId: r.serviceRequestId,
@@ -116,8 +119,17 @@ export function toResultResponse(r: DiagnosticReportRow): ResultResponse {
     attachmentId: r.attachmentId,
     issuedAt: r.issuedAt.toISOString(),
     filedBy: r.filedBy,
+    reviewedAt: r.reviewedAt ? r.reviewedAt.toISOString() : null,
+    reviewedBy: r.reviewedBy,
     version: r.version,
     createdAt: r.createdAt.toISOString(),
+    lines: (r.lines ?? []).map((l) => ({
+      analyte: l.analyte,
+      value: l.value,
+      unit: l.unit ?? null,
+      referenceRange: l.referenceRange ?? null,
+      flag: l.flag,
+    })),
   };
 }
 

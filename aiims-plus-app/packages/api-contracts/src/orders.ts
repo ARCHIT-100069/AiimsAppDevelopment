@@ -49,6 +49,18 @@ export const createResultRequestSchema = z.object({
 });
 export type CreateResultRequest = z.infer<typeof createResultRequestSchema>;
 
+/** A single analyte/value row within a lab result — the structured data a
+ *  clinician actually needs (value, reference range, abnormal flag), not
+ *  just the written impression. */
+export const resultLineSchema = z.object({
+  analyte: z.string(),
+  value: z.string(),
+  unit: z.string().nullable(),
+  referenceRange: z.string().nullable(),
+  flag: z.enum(["normal", "high", "low", "critical"]),
+});
+export type ResultLine = z.infer<typeof resultLineSchema>;
+
 export const resultResponseSchema = z.object({
   id: uuidSchema,
   serviceRequestId: uuidSchema,
@@ -59,8 +71,13 @@ export const resultResponseSchema = z.object({
   attachmentId: uuidSchema.nullable(),
   issuedAt: isoTimestampSchema,
   filedBy: uuidSchema,
+  /** Null until the ordering clinician reviews it — only then is it visible
+   *  in the patient portal (ADR-0022). */
+  reviewedAt: isoTimestampSchema.nullable(),
+  reviewedBy: uuidSchema.nullable(),
   version: z.number().int(),
   createdAt: isoTimestampSchema,
+  lines: z.array(resultLineSchema).default([]),
 });
 export type ResultResponse = z.infer<typeof resultResponseSchema>;
 

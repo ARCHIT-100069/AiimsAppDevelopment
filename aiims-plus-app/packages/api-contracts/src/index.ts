@@ -26,4 +26,8 @@ export * from "./fhir-practitioner";
 export * from "./fhir-appointment";
 export * from "./fhir-encounter";
 export * from "./fhir-invoice";
-export { openApiDocument } from "./generate-openapi";
+// NOTE: openApiDocument is intentionally NOT re-exported here. That module
+// has a top-level `node:fs` import (used only by its CLI runner), and
+// re-exporting it from this barrel pulls `node:fs` into every consumer —
+// including the browser bundle for apps/web, which crashes at runtime.
+// Import it directly from "@aiims/api-contracts/generate-openapi" instead.

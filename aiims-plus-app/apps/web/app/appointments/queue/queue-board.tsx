@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import type { FacilityResponse, QueueEntry } from "@aiims/api-contracts";
 import { Badge, Button, Card, Field, Select } from "@aiims/ui-web";
+import { formatTime } from "../../lib/date";
 
-function timeOf(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
+const timeOf = formatTime;
 
 /** The OPD "now serving" board — reception/doctor view (D-4.3). */
 export function QueueBoard({ facilities, date }: { facilities: FacilityResponse[]; date: string }) {
@@ -75,6 +74,14 @@ export function QueueBoard({ facilities, date }: { facilities: FacilityResponse[
                 <Badge tone={e.status === "in_progress" ? "green" : "sky"}>
                   {e.status === "in_progress" ? "In consult" : `Position ${e.position}`}
                 </Badge>
+                {e.encounterId ? (
+                  <a
+                    href={`/encounters/${e.encounterId}`}
+                    className="shrink-0 rounded-full bg-teal-700 px-3 py-1.5 text-sm font-medium tracking-wide text-white hover:bg-teal-800"
+                  >
+                    Open encounter →
+                  </a>
+                ) : null}
               </Card>
             </li>
           ))}

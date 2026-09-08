@@ -2,13 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { AppShell, Badge, Card, Empty, Stat, type NavItem } from "../../lib/app-shell";
+import { formatDayMonthTime } from "../../lib/date";
 import type { InvoiceListItem } from "@aiims/api-contracts";
-
-const NAV: NavItem[] = [
-  { key: "dashboard", label: "Dashboard", group: "Overview" },
-  { key: "unpaid", label: "Collect Payment", group: "Cashier" },
-  { key: "paid", label: "Paid Invoices", group: "Cashier" },
-];
 
 const PAY_METHODS = [
   { code: "cash", label: "Cash" },
@@ -18,9 +13,25 @@ const PAY_METHODS = [
 
 const inr = (n: string | number) =>
   "₹" + Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmt = (iso: string) => new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+const fmt = formatDayMonthTime;
 
-export function BillingPortal({ userName, greeting }: { userName: string; greeting: string }) {
+export function BillingPortal({
+  userName,
+  greeting,
+  canManage,
+}: {
+  userName: string;
+  greeting: string;
+  /** billing:manage — front desk is the cashier (decision D-6.5). Admin has
+   *  billing:read (oversight) but not this, so it sees the same numbers
+   *  read-only instead of a "Take payment" button that would 403. */
+  canManage: boolean;
+}) {
+  const nav: NavItem[] = [
+    { key: "dashboard", label: "Dashboard", group: "Overview" },
+    { key: "unpaid", label: canManage ? "Collect Payment" : "Pending Payments", group: "Cashier" },
+    { key: "paid", label: "Paid Invoices", group: "Cashier" },
+  ];
   const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -80,11 +91,36 @@ export function BillingPortal({ userName, greeting }: { userName: string; greeti
           </>
         );
       case "unpaid":
-        return unpaid.length === 0 ? (
-          <Card>
-            <Empty>No pending payments.</Empty>
-          </Card>
-        ) : (
+        if (unpaid.length === 0) {
+          return (
+            <Card>
+              <Empty>No pending payments.</Empty>
+            </Card>
+          );
+        }
+        if (!canManage) {
+          return (
+            <div className="space-y-3">
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                Read-only — taking payment is a front-desk action. This view is for oversight.
+              </p>
+              {unpaid.map((i) => (
+                <Card key={i.id}>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-slate-800">{i.patientName}</p>
+                      <p className="text-sm text-slate-500">
+                        {i.invoiceNumber} · {fmt(i.issuedAt)}
+                      </p>
+                    </div>
+                    <p className="text-lg font-bold text-slate-900">{inr(i.total)}</p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          );
+        }
+        return (
           <div className="space-y-3">
             {unpaid.map((i) => (
               <PayRow key={i.id} inv={i} onDone={load} />
@@ -129,7 +165,7 @@ export function BillingPortal({ userName, greeting }: { userName: string; greeti
       roleLabel="Billing"
       userName={userName}
       greeting={greeting}
-      nav={NAV}
+      nav={nav}
       renderSection={render}
     />
   );
@@ -188,7 +224,7 @@ function PayRow({ inv, onDone }: { inv: InvoiceListItem; onDone: () => void }) {
           type="button"
           onClick={pay}
           disabled={busy}
-          className="ml-auto rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+          className="ml-auto rounded-full bg-teal-700 px-4 py-2 text-sm font-medium tracking-wide text-white hover:bg-teal-800 disabled:opacity-50"
         >
           {busy ? "Processing…" : `Take payment · ${inr(inv.total)}`}
         </button>

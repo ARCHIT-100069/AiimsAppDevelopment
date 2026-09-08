@@ -30,83 +30,79 @@ body {
   color: var(--ink);
 }
 
-/* Soft blue → mint backdrop (calm consumer-health feel) */
+/* Flat, quiet backdrop — a single warm-neutral surface with the faintest
+ *  wash of the brand tint, not a "consumer app" gradient collage. This is
+ *  the core move of the minimalist-label aesthetic: let whitespace and one
+ *  restrained accent color carry the page, not layered blooms. */
 .app-bg {
   background:
-    radial-gradient(900px 500px at 110% -5%, rgba(45, 212, 191, 0.18), transparent 55%),
-    radial-gradient(1000px 600px at -10% 0%, rgba(147, 197, 253, 0.28), transparent 55%),
-    linear-gradient(180deg, #e8f3ff 0%, #eef7f6 40%, #f4fbfa 100%);
+    radial-gradient(1200px 640px at 100% -12%, rgba(13, 148, 136, 0.05), transparent 60%), #f8f7f3;
   background-attachment: fixed;
 }
 
+/* A single flat brand panel, not a three-stop gradient — reads like a
+ *  product-box color block. */
 .auth-panel {
-  background:
-    radial-gradient(600px 300px at 20% 10%, rgba(255, 255, 255, 0.12), transparent 50%),
-    linear-gradient(160deg, #0f766e 0%, #0d9488 45%, #0891b2 100%);
+  background: var(--brand-700);
 }
 
-/* Rounded, softly elevated card */
+/* Flat card, hairline edge, whisper of lift — no glow. */
 .card {
   background: #fff;
-  border: 1px solid rgba(226, 236, 244, 0.9);
-  border-radius: 22px;
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.03),
-    0 10px 30px rgba(30, 64, 92, 0.06);
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
 /* Frosted glass surface */
 .glass {
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 22px;
-  box-shadow: 0 10px 30px rgba(30, 64, 92, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
-/* Hero gradient (appointment card) */
+/* Hero panel (appointment card) — one flat brand tint, no radial bloom. */
 .hero-gradient {
-  background:
-    radial-gradient(500px 200px at 85% -20%, rgba(255, 255, 255, 0.35), transparent 60%),
-    linear-gradient(155deg, #bfe9e4 0%, #7fd3cc 55%, #4bb8b0 100%);
+  background: var(--brand-600);
 }
 
 /* Rounded search field */
 .search-field {
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 999px;
-  box-shadow: 0 6px 18px rgba(30, 64, 92, 0.08);
+  box-shadow: none;
 }
 
 /* Quick-action tile */
 .qa-tile {
-  background: linear-gradient(180deg, #ffffff 0%, #eef7f6 100%);
-  border: 1px solid rgba(226, 236, 244, 0.9);
-  border-radius: 20px;
-  box-shadow: 0 6px 16px rgba(30, 64, 92, 0.06);
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  border-radius: 18px;
+  box-shadow: none;
   transition:
-    transform 0.12s ease,
-    box-shadow 0.12s ease;
+    border-color 0.15s ease,
+    background-color 0.15s ease;
 }
 .qa-tile:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(30, 64, 92, 0.12);
+  border-color: rgba(13, 148, 136, 0.35);
+  background: var(--brand-50);
 }
 
 /* Article/health-tip image placeholder */
 .tip-img {
-  background:
-    radial-gradient(120px 80px at 30% 20%, rgba(255, 255, 255, 0.5), transparent 60%),
-    linear-gradient(140deg, #cdeee9, #9fd8f0);
+  background: var(--brand-100);
 }
 
 /* Prescription-receipt card with a serrated bottom edge */
 .receipt {
   background: #fff;
-  border-radius: 22px 22px 0 0;
-  box-shadow: 0 10px 30px rgba(30, 64, 92, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
   -webkit-mask: radial-gradient(10px at 10px 100%, transparent 98%, #000) 0 100% / 20px 100%
     repeat-x;
   mask: radial-gradient(10px at 10px 100%, transparent 98%, #000) 0 100% / 20px 100% repeat-x;

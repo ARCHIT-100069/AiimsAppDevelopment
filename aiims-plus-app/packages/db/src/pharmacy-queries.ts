@@ -159,6 +159,14 @@ export interface PrescriptionRow {
   version: number;
   createdAt: Date;
 }
+/** Read shape for list/get queries, which join the patient for a display
+ *  name (pharmacy dispenses by identity but doesn't hold general
+ *  patient:read — same pattern as the lab worklist and billing invoice
+ *  list). A plain INSERT ... RETURNING has no join, so `insertPrescription`
+ *  returns the narrower `PrescriptionRow` instead. */
+export interface PrescriptionRowWithPatient extends PrescriptionRow {
+  patientName: string;
+}
 const prescCols = {
   id: s.prescription.id,
   patientId: s.prescription.patientId,
@@ -169,6 +177,14 @@ const prescCols = {
   version: s.prescription.version,
   createdAt: s.prescription.createdAt,
 };
+const prescColsWithPatient = {
+  ...prescCols,
+  patientName: sql<string>`${s.patient.nameGiven} || ' ' || ${s.patient.nameFamily}`,
+};
+const joinPatient = and(
+  eq(s.patient.tenantId, s.prescription.tenantId),
+  eq(s.patient.id, s.prescription.patientId),
+);
 
 export interface InsertPrescriptionInput {
   id: string;
@@ -268,10 +284,11 @@ export async function listPrescriptionItems(
 export async function getPrescriptionById(
   db: TenantDb,
   id: string,
-): Promise<PrescriptionRow | undefined> {
+): Promise<PrescriptionRowWithPatient | undefined> {
   const [row] = await db
-    .select(prescCols)
+    .select(prescColsWithPatient)
     .from(s.prescription)
+    .innerJoin(s.patient, joinPatient)
     .where(eq(s.prescription.id, id))
     .limit(1);
   return row;
@@ -280,12 +297,13 @@ export async function getPrescriptionById(
 export async function listPrescriptions(
   db: TenantDb,
   status?: "active" | "dispensed" | "cancelled",
-): Promise<PrescriptionRow[]> {
+): Promise<PrescriptionRowWithPatient[]> {
   const conds = [isNull(s.prescription.deletedAt)];
   if (status) conds.push(eq(s.prescription.status, status));
   return db
-    .select(prescCols)
+    .select(prescColsWithPatient)
     .from(s.prescription)
+    .innerJoin(s.patient, joinPatient)
     .where(and(...conds))
     .orderBy(desc(s.prescription.createdAt))
     .limit(100);
@@ -294,10 +312,11 @@ export async function listPrescriptions(
 export async function listPrescriptionsByPatient(
   db: TenantDb,
   patientId: string,
-): Promise<PrescriptionRow[]> {
+): Promise<PrescriptionRowWithPatient[]> {
   return db
-    .select(prescCols)
+    .select(prescColsWithPatient)
     .from(s.prescription)
+    .innerJoin(s.patient, joinPatient)
     .where(and(eq(s.prescription.patientId, patientId), isNull(s.prescription.deletedAt)))
     .orderBy(desc(s.prescription.createdAt));
 }

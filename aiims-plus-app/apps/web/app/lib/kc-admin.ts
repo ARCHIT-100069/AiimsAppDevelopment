@@ -93,17 +93,36 @@ export async function createKcUser(input: CreateKcUserInput): Promise<string> {
   });
   if (!pwRes.ok) throw new Error(`kc set password failed: ${pwRes.status}`);
 
-  // Assign the realm role.
-  const roleRes = await fetch(`${kcBase()}/admin/realms/${r}/roles/${input.realmRole}`, {
+  // Assign the realm role — self-healing: if this realm role has never been
+  // created before (e.g. the very first "nurse" account on a fresh realm),
+  // create it first instead of silently skipping the mapping. Without this,
+  // the account is created "successfully" but carries no usable role.
+  let roleRes = await fetch(`${kcBase()}/admin/realms/${r}/roles/${input.realmRole}`, {
     headers: { authorization: `Bearer ${tok}` },
   });
-  if (roleRes.ok) {
-    const role = await roleRes.json();
-    await fetch(`${kcBase()}/admin/realms/${r}/users/${userId}/role-mappings/realm`, {
+  if (roleRes.status === 404) {
+    await fetch(`${kcBase()}/admin/realms/${r}/roles`, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${tok}` },
-      body: JSON.stringify([role]),
+      body: JSON.stringify({ name: input.realmRole }),
     });
+    roleRes = await fetch(`${kcBase()}/admin/realms/${r}/roles/${input.realmRole}`, {
+      headers: { authorization: `Bearer ${tok}` },
+    });
+  }
+  if (roleRes.ok) {
+    const role = await roleRes.json();
+    const mapRes = await fetch(
+      `${kcBase()}/admin/realms/${r}/users/${userId}/role-mappings/realm`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${tok}` },
+        body: JSON.stringify([role]),
+      },
+    );
+    if (!mapRes.ok) throw new Error(`kc role mapping failed: ${mapRes.status}`);
+  } else {
+    throw new Error(`kc role "${input.realmRole}" unavailable: ${roleRes.status}`);
   }
 
   return userId;

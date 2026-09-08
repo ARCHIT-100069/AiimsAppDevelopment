@@ -103,9 +103,10 @@ export class PractitionerController {
       ...(query.q ? { q: query.q } : {}),
       ...(query.registrationNo ? { registrationNo: query.registrationNo } : {}),
       ...(query.departmentId ? { departmentId: query.departmentId } : {}),
+      ...(query.role ? { role: query.role } : {}),
       ...(toKeyset(query.cursor) ? { cursor: toKeyset(query.cursor)! } : {}),
     });
-    const filtered = Boolean(query.q || query.registrationNo || query.departmentId);
+    const filtered = Boolean(query.q || query.registrationNo || query.departmentId || query.role);
     return {
       data: results.map(toPractitionerResponse),
       meta: {

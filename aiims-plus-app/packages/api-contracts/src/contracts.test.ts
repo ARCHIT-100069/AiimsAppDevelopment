@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ERROR_CODES, openApiDocument, problemDetailsSchema } from "./index";
+import { ERROR_CODES, problemDetailsSchema } from "./index";
+import { openApiDocument } from "./generate-openapi";
 
 describe("api contracts (APDR-0003/0014)", () => {
   it("problem details carry a stable code and correlation id", () => {

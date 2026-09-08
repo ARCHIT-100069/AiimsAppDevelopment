@@ -28,6 +28,7 @@ export const appUser = platform.table("app_user", {
   keycloakSub: text("keycloak_sub").notNull(),
   displayName: text("display_name").notNull(),
   status: text("status").$type<"active" | "disabled">().notNull().default("active"),
+  version: integer("version").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

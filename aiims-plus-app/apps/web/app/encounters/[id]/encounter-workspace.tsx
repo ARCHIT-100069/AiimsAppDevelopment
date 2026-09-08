@@ -11,6 +11,7 @@ import type {
   ResultResponse,
 } from "@aiims/api-contracts";
 import { Badge, Button, Card, Field, Select, TextInput } from "@aiims/ui-web";
+import { formatDayMonthTime } from "../../lib/date";
 
 /** Curated subset of seeded reference codes for the demo pickers. */
 const VITALS = [
@@ -27,14 +28,16 @@ const DIAGNOSES = [
   { system: "icd-10", code: "J06.9", display: "Acute upper respiratory infection" },
 ];
 const ORDERABLE = [
-  { system: "loinc", code: "718-7", display: "Hemoglobin" },
-  { system: "loinc", code: "2345-7", display: "Glucose" },
+  { system: "loinc", code: "718-7", display: "Hemoglobin", category: "lab" as const },
+  { system: "loinc", code: "2345-7", display: "Glucose", category: "lab" as const },
+  { system: "loinc", code: "36643-5", display: "Chest X-Ray", category: "imaging" as const },
 ];
 
 const emr = (path: string) => `/api/bff/emr/${path}`;
 
 export function EncounterWorkspace({
   encounter: initialEncounter,
+  attendingName,
   initialNotes,
   initialObservations,
   initialConditions,
@@ -45,8 +48,13 @@ export function EncounterWorkspace({
   canSign,
   canBill,
   canShare,
+  canReview,
 }: {
   encounter: EncounterResponse;
+  /** Who this encounter actually belongs to — shown so any doctor/nurse
+   *  opening it from a shared OPD queue always knows whose patient it is,
+   *  even though documentation isn't hard-restricted to the assigned doctor. */
+  attendingName: string | null;
   initialNotes: NoteResponse[];
   initialObservations: ObservationResponse[];
   initialConditions: ConditionResponse[];
@@ -57,6 +65,8 @@ export function EncounterWorkspace({
   canSign: boolean;
   canBill: boolean;
   canShare: boolean;
+  /** Only the ordering clinician releases a result to the patient. */
+  canReview: boolean;
 }) {
   const id = initialEncounter.id;
   const [encounter, setEncounter] = useState(initialEncounter);
@@ -64,10 +74,14 @@ export function EncounterWorkspace({
   const [observations, setObservations] = useState(initialObservations);
   const [conditions, setConditions] = useState(initialConditions);
   const [orders, setOrders] = useState(initialOrders);
-  const [results] = useState(initialResults);
+  const [results, setResults] = useState(initialResults);
   const [invoice, setInvoice] = useState<InvoiceResponse | null>(initialInvoice);
   const [shared, setShared] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // One flag for every mutating action on this page — a slow response
+  // shouldn't let a doctor's second click file a duplicate diagnosis, order,
+  // or payment while the first is still in flight.
+  const [busy, setBusy] = useState(false);
 
   const signed = encounter.status === "finished" || encounter.signedAt !== null;
   const editable = canDocument && !signed;
@@ -80,19 +94,29 @@ export function EncounterWorkspace({
     const res = await fetch(emr(`encounters/${id}`));
     if (res.ok) setEncounter(await res.json());
   }
-  async function post(path: string, body: unknown, headers: Record<string, string> = {}) {
+  async function post(
+    path: string,
+    body: unknown,
+    headers: Record<string, string> = {},
+    method: "POST" | "PATCH" = "POST",
+  ) {
     setError(null);
-    const res = await fetch(emr(path), {
-      method: "POST",
-      headers: { "content-type": "application/json", ...headers },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const p = await res.json().catch(() => ({}));
-      setError(p.detail ?? p.title ?? "Request failed");
-      return false;
+    setBusy(true);
+    try {
+      const res = await fetch(emr(path), {
+        method,
+        headers: { "content-type": "application/json", ...headers },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const p = await res.json().catch(() => ({}));
+        setError(p.detail ?? p.title ?? "Request failed");
+        return false;
+      }
+      return true;
+    } finally {
+      setBusy(false);
     }
-    return true;
   }
 
   return (
@@ -103,7 +127,10 @@ export function EncounterWorkspace({
             OPD encounter
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            {encounter.class} · started {new Date(encounter.periodStart).toLocaleString()}
+            {encounter.class} · started {formatDayMonthTime(encounter.periodStart)}
+          </p>
+          <p className="mt-1 text-sm font-medium text-teal-700">
+            Attending: {attendingName ?? "Unknown practitioner"}
           </p>
         </div>
         {signed ? (
@@ -122,12 +149,14 @@ export function EncounterWorkspace({
       <ChiefComplaint
         encounter={encounter}
         editable={editable}
+        busy={busy}
         onSave={async (text) => {
           if (
             await post(
               `encounters/${id}`,
               { chiefComplaint: text },
               { "if-match": String(encounter.version) },
+              "PATCH",
             )
           ) {
             await reloadEncounter();
@@ -138,6 +167,7 @@ export function EncounterWorkspace({
       <VitalsPanel
         observations={observations}
         editable={editable}
+        busy={busy}
         onAdd={async (code, value) => {
           const v = VITALS.find((x) => x.code === code)!;
           if (
@@ -154,6 +184,7 @@ export function EncounterWorkspace({
       <DiagnosisPanel
         conditions={conditions}
         editable={editable}
+        busy={busy}
         onAdd={async (code) => {
           const d = DIAGNOSES.find((x) => x.code === code)!;
           if (
@@ -171,6 +202,7 @@ export function EncounterWorkspace({
         notes={notes}
         canDocument={canDocument}
         editable={editable}
+        busy={busy}
         onAdd={async (body) => {
           if (await post(`encounters/${id}/notes`, { body, noteType: "progress" }))
             await reload(`encounters/${id}/notes`, setNotes);
@@ -185,20 +217,32 @@ export function EncounterWorkspace({
         orders={orders}
         results={results}
         editable={editable}
+        canReview={canReview}
+        busy={busy}
         onAdd={async (code) => {
           const o = ORDERABLE.find((x) => x.code === code)!;
           if (
             await post(`encounters/${id}/orders`, {
               code: { system: o.system, code: o.code, display: o.display },
+              category: o.category,
               priority: "routine",
             })
           )
             await reload(`encounters/${id}/orders`, setOrders);
         }}
+        onReview={async (resultId, version) => {
+          const ok = await post(
+            `encounters/${id}/results/${resultId}/review`,
+            {},
+            { "if-match": String(version) },
+          );
+          if (ok) await reload(`encounters/${id}/results`, setResults);
+        }}
       />
 
       {canSign && !signed ? (
         <SignPanel
+          busy={busy}
           onSign={async () => {
             if (
               await post(
@@ -217,39 +261,58 @@ export function EncounterWorkspace({
         shared={shared}
         canBill={canBill}
         canShare={canShare}
+        busy={busy}
         onGenerate={async () => {
           setError(null);
-          const res = await fetch(emr(`encounters/${id}/invoice`), {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: "{}",
-          });
-          if (res.ok) setInvoice(await res.json());
-          else
-            setError((await res.json().catch(() => ({}))).detail ?? "Could not generate invoice");
+          setBusy(true);
+          try {
+            const res = await fetch(emr(`encounters/${id}/invoice`), {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: "{}",
+            });
+            if (res.ok) setInvoice(await res.json());
+            else
+              setError((await res.json().catch(() => ({}))).detail ?? "Could not generate invoice");
+          } finally {
+            setBusy(false);
+          }
         }}
         onPay={async () => {
           if (!invoice) return;
           setError(null);
-          const res = await fetch(emr(`invoices/${invoice.id}/pay`), {
-            method: "POST",
-            headers: { "content-type": "application/json", "idempotency-key": crypto.randomUUID() },
-            body: JSON.stringify({ method: "mock" }),
-          });
-          if (res.ok) setInvoice(await res.json());
-          else setError((await res.json().catch(() => ({}))).detail ?? "Payment failed");
+          setBusy(true);
+          try {
+            const res = await fetch(emr(`invoices/${invoice.id}/pay`), {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                "idempotency-key": crypto.randomUUID(),
+              },
+              body: JSON.stringify({ method: "mock" }),
+            });
+            if (res.ok) setInvoice(await res.json());
+            else setError((await res.json().catch(() => ({}))).detail ?? "Payment failed");
+          } finally {
+            setBusy(false);
+          }
         }}
         onShare={async () => {
           setError(null);
-          const res = await fetch(emr(`encounters/${id}/share`), {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: "{}",
-          });
-          if (res.ok) {
-            const body = await res.json();
-            setShared(body.careContextRef);
-          } else setError((await res.json().catch(() => ({}))).detail ?? "Share failed");
+          setBusy(true);
+          try {
+            const res = await fetch(emr(`encounters/${id}/share`), {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: "{}",
+            });
+            if (res.ok) {
+              const body = await res.json();
+              setShared(body.careContextRef);
+            } else setError((await res.json().catch(() => ({}))).detail ?? "Share failed");
+          } finally {
+            setBusy(false);
+          }
         }}
       />
     </section>
@@ -261,6 +324,7 @@ function BillingPanel({
   shared,
   canBill,
   canShare,
+  busy,
   onGenerate,
   onPay,
   onShare,
@@ -269,6 +333,7 @@ function BillingPanel({
   shared: string | null;
   canBill: boolean;
   canShare: boolean;
+  busy: boolean;
   onGenerate: () => Promise<void>;
   onPay: () => Promise<void>;
   onShare: () => Promise<void>;
@@ -280,7 +345,7 @@ function BillingPanel({
       {!invoice ? (
         <div className="mt-3">
           {canBill ? (
-            <Button type="button" variant="secondary" onClick={onGenerate}>
+            <Button type="button" variant="secondary" onClick={onGenerate} disabled={busy}>
               Generate invoice
             </Button>
           ) : (
@@ -311,7 +376,7 @@ function BillingPanel({
           </div>
           <div className="flex flex-wrap gap-3">
             {!paid && canBill ? (
-              <Button type="button" onClick={onPay}>
+              <Button type="button" onClick={onPay} disabled={busy}>
                 Take payment (mock)
               </Button>
             ) : null}
@@ -319,7 +384,7 @@ function BillingPanel({
               <span className="text-xs text-slate-500">Paid · ref {invoice.paymentRef}</span>
             ) : null}
             {paid && canShare && !shared ? (
-              <Button type="button" variant="secondary" onClick={onShare}>
+              <Button type="button" variant="secondary" onClick={onShare} disabled={busy}>
                 Share on consent (ABDM)
               </Button>
             ) : null}
@@ -338,10 +403,12 @@ function BillingPanel({
 function ChiefComplaint({
   encounter,
   editable,
+  busy,
   onSave,
 }: {
   encounter: EncounterResponse;
   editable: boolean;
+  busy: boolean;
   onSave: (text: string) => Promise<void>;
 }) {
   const [text, setText] = useState(encounter.chiefComplaint ?? "");
@@ -365,7 +432,7 @@ function ChiefComplaint({
             type="button"
             variant="secondary"
             onClick={() => onSave(text)}
-            disabled={!text.trim()}
+            disabled={!text.trim() || busy}
           >
             Save
           </Button>
@@ -380,10 +447,12 @@ function ChiefComplaint({
 function VitalsPanel({
   observations,
   editable,
+  busy,
   onAdd,
 }: {
   observations: ObservationResponse[];
   editable: boolean;
+  busy: boolean;
   onAdd: (code: string, value: number) => Promise<void>;
 }) {
   const [code, setCode] = useState(VITALS[0]!.code);
@@ -422,7 +491,7 @@ function VitalsPanel({
           <Button
             type="button"
             variant="secondary"
-            disabled={value === ""}
+            disabled={value === "" || busy}
             onClick={async () => {
               await onAdd(code, Number(value));
               setValue("");
@@ -439,10 +508,12 @@ function VitalsPanel({
 function DiagnosisPanel({
   conditions,
   editable,
+  busy,
   onAdd,
 }: {
   conditions: ConditionResponse[];
   editable: boolean;
+  busy: boolean;
   onAdd: (code: string) => Promise<void>;
 }) {
   const [code, setCode] = useState(DIAGNOSES[0]!.code);
@@ -470,7 +541,7 @@ function DiagnosisPanel({
               ))}
             </Select>
           </Field>
-          <Button type="button" variant="secondary" onClick={() => onAdd(code)}>
+          <Button type="button" variant="secondary" onClick={() => onAdd(code)} disabled={busy}>
             Add diagnosis
           </Button>
         </div>
@@ -483,12 +554,14 @@ function NotesPanel({
   notes,
   canDocument,
   editable,
+  busy,
   onAdd,
   onAmend,
 }: {
   notes: NoteResponse[];
   canDocument: boolean;
   editable: boolean;
+  busy: boolean;
   onAdd: (body: string) => Promise<void>;
   onAmend: (noteId: string, body: string, reason: string) => Promise<void>;
 }) {
@@ -504,7 +577,9 @@ function NotesPanel({
               <span className="text-xs uppercase tracking-wide text-slate-400">
                 {n.noteType} · v{n.version}
               </span>
-              {canDocument ? <AmendControl onAmend={(b, r) => onAmend(n.noteId, b, r)} /> : null}
+              {canDocument ? (
+                <AmendControl busy={busy} onAmend={(b, r) => onAmend(n.noteId, b, r)} />
+              ) : null}
             </div>
             <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{n.body}</p>
           </li>
@@ -527,7 +602,7 @@ function NotesPanel({
             <Button
               type="button"
               variant="secondary"
-              disabled={!body.trim()}
+              disabled={!body.trim() || busy}
               onClick={async () => {
                 await onAdd(body);
                 setBody("");
@@ -542,7 +617,13 @@ function NotesPanel({
   );
 }
 
-function AmendControl({ onAmend }: { onAmend: (body: string, reason: string) => Promise<void> }) {
+function AmendControl({
+  busy,
+  onAmend,
+}: {
+  busy: boolean;
+  onAmend: (body: string, reason: string) => Promise<void>;
+}) {
   const [open, setOpen] = useState(false);
   const [body, setBody] = useState("");
   const [reason, setReason] = useState("");
@@ -582,7 +663,7 @@ function AmendControl({ onAmend }: { onAmend: (body: string, reason: string) => 
       <Button
         type="button"
         size="sm"
-        disabled={!body.trim() || !reason.trim()}
+        disabled={!body.trim() || !reason.trim() || busy}
         onClick={async () => {
           await onAmend(body, reason);
           setOpen(false);
@@ -598,38 +679,102 @@ function OrdersPanel({
   orders,
   results,
   editable,
+  canReview,
+  busy,
   onAdd,
+  onReview,
 }: {
   orders: OrderResponse[];
   results: ResultResponse[];
   editable: boolean;
+  /** Only the ordering clinician releases a result to the patient. */
+  canReview: boolean;
+  busy: boolean;
   onAdd: (code: string) => Promise<void>;
+  onReview: (resultId: string, version: number) => Promise<void>;
 }) {
   const [code, setCode] = useState(ORDERABLE[0]!.code);
   return (
     <Card className="p-6">
       <h2 className="text-sm font-semibold text-slate-700">Orders &amp; results</h2>
-      <ul className="mt-3 space-y-1 text-sm text-slate-600">
+      <ul className="mt-3 space-y-3 text-sm text-slate-600">
         {orders.length === 0 ? <li className="text-slate-400">No orders</li> : null}
         {orders.map((o) => {
           const result = results.find((r) => r.serviceRequestId === o.id);
           return (
-            <li key={o.id} className="flex items-center justify-between">
-              <span>
-                {o.code.display} <span className="text-xs text-slate-400">({o.status})</span>
-              </span>
+            <li key={o.id}>
+              <div className="flex items-center justify-between">
+                <span>
+                  {o.code.display} <span className="text-xs text-slate-400">({o.status})</span>
+                </span>
+                {!result ? <span className="text-xs text-slate-400">awaiting result</span> : null}
+              </div>
               {result ? (
-                <Badge tone="green">{result.conclusion}</Badge>
-              ) : (
-                <span className="text-xs text-slate-400">awaiting result</span>
-              )}
+                <div className="mt-2 rounded-lg border border-slate-100 bg-slate-50/60 p-3">
+                  <p className="text-sm text-slate-700">{result.conclusion}</p>
+                  {result.lines.length > 0 ? (
+                    <div className="mt-2 overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="uppercase text-slate-400">
+                            <th className="py-1 pr-3 font-medium">Test</th>
+                            <th className="py-1 pr-3 font-medium">Result</th>
+                            <th className="py-1 pr-3 font-medium">Reference</th>
+                            <th className="py-1 font-medium">Flag</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {result.lines.map((l, i) => (
+                            <tr key={i} className="border-t border-slate-200/70">
+                              <td className="py-1 pr-3">{l.analyte}</td>
+                              <td className="py-1 pr-3 font-mono">
+                                {l.value} {l.unit ?? ""}
+                              </td>
+                              <td className="py-1 pr-3 text-slate-500">
+                                {l.referenceRange ?? "—"}
+                              </td>
+                              <td className="py-1">
+                                <Badge tone={l.flag === "normal" ? "green" : "amber"}>
+                                  {l.flag}
+                                </Badge>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : null}
+                  <div className="mt-3 flex items-center justify-between border-t border-slate-200/70 pt-2">
+                    {result.reviewedAt ? (
+                      <span className="text-xs text-slate-400">
+                        Reviewed {formatDayMonthTime(result.reviewedAt)} — visible to the patient
+                      </span>
+                    ) : (
+                      <span className="text-xs text-amber-600">
+                        Not yet reviewed — the patient can't see this result
+                      </span>
+                    )}
+                    {!result.reviewedAt && canReview ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={busy}
+                        onClick={() => onReview(result.id, result.version)}
+                      >
+                        Mark reviewed
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
             </li>
           );
         })}
       </ul>
       {editable ? (
         <div className="mt-4 flex items-end gap-3">
-          <Field label="Order (lab)">
+          <Field label="Order (lab / imaging)">
             <Select value={code} onChange={(e) => setCode(e.target.value)}>
               {ORDERABLE.map((o) => (
                 <option key={o.code} value={o.code}>
@@ -638,7 +783,7 @@ function OrdersPanel({
               ))}
             </Select>
           </Field>
-          <Button type="button" variant="secondary" onClick={() => onAdd(code)}>
+          <Button type="button" variant="secondary" onClick={() => onAdd(code)} disabled={busy}>
             Place order
           </Button>
         </div>
@@ -647,7 +792,7 @@ function OrdersPanel({
   );
 }
 
-function SignPanel({ onSign }: { onSign: () => Promise<void> }) {
+function SignPanel({ busy, onSign }: { busy: boolean; onSign: () => Promise<void> }) {
   const [attest, setAttest] = useState(false);
   return (
     <Card className="border-teal-200 bg-teal-50/40 p-6">
@@ -660,7 +805,7 @@ function SignPanel({ onSign }: { onSign: () => Promise<void> }) {
         attest this documentation is accurate and complete.
       </label>
       <div className="mt-3">
-        <Button type="button" disabled={!attest} onClick={onSign}>
+        <Button type="button" disabled={!attest || busy} onClick={onSign}>
           Sign encounter
         </Button>
       </div>

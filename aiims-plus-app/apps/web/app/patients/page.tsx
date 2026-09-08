@@ -6,7 +6,9 @@ import { AppShell, canRegisterPatients } from "./shell";
 import { PatientList } from "./patient-list";
 
 export default async function PatientsPage() {
-  if (!(await readSession())) redirect("/login");
+  const session = await readSession();
+  if (!session) redirect("/login");
+  if (session.roles.includes("patient")) redirect("/portal");
   const res = await apiFetch("/v1/patients?limit=50");
   const body: ListPatientsResponse = res.ok
     ? await res.json()

@@ -9,7 +9,7 @@
  */
 import { MODULE_METADATA, PATH_METADATA, METHOD_METADATA } from "@nestjs/common/constants";
 import { RequestMethod } from "@nestjs/common";
-import { openApiDocument } from "@aiims/api-contracts";
+import { openApiDocument } from "@aiims/api-contracts/generate-openapi";
 import { describe, expect, it } from "vitest";
 import { AppModule } from "./app.module";
 

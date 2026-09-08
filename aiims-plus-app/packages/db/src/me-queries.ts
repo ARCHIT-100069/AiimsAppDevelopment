@@ -4,7 +4,7 @@
  * patient can only ever read their own record. Read-only — the portal never
  * writes clinical or billing data.
  */
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import * as s from "./schema";
 import type { TenantDb } from "./tenant-context";
 
@@ -18,7 +18,11 @@ export interface BookablePractitionerRow {
   departmentName: string;
 }
 
-/** Practitioners a patient can book with: active, with a department + facility. */
+/** Practitioners a patient can book with: active, with a department + facility,
+ *  and — critically — whose linked login actually holds the "doctor" role.
+ *  A practitioner profile alone isn't enough: nurses get one too (so they're
+ *  attributable on documentation), but a patient booking an OPD consultation
+ *  must never be offered a nurse in the same list as a physician. */
 export async function listBookablePractitioners(db: TenantDb): Promise<BookablePractitionerRow[]> {
   return db
     .select({
@@ -34,6 +38,8 @@ export async function listBookablePractitioners(db: TenantDb): Promise<BookableP
     .from(s.practitioner)
     .innerJoin(s.department, eq(s.department.id, s.practitioner.departmentId))
     .innerJoin(s.facility, eq(s.facility.id, s.department.facilityId))
+    .innerJoin(s.userRole, eq(s.userRole.userId, s.practitioner.appUserId))
+    .innerJoin(s.role, and(eq(s.role.id, s.userRole.roleId), eq(s.role.code, "doctor")))
     .where(and(eq(s.practitioner.status, "active"), isNull(s.practitioner.deletedAt)))
     .orderBy(s.practitioner.nameFamily)
     .then((rows) =>
@@ -105,12 +111,22 @@ export interface MyReportRow {
   conclusion: string;
   issuedAt: Date;
   category: "lab" | "imaging" | "other";
+  reviewedAt: Date | null;
 }
 
-/** The patient's diagnostic reports (lab/imaging), newest first. */
+/** The patient's diagnostic reports (lab/imaging), newest first.
+ *
+ *  `reviewedOnly` is the ADR-0022 gate: a result exists the moment the lab
+ *  files it, but it isn't the PATIENT's to see until the ordering clinician
+ *  has reviewed it. The patient's own portal (`/v1/me/summary`) must always
+ *  pass `true`. Staff viewing the same aggregate for a patient chart
+ *  (`/v1/patients/:id/chart`) pass `false` — a doctor needs to see (and
+ *  review) a result the moment it's filed, not after they've already
+ *  reviewed it. */
 export async function listReportsByPatient(
   db: TenantDb,
   patientId: string,
+  reviewedOnly: boolean,
 ): Promise<MyReportRow[]> {
   return db
     .select({
@@ -119,6 +135,7 @@ export async function listReportsByPatient(
       conclusion: s.diagnosticReport.conclusion,
       issuedAt: s.diagnosticReport.issuedAt,
       category: s.serviceRequest.category,
+      reviewedAt: s.diagnosticReport.reviewedAt,
     })
     .from(s.diagnosticReport)
     .innerJoin(
@@ -128,7 +145,13 @@ export async function listReportsByPatient(
         eq(s.serviceRequest.id, s.diagnosticReport.serviceRequestId),
       ),
     )
-    .where(and(eq(s.diagnosticReport.patientId, patientId), isNull(s.diagnosticReport.deletedAt)))
+    .where(
+      and(
+        eq(s.diagnosticReport.patientId, patientId),
+        isNull(s.diagnosticReport.deletedAt),
+        reviewedOnly ? isNotNull(s.diagnosticReport.reviewedAt) : undefined,
+      ),
+    )
     .orderBy(desc(s.diagnosticReport.issuedAt));
 }
 

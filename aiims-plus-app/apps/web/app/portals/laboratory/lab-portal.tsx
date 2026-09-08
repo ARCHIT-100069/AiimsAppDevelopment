@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppShell, Badge, Card, Empty, Stat, type NavItem } from "../../lib/app-shell";
+import { formatDayMonthTime } from "../../lib/date";
 import type { LabWorklistItem } from "@aiims/api-contracts";
 
 const NAV: NavItem[] = [
@@ -27,7 +28,7 @@ const blankLine = (): Line => ({
   flag: "normal",
 });
 
-const fmt = (iso: string) => new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+const fmt = formatDayMonthTime;
 
 export function LabPortal({ userName, greeting }: { userName: string; greeting: string }) {
   const [items, setItems] = useState<LabWorklistItem[]>([]);
@@ -205,7 +206,7 @@ function ResultEntry({ item, onDone }: { item: LabWorklistItem; onDone: () => vo
           <button
             type="button"
             onClick={() => setOpen((o) => !o)}
-            className="shrink-0 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+            className="shrink-0 rounded-full bg-teal-700 px-4 py-2 text-sm font-medium tracking-wide text-white hover:bg-teal-800"
           >
             {open ? "Close" : "Enter result"}
           </button>
@@ -288,7 +289,7 @@ function ResultEntry({ item, onDone }: { item: LabWorklistItem; onDone: () => vo
             type="button"
             onClick={submit}
             disabled={!conclusion.trim() || busy}
-            className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+            className="rounded-full bg-teal-700 px-4 py-2 text-sm font-medium tracking-wide text-white hover:bg-teal-800 disabled:opacity-50"
           >
             {busy ? "Filing…" : "File result"}
           </button>

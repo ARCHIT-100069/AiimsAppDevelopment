@@ -112,6 +112,7 @@ export interface AppUserRow {
   id: string;
   displayName: string;
   status: "active" | "disabled";
+  version: number;
   createdAt: Date;
 }
 
@@ -122,6 +123,21 @@ export async function insertAppUser(
   const [inserted] = await db.insert(s.appUser).values(row).returning();
   if (!inserted) throw new Error("insert returned no row");
   return inserted;
+}
+
+/** Optimistic-concurrency status flip (activate/deactivate a staff login). */
+export async function updateAppUserStatus(
+  db: TenantDb,
+  id: string,
+  expectedVersion: number,
+  status: "active" | "disabled",
+): Promise<AppUserRow | undefined> {
+  const [row] = await db
+    .update(s.appUser)
+    .set({ status, version: expectedVersion + 1 })
+    .where(and(eq(s.appUser.id, id), eq(s.appUser.version, expectedVersion)))
+    .returning();
+  return row;
 }
 
 /** Idempotent role assignment: replay is a no-op (clarification #3). */
@@ -150,6 +166,7 @@ export async function listUsers(db: TenantDb, limit: number, k?: Keyset): Promis
       id: s.appUser.id,
       displayName: s.appUser.displayName,
       status: s.appUser.status,
+      version: s.appUser.version,
       createdAt: s.appUser.createdAt,
     })
     .from(s.appUser)

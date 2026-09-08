@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { readSession } from "../lib/session";
 import { homeFor } from "../lib/roles";
-import { PORTALS } from "../lib/portals";
+import { canAccessPortal, PORTALS } from "../lib/portals";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +12,8 @@ export default async function PortalsHub() {
   const session = await readSession();
   if (!session) redirect("/login");
   if (session.roles.includes("patient")) redirect("/portal");
+  // Only show what this role can actually open — no dead-end tiles.
+  const visible = PORTALS.filter((p) => canAccessPortal(p.slug, session.roles));
 
   return (
     <div className="app-bg min-h-screen">
@@ -36,7 +38,7 @@ export default async function PortalsHub() {
           Open any department&apos;s workspace. Each portal covers what that team runs day to day.
         </p>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[...PORTALS]
+          {[...visible]
             .sort((a, b) => Number(LIVE.has(b.slug)) - Number(LIVE.has(a.slug)))
             .map((p) => {
               const live = LIVE.has(p.slug);

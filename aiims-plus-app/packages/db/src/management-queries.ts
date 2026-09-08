@@ -28,47 +28,49 @@ export async function getManagementOverview(
   dayStart: Date,
   dayEnd: Date,
 ): Promise<ManagementOverview> {
-  const [opdRows, revenueRow, srRows, rxRows, drugStock, fbRow] = await Promise.all([
-    db
-      .select({ status: s.appointment.status, n: count() })
-      .from(s.appointment)
-      .where(and(gte(s.appointment.startAt, dayStart), lte(s.appointment.startAt, dayEnd)))
-      .groupBy(s.appointment.status),
-    db
-      .select({
-        paidTotal: sql<string>`coalesce(sum(${s.invoice.total}) filter (where ${s.invoice.status} = 'paid'), 0)`,
-        outstandingTotal: sql<string>`coalesce(sum(${s.invoice.total}) filter (where ${s.invoice.status} = 'issued'), 0)`,
-        paidCount: sql<number>`count(*) filter (where ${s.invoice.status} = 'paid')`,
-      })
-      .from(s.invoice),
-    db
-      .select({ status: s.serviceRequest.status, n: count() })
-      .from(s.serviceRequest)
-      .groupBy(s.serviceRequest.status),
-    db
-      .select({ status: s.prescription.status, n: count() })
-      .from(s.prescription)
-      .groupBy(s.prescription.status),
-    // Per-drug stock vs reorder level — count low/out in JS (small formulary).
-    db
-      .select({
-        reorderLevel: s.drug.reorderLevel,
-        qty: sql<number>`coalesce(sum(${s.stockBatch.quantity}), 0)`,
-      })
-      .from(s.drug)
-      .leftJoin(
-        s.stockBatch,
-        and(eq(s.stockBatch.tenantId, s.drug.tenantId), eq(s.stockBatch.drugId, s.drug.id)),
-      )
-      .where(sql`${s.drug.deletedAt} is null`)
-      .groupBy(s.drug.id, s.drug.reorderLevel),
-    db
-      .select({
-        avg: sql<number>`coalesce(avg(${s.patientFeedback.rating}), 0)`,
-        n: count(),
-      })
-      .from(s.patientFeedback),
-  ]);
+  // Sequential, not Promise.all: every query below shares the one pg client
+  // this transaction holds, and node-postgres only allows one in-flight
+  // query per client — concurrent awaits on it are deprecated (pg#9 removes
+  // support entirely) even though today's driver silently queues them.
+  const opdRows = await db
+    .select({ status: s.appointment.status, n: count() })
+    .from(s.appointment)
+    .where(and(gte(s.appointment.startAt, dayStart), lte(s.appointment.startAt, dayEnd)))
+    .groupBy(s.appointment.status);
+  const revenueRow = await db
+    .select({
+      paidTotal: sql<string>`coalesce(sum(${s.invoice.total}) filter (where ${s.invoice.status} = 'paid'), 0)`,
+      outstandingTotal: sql<string>`coalesce(sum(${s.invoice.total}) filter (where ${s.invoice.status} = 'issued'), 0)`,
+      paidCount: sql<number>`count(*) filter (where ${s.invoice.status} = 'paid')`,
+    })
+    .from(s.invoice);
+  const srRows = await db
+    .select({ status: s.serviceRequest.status, n: count() })
+    .from(s.serviceRequest)
+    .groupBy(s.serviceRequest.status);
+  const rxRows = await db
+    .select({ status: s.prescription.status, n: count() })
+    .from(s.prescription)
+    .groupBy(s.prescription.status);
+  // Per-drug stock vs reorder level — count low/out in JS (small formulary).
+  const drugStock = await db
+    .select({
+      reorderLevel: s.drug.reorderLevel,
+      qty: sql<number>`coalesce(sum(${s.stockBatch.quantity}), 0)`,
+    })
+    .from(s.drug)
+    .leftJoin(
+      s.stockBatch,
+      and(eq(s.stockBatch.tenantId, s.drug.tenantId), eq(s.stockBatch.drugId, s.drug.id)),
+    )
+    .where(sql`${s.drug.deletedAt} is null`)
+    .groupBy(s.drug.id, s.drug.reorderLevel);
+  const fbRow = await db
+    .select({
+      avg: sql<number>`coalesce(avg(${s.patientFeedback.rating}), 0)`,
+      n: count(),
+    })
+    .from(s.patientFeedback);
 
   const opdBy = (st: string) => Number(opdRows.find((r) => r.status === st)?.n ?? 0);
   const srBy = (st: string) => Number(srRows.find((r) => r.status === st)?.n ?? 0);

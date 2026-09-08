@@ -28,6 +28,9 @@ export const queueEntrySchema = z.object({
   status: z.enum(["checked_in", "in_progress"]),
   startAt: isoTimestampSchema,
   checkedInAt: isoTimestampSchema,
+  /** The clinical encounter check-in opened — null only if it's somehow
+   *  missing. Lets a queue view link straight into documenting the visit. */
+  encounterId: uuidSchema.nullable(),
 });
 export type QueueEntry = z.infer<typeof queueEntrySchema>;
 

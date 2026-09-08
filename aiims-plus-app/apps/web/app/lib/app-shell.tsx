@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 import { Ripple } from "@/components/ui/ripple";
 
 /* ------------------------------ shared primitives ------------------------- */
@@ -8,16 +8,18 @@ export function Card({
   title,
   action,
   children,
+  className,
 }: {
   title?: string;
   action?: ReactNode;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="card p-6">
+    <section className={`card p-6${className ? ` ${className}` : ""}`}>
       {title ? (
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{title}</h2>
+          <h2 className="text-xs font-medium uppercase tracking-wider text-slate-500">{title}</h2>
           {action}
         </div>
       ) : null}
@@ -39,7 +41,9 @@ export function Badge({ children, tone = "slate" }: { children: ReactNode; tone?
     slate: "bg-slate-100 text-slate-600",
   };
   return (
-    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${tones[tone]}`}>
+    <span
+      className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize tracking-wide ${tones[tone]}`}
+    >
       {children}
     </span>
   );
@@ -49,8 +53,14 @@ export function Row({ title, sub, right }: { title: string; sub?: string; right?
   return (
     <li className="flex items-center justify-between gap-3 py-3">
       <div className="min-w-0">
-        <p className="truncate font-medium text-slate-800">{title}</p>
-        {sub ? <p className="truncate text-sm text-slate-500">{sub}</p> : null}
+        <p className="truncate font-medium text-slate-800" title={title}>
+          {title}
+        </p>
+        {sub ? (
+          <p className="truncate text-sm text-slate-500" title={sub}>
+            {sub}
+          </p>
+        ) : null}
       </div>
       {right}
     </li>
@@ -74,7 +84,7 @@ export function Stat({
   return (
     <div className="card p-4">
       <p className="text-xs uppercase tracking-wide text-slate-400">{label}</p>
-      <p className={`mt-1 text-2xl font-semibold ${tones[tone]}`}>{value}</p>
+      <p className={`font-display mt-1 text-2xl font-medium ${tones[tone]}`}>{value}</p>
     </div>
   );
 }
@@ -99,6 +109,53 @@ export interface MockSectionData {
   items?: MockItem[];
 }
 
+/** A loud, hard-to-miss banner marking content as fabricated demo data — not
+ *  a real hospital record. Shown ABOVE the numbers, not as a footnote below
+ *  them, because that's the order a reader actually scans in. */
+export function PreviewNotice({
+  label = "Preview module",
+  hasData = true,
+}: {
+  label?: string;
+  /** False when the section shows no illustrative numbers at all — just
+   *  "coming soon" — so the copy doesn't promise numbers that aren't there. */
+  hasData?: boolean;
+}) {
+  return (
+    <div
+      role="status"
+      className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+    >
+      <svg
+        width={18}
+        height={18}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+        className="mt-0.5 shrink-0"
+      >
+        <path d="M12 3l10 18H2z" />
+        <path d="M12 9v5M12 18h.01" />
+      </svg>
+      {hasData ? (
+        <p>
+          <span className="font-semibold">{label} — example data.</span> Nothing on this screen is
+          connected to your hospital's real records yet; the numbers below are illustrative only.
+        </p>
+      ) : (
+        <p>
+          <span className="font-semibold">{label} isn't built yet.</span> This isn't a real feature
+          you can rely on — no data is tracked here yet.
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** Renders example data (stat tiles + a list) for a section without a backend. */
 export function MockSection({
   title,
@@ -110,10 +167,16 @@ export function MockSection({
   note?: string;
 }) {
   if (!data || (!data.stats?.length && !data.items?.length)) {
-    return <Placeholder title={title} note={note} />;
+    return (
+      <>
+        <PreviewNotice label={title} hasData={false} />
+        <Placeholder title={title} note={note} />
+      </>
+    );
   }
   return (
     <>
+      <PreviewNotice label={title} />
       {data.stats?.length ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {data.stats.map(([label, value]) => (
@@ -137,10 +200,6 @@ export function MockSection({
           <Empty>{note}</Empty>
         )}
       </Card>
-      <p className="flex items-center gap-1.5 px-1 text-xs text-slate-400">
-        <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400" />
-        Example data — this section activates when its module goes live.
-      </p>
     </>
   );
 }
@@ -197,7 +256,7 @@ const ICON_RULES: [RegExp, string][] = [
   [/schedule|appointment|queue|availab|arrival|admission/, "calendar"],
   [/staff|user|doctor|patient|people|team/, "users"],
 ];
-function sectionIcon(label: string, size = 20) {
+export function sectionIcon(label: string, size = 20) {
   const key = ICON_RULES.find(([re]) => re.test(label.toLowerCase()))?.[1] ?? "list";
   return (
     <svg
@@ -217,17 +276,31 @@ function sectionIcon(label: string, size = 20) {
 }
 
 /* -------------------------------- greeting -------------------------------- */
+// Shown once per browser session (first workspace load after login), not on
+// every navigation back to a workspace home — a hospital app that blocked
+// the screen for ~1.7s every time staff clicked "home" would be unusable.
+const SPLASH_SESSION_KEY = "aiims:splash-shown";
+
 export function Splash({ greeting }: { greeting: string }) {
   const [gone, setGone] = useState(false);
   const [fade, setFade] = useState(false);
+
+  // Runs before paint: if this session already saw the splash, skip it with
+  // no visible flash.
+  useLayoutEffect(() => {
+    if (sessionStorage.getItem(SPLASH_SESSION_KEY)) setGone(true);
+  }, []);
+
   useEffect(() => {
+    if (gone) return;
+    sessionStorage.setItem(SPLASH_SESSION_KEY, "1");
     const t1 = setTimeout(() => setFade(true), 1150);
     const t2 = setTimeout(() => setGone(true), 1700);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, []);
+  }, [gone]);
   if (gone) return null;
   return (
     <div
@@ -237,9 +310,11 @@ export function Splash({ greeting }: { greeting: string }) {
     >
       <Ripple mainCircleSize={240} numCircles={8} />
       <div className="relative z-10 text-center">
-        <p className="text-sm font-medium text-teal-900/70">Welcome back</p>
-        <h1 className="mt-2 text-4xl font-bold text-slate-900">Hey {greeting}</h1>
-        <div className="mx-auto mt-6 h-8 w-8 animate-spin rounded-full border-2 border-white/70 border-t-teal-700" />
+        <p className="text-xs font-medium uppercase tracking-wider text-white/60">Welcome back</p>
+        <h1 className="font-display mt-2 text-4xl font-normal tracking-tight text-white">
+          Hey {greeting}
+        </h1>
+        <div className="mx-auto mt-6 h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
       </div>
     </div>
   );
@@ -260,6 +335,7 @@ export function AppShell({
   greeting,
   nav,
   renderSection,
+  previewBanner,
 }: {
   appName: string;
   roleLabel: string;
@@ -267,6 +343,9 @@ export function AppShell({
   greeting?: string;
   nav: NavItem[];
   renderSection: (key: string) => ReactNode;
+  /** Set when the WHOLE workspace (not just one section) is example data —
+   *  shown on the landing screen too, before a section is even opened. */
+  previewBanner?: boolean;
 }) {
   const [active, setActive] = useState<string | null>(null);
   const groups = [...new Set(nav.map((n) => n.group))];
@@ -285,16 +364,16 @@ export function AppShell({
       <header className="sticky top-0 z-20 border-b border-white/40 bg-white/70 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
           <button type="button" onClick={() => setActive(null)} className="text-left">
-            <div className="text-lg font-semibold text-teal-700">{appName}</div>
-            <div className="text-[11px] uppercase tracking-wide text-slate-400">{roleLabel}</div>
+            <div className="font-display text-lg tracking-tight text-teal-800">{appName}</div>
+            <div className="text-[11px] uppercase tracking-widest text-slate-400">{roleLabel}</div>
           </button>
           <div className="flex items-center gap-3">
             <span className="hidden text-sm text-slate-500 sm:block">{userName}</span>
-            <div className="grid h-9 w-9 place-items-center rounded-full bg-teal-100 text-sm font-semibold text-teal-700">
+            <div className="grid h-9 w-9 place-items-center rounded-full bg-teal-100 text-sm font-medium text-teal-800">
               {initials}
             </div>
             <form action="/api/auth/logout" method="post">
-              <button className="rounded-lg px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+              <button className="rounded-full px-3.5 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
                 Log out
               </button>
             </form>
@@ -306,9 +385,16 @@ export function AppShell({
         {active === null ? (
           <>
             <div className="mb-6">
-              <h1 className="text-3xl font-bold text-slate-900">Hey {hello}</h1>
+              <h1 className="font-display text-3xl font-normal tracking-tight text-slate-900">
+                Hey {hello}
+              </h1>
               <p className="mt-1 text-sm text-slate-500">{roleLabel} · tap a section to open it.</p>
             </div>
+            {previewBanner ? (
+              <div className="mb-6">
+                <PreviewNotice label={roleLabel} />
+              </div>
+            ) : null}
             {groups.map((g) => (
               <div key={g} className="mb-6">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
@@ -324,7 +410,7 @@ export function AppShell({
                         onClick={() => setActive(n.key)}
                         className="qa-tile group flex items-center gap-3 p-4 text-left"
                       >
-                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-teal-50 text-teal-700 transition-colors group-hover:bg-teal-600 group-hover:text-white">
+                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-teal-50 text-teal-700 transition-colors group-hover:bg-teal-700 group-hover:text-white">
                           {sectionIcon(n.label)}
                         </span>
                         <span className="min-w-0">
@@ -346,15 +432,17 @@ export function AppShell({
             <button
               type="button"
               onClick={() => setActive(null)}
-              className="mb-4 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-medium text-teal-700 hover:bg-teal-50"
+              className="mb-4 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium text-teal-800 hover:bg-teal-50"
             >
               ← All sections
             </button>
             <div className="mb-4 flex items-center gap-3">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-teal-600 text-white">
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-teal-800 text-white">
                 {sectionIcon(activeItem?.label ?? "", 22)}
               </span>
-              <h1 className="text-2xl font-bold text-slate-900">{activeItem?.label}</h1>
+              <h1 className="font-display text-2xl font-normal tracking-tight text-slate-900">
+                {activeItem?.label}
+              </h1>
             </div>
             <div className="space-y-5">{renderSection(active)}</div>
           </>

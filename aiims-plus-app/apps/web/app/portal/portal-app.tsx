@@ -8,29 +8,24 @@ import type {
   MySummaryResponse,
 } from "@aiims/api-contracts";
 import { MockSection, Splash } from "../lib/app-shell";
+import {
+  formatDateTimeShort,
+  formatDayMonth,
+  formatDateShort,
+  formatTime,
+  formatWeekdayShort,
+  isoDateIST,
+} from "../lib/date";
 import { patientMock } from "../lib/mock";
 import { LanguageProvider, LanguageToggle, useI18n, useT } from "../lib/i18n";
 
 /* ---------------------------------- utils --------------------------------- */
-// A FIXED timeZone keeps these strings identical on the server and the client,
-// so they never trigger a React hydration mismatch (which would silently kill
-// interactivity in the App Router).
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "Asia/Kolkata",
-  });
-const fmtDateTime = (iso: string) =>
-  new Date(iso).toLocaleString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Kolkata",
-  });
+// Hand-rolled (not toLocaleString): a fixed timeZone alone isn't enough to
+// keep these identical on the server and the client — WebKit's AM/PM casing
+// and separator conventions disagree with Node/Chromium/Firefox even for the
+// same timeZone, which still trips a React hydration mismatch.
+const fmtDate = formatDateShort;
+const fmtDateTime = formatDateTimeShort;
 
 type SectionKey =
   | "dashboard"
@@ -285,10 +280,12 @@ function LiveToken() {
   if (!pos || !pos.active) return null;
   const ahead = pos.ahead ?? 0;
   return (
-    <div className="flex items-center justify-between rounded-[26px] bg-teal-600 p-5 text-white shadow-lg">
+    <div className="flex items-center justify-between rounded-[26px] bg-teal-800 p-5 text-white">
       <div>
-        <p className="text-sm font-medium text-teal-50/80">{t("You're checked in")}</p>
-        <p className="mt-1 text-lg font-semibold">
+        <p className="text-xs font-medium uppercase tracking-wider text-teal-50/70">
+          {t("You're checked in")}
+        </p>
+        <p className="font-display mt-1 text-lg font-normal">
           {ahead === 0
             ? t("You're next — please be ready")
             : `${ahead} ${ahead > 1 ? t("patients ahead of you") : t("patient ahead of you")}`}
@@ -299,10 +296,10 @@ function LiveToken() {
           </p>
         ) : null}
       </div>
-      <div className="grid h-20 w-20 shrink-0 place-items-center rounded-2xl bg-white/15 text-center">
+      <div className="grid h-20 w-20 shrink-0 place-items-center rounded-full border border-white/25 text-center">
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-teal-50/80">{t("Token")}</p>
-          <p className="text-3xl font-bold leading-none">{pos.token}</p>
+          <p className="text-[10px] uppercase tracking-wide text-teal-50/70">{t("Token")}</p>
+          <p className="font-display text-3xl font-normal leading-none">{pos.token}</p>
         </div>
       </div>
     </div>
@@ -587,27 +584,27 @@ function Profile({ me }: { me: MySummaryResponse }) {
   return (
     <div className="space-y-5">
       {/* Hospital patient health card */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between bg-gradient-to-r from-teal-700 to-emerald-600 px-5 py-3 text-white">
+      <div className="card overflow-hidden">
+        <div className="flex items-center justify-between bg-teal-800 px-5 py-3 text-white">
           <div className="flex items-center gap-2">
             <IconCrossMini />
             <div>
-              <p className="text-sm font-semibold leading-tight">AIIMS+ {t("Hospital")}</p>
-              <p className="text-[11px] leading-tight text-teal-50/80">
+              <p className="font-display text-sm leading-tight">AIIMS+ {t("Hospital")}</p>
+              <p className="text-[11px] uppercase tracking-wide leading-tight text-teal-50/70">
                 {t("Patient Health Card")}
               </p>
             </div>
           </div>
-          <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-medium">
+          <span className="rounded-full border border-white/30 px-2 py-0.5 text-[11px] font-medium">
             {t("ABHA verified")}
           </span>
         </div>
         <div className="flex gap-4 p-5">
-          <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-teal-500 to-emerald-400 text-2xl font-bold text-white shadow ring-2 ring-white">
+          <div className="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-teal-100 text-2xl font-medium text-teal-800">
             {initials.toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-lg font-bold leading-tight text-slate-900">
+            <p className="font-display text-lg font-normal leading-tight text-slate-900">
               {p.nameGiven} {p.nameFamily}
             </p>
             <dl className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
@@ -776,26 +773,16 @@ interface Slot {
   startAt: string;
   endAt: string;
 }
-const timeIST = (iso: string) =>
-  new Date(iso).toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Kolkata",
-  });
+const timeIST = formatTime;
 /** Next 14 days as {value:yyyy-mm-dd, label} for the date chips. */
 function nextDays(n: number): { value: string; label: string; dow: string }[] {
   const out: { value: string; label: string; dow: string }[] = [];
   for (let i = 0; i < n; i++) {
     const d = new Date(Date.now() + i * 864e5);
-    const value = d.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }); // yyyy-mm-dd
     out.push({
-      value,
-      label: d.toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "short",
-        timeZone: "Asia/Kolkata",
-      }),
-      dow: d.toLocaleDateString("en-IN", { weekday: "short", timeZone: "Asia/Kolkata" }),
+      value: isoDateIST(d),
+      label: formatDayMonth(d.toISOString()),
+      dow: formatWeekdayShort(d.toISOString()),
     });
   }
   return out;
@@ -951,7 +938,7 @@ function BookCard({ practitioners }: { practitioners: BookablePractitioner[] }) 
             type="button"
             disabled={busy}
             onClick={confirm}
-            className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+            className="rounded-full bg-teal-700 px-4 py-2 text-sm font-medium tracking-wide text-white hover:bg-teal-800 disabled:opacity-50"
           >
             {busy ? "Confirming…" : `Confirm ${timeIST(slot)} with ${prac?.name}`}
           </button>
@@ -1037,8 +1024,8 @@ function Prescriptions({ me }: { me: MySummaryResponse }) {
   }
   return (
     <div className="receipt p-6">
-      <div className="mb-4 flex items-center gap-3 rounded-2xl bg-gradient-to-br from-teal-50 to-sky-50 p-3">
-        <div className="grid h-12 w-12 place-items-center rounded-xl bg-white text-sm font-bold text-teal-700">
+      <div className="mb-4 flex items-center gap-3 rounded-2xl bg-teal-50 p-3">
+        <div className="grid h-12 w-12 place-items-center rounded-full bg-white text-sm font-medium text-teal-800">
           MR
         </div>
         <div>
@@ -1091,7 +1078,9 @@ function Records({ me }: { me: MySummaryResponse }) {
                 key={v.id}
                 title={v.chiefComplaint ?? "OPD visit"}
                 sub={fmtDate(v.date)}
-                right={<Badge tone={v.signed ? "green" : "amber"}>{v.status}</Badge>}
+                right={
+                  <Badge tone={v.signed ? "green" : "amber"}>{v.status.replace("_", " ")}</Badge>
+                }
               />
             ))}
           </ul>
@@ -1473,7 +1462,7 @@ function Feedback() {
 
         <button
           disabled={!rating || busy}
-          className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+          className="rounded-full bg-teal-700 px-4 py-2 text-sm font-medium tracking-wide text-white hover:bg-teal-800 disabled:opacity-50"
         >
           {busy ? `${t("Sending")}…` : t("Send feedback")}
         </button>

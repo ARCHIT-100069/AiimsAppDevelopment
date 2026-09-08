@@ -34,10 +34,12 @@ import {
   insertServiceRequest,
   isForeignKeyViolation,
   listConditionsByEncounter,
+  listLabResultLines,
   listLatestNotesByEncounter,
   listObservationsByEncounter,
   listResultsByEncounter,
   listServiceRequestsByEncounter,
+  markResultReviewed,
   newId,
   signEncounterVersioned,
   updateEncounterChiefComplaint,
@@ -45,6 +47,7 @@ import {
   type ConditionRow,
   type DiagnosticReportRow,
   type EncounterRow,
+  type LabResultLineRow,
   type NoteRow,
   type ObservationRow,
   type ServiceRequestRow,
@@ -453,12 +456,41 @@ export class EmrService {
     }
   }
 
-  async listResults(principal: Principal, encounterId: string): Promise<DiagnosticReportRow[]> {
+  /** The ordering clinician reviews a filed result — the only gate before it
+   *  reaches the patient portal (0022). Doctor-only in practice (`result:file`
+   *  is not granted to nurse). */
+  async reviewResult(
+    principal: Principal,
+    resultId: string,
+    expectedVersion: number,
+  ): Promise<DiagnosticReportRow> {
+    const actor = this.actor(principal);
+    return this.uow.withTenant(actor, async (db) => {
+      const reviewedBy = await this.practitionerId(db, principal);
+      const row = await markResultReviewed(db, resultId, expectedVersion, reviewedBy);
+      if (!row) throw new ConflictError("This result was already updated — reload and retry");
+      await this.auditRow(db, actor, "diagnostic_report.review", "diagnostic_report", row.id);
+      return row;
+    });
+  }
+
+  async listResults(
+    principal: Principal,
+    encounterId: string,
+  ): Promise<Array<DiagnosticReportRow & { lines: LabResultLineRow[] }>> {
     const actor = this.actor(principal);
     return this.uow.withTenant(actor, async (db) => {
       const rows = await listResultsByEncounter(db, encounterId);
       await this.auditRow(db, actor, "diagnostic_report.read", "encounter", encounterId);
-      return rows;
+      // The doctor needs the actual analyte values, not just the written
+      // impression — a "High WBC" flag matters more here than anywhere else.
+      // Sequential: these queries share this transaction's one pg client, so
+      // concurrent awaits on it are deprecated (pg#9 removes support).
+      const out: Array<DiagnosticReportRow & { lines: LabResultLineRow[] }> = [];
+      for (const r of rows) {
+        out.push({ ...r, lines: await listLabResultLines(db, r.id) });
+      }
+      return out;
     });
   }
 
@@ -536,13 +568,13 @@ export class EmrService {
     return this.uow.withTenant(actor, async (db) => {
       const encounter = await getEncounterById(db, encounterId);
       if (!encounter) throw new NotFoundError("Encounter not found");
-      const [observations, conditions, notes, orders, results] = await Promise.all([
-        listObservationsByEncounter(db, encounterId),
-        listConditionsByEncounter(db, encounterId),
-        listLatestNotesByEncounter(db, encounterId),
-        listServiceRequestsByEncounter(db, encounterId),
-        listResultsByEncounter(db, encounterId),
-      ]);
+      // Sequential: these queries share this transaction's one pg client, so
+      // concurrent awaits on it are deprecated (pg#9 removes support).
+      const observations = await listObservationsByEncounter(db, encounterId);
+      const conditions = await listConditionsByEncounter(db, encounterId);
+      const notes = await listLatestNotesByEncounter(db, encounterId);
+      const orders = await listServiceRequestsByEncounter(db, encounterId);
+      const results = await listResultsByEncounter(db, encounterId);
       await this.auditRow(db, actor, "encounter.fhir_read", "encounter", encounterId);
       return { encounter, observations, conditions, notes, orders, results };
     });

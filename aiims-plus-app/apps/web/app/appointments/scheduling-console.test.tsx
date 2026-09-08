@@ -18,7 +18,12 @@ const patients = [
   },
 ] as unknown as PatientResponse[];
 const practitioners = [
-  { id: "0197a000-0000-7000-8000-000000000002", nameGiven: "Dr", nameFamily: "Bose" },
+  {
+    id: "0197a000-0000-7000-8000-000000000002",
+    nameGiven: "Dr",
+    nameFamily: "Bose",
+    registrationNo: "MCI-1",
+  },
 ] as unknown as PractitionerResponse[];
 const facilities = [
   { id: "0197a000-0000-7000-8000-000000000003", name: "Main OPD" },
@@ -60,6 +65,7 @@ describe("SchedulingConsole (a11y)", () => {
         date="2026-08-01"
         initialAppointments={appts}
         practitioners={practitioners}
+        bookablePractitioners={practitioners}
         facilities={facilities}
         patients={patients}
         canManage

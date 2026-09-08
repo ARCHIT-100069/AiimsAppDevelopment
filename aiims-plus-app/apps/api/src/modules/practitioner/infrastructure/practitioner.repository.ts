@@ -11,6 +11,7 @@ import {
   insertPractitioner,
   listPractitioners,
   listPractitionersByDepartment,
+  listPractitionersByRole,
   roleCodesForAppUser,
   searchPractitionersByText,
   updatePractitionerVersioned,
@@ -59,6 +60,8 @@ export class DrizzlePractitionerRepository implements PractitionerRepository {
       rows = await listPractitionersByDepartment(db, query.departmentId, query.limit);
     } else if (query.q) {
       rows = await searchPractitionersByText(db, query.q, query.limit);
+    } else if (query.role) {
+      rows = await listPractitionersByRole(db, query.role, query.limit);
     } else {
       rows = await listPractitioners(db, query.limit, query.cursor);
     }

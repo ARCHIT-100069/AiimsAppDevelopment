@@ -4,7 +4,7 @@
  * cross this boundary. Registration number is a professional credential,
  * NOT patient PHI, so it is not encrypted (decision d).
  */
-import { isoTimestampSchema, uuidSchema } from "@aiims/domain-types";
+import { isoTimestampSchema, ROLE_CODES, uuidSchema } from "@aiims/domain-types";
 import { z } from "zod";
 import { listMetaSchema, listQuerySchema } from "./pagination";
 
@@ -81,12 +81,16 @@ export const createPractitionerResponseSchema = practitionerResponseSchema.exten
 });
 export type CreatePractitionerResponse = z.infer<typeof createPractitionerResponseSchema>;
 
-/** Allow-listed search (APDR-0005): free text (name) OR registration OR department. */
+/** Allow-listed search (APDR-0005): free text (name) OR registration OR department.
+ *  `role` is a separate eligibility filter (not part of that mutual-exclusion
+ *  group) — e.g. `?role=doctor` for a booking picker that must never offer a
+ *  nurse or front-desk practitioner profile alongside physicians. */
 export const searchPractitionersQuerySchema = listQuerySchema
   .extend({
     q: z.string().trim().min(1).max(120).optional(),
     registrationNo: z.string().trim().min(1).max(40).optional(),
     departmentId: uuidSchema.optional(),
+    role: z.enum(ROLE_CODES).optional(),
   })
   .refine((v) => [v.q, v.registrationNo, v.departmentId].filter(Boolean).length <= 1, {
     message: "Use at most one of q, registrationNo, departmentId",

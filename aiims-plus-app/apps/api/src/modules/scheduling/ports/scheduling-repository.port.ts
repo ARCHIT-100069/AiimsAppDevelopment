@@ -59,6 +59,7 @@ export interface QueueEntryView {
   status: "checked_in" | "in_progress";
   startAt: Date;
   checkedInAt: Date;
+  encounterId: string | null;
 }
 
 export interface SchedulingRepository {

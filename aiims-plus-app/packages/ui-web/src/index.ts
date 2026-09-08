@@ -13,5 +13,11 @@ export {
   Avatar,
   DataTable,
   type Column,
+  IDCard,
+  IDBadgeStrip,
+  type IDCardProps,
+  Tabs,
+  type TabItem,
+  EmptyState,
 } from "./components";
 export * from "./icons";

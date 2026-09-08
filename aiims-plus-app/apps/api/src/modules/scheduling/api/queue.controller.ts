@@ -45,6 +45,7 @@ export class QueueController {
         status: e.status,
         startAt: e.startAt.toISOString(),
         checkedInAt: e.checkedInAt.toISOString(),
+        encounterId: e.encounterId,
       })),
     };
   }

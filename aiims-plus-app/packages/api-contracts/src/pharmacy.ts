@@ -77,6 +77,7 @@ export const prescriptionItemResponseSchema = z.object({
 export const prescriptionResponseSchema = z.object({
   id: z.uuid(),
   patientId: z.uuid(),
+  patientName: z.string(),
   encounterId: z.uuid().nullable(),
   prescriberId: z.uuid(),
   status: z.enum(["active", "dispensed", "cancelled"]),

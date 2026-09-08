@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { IDBadgeStrip, IDCard } from "@aiims/ui-web";
 import {
-  AppShell,
   Badge,
   Card,
   Empty,
   MockSection,
   Row,
+  Splash,
   Stat,
+  sectionIcon,
   type NavItem,
 } from "../lib/app-shell";
+import { formatDateShort, formatDayMonthTime, formatTodayHeader } from "../lib/date";
 import { doctorMock } from "../lib/mock";
 
 interface Patient {
@@ -23,14 +26,25 @@ interface Patient {
 }
 interface Appt {
   id: string;
+  patientId: string;
   startAt: string;
   status: string;
   appointmentType: string;
 }
 interface QueueItem {
   appointmentId?: string;
+  patientId?: string;
+  patientName?: string | null;
   queueToken?: number;
   status?: string;
+  encounterId?: string | null;
+}
+
+export interface DoctorProfile {
+  registrationNo: string;
+  specialty: string | null;
+  status: "active" | "inactive";
+  since: string;
 }
 
 export interface DoctorData {
@@ -39,6 +53,7 @@ export interface DoctorData {
   patients: Patient[];
   appointments: Appt[];
   queue: QueueItem[];
+  profile: DoctorProfile | null;
 }
 
 const NAV: NavItem[] = [
@@ -65,14 +80,7 @@ const NAV: NavItem[] = [
   { key: "settings", label: "Settings", group: "Account" },
 ];
 
-const dayFmt = (iso: string) =>
-  new Date(iso).toLocaleString("en-IN", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Kolkata",
-  });
+const dayFmt = formatDayMonthTime;
 const istDay = (iso: string) =>
   new Date(iso).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
 
@@ -102,7 +110,7 @@ function PatientSearch({ initial }: { initial: Patient[] }) {
           placeholder="Name or MRN"
           className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
         />
-        <button className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
+        <button className="rounded-full bg-teal-700 px-4 py-2 text-sm font-medium tracking-wide text-white hover:bg-teal-800">
           {busy ? "…" : "Search"}
         </button>
       </form>
@@ -428,7 +436,7 @@ function PrescribeForm({ patients }: { patients: Patient[] }) {
         type="button"
         onClick={submit}
         disabled={busy || lines.length === 0}
-        className="mt-4 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+        className="mt-4 rounded-full bg-teal-700 px-4 py-2 text-sm font-medium tracking-wide text-white hover:bg-teal-800 disabled:opacity-50"
       >
         {busy ? "Writing…" : `Write prescription${lines.length ? ` (${lines.length})` : ""}`}
       </button>
@@ -452,7 +460,7 @@ function ClinicalLauncher({
       {primary ? (
         <a
           href={primary.href}
-          className="mb-4 inline-block rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+          className="mb-4 inline-block rounded-full bg-teal-700 px-4 py-2 text-sm font-medium tracking-wide text-white hover:bg-teal-800"
         >
           {primary.label}
         </a>
@@ -488,40 +496,13 @@ function ClinicalLauncher({
 export function DoctorApp({ data }: { data: DoctorData }) {
   const today = new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
   const todays = data.appointments.filter((a) => istDay(a.startAt) === today);
+  const patientName = (id: string) => {
+    const p = data.patients.find((x) => x.id === id);
+    return p ? `${p.nameGiven} ${p.nameFamily}` : "Patient";
+  };
 
   const render = (key: string) => {
     switch (key) {
-      case "dashboard":
-        return (
-          <>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Good day, {data.userName}</h2>
-              <p className="mt-1 text-sm text-slate-500">Your clinical workspace.</p>
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Stat label="Today" value={`${todays.length}`} />
-              <Stat label="In queue" value={`${data.queue.length}`} tone="amber" />
-              <Stat label="Appointments" value={`${data.appointments.length}`} tone="slate" />
-              <Stat label="Patients" value={`${data.patients.length}`} tone="slate" />
-            </div>
-            <Card title="Next patients today">
-              {todays.length === 0 ? (
-                <Empty>No appointments today.</Empty>
-              ) : (
-                <ul className="divide-y divide-slate-100">
-                  {todays.slice(0, 6).map((a) => (
-                    <Row
-                      key={a.id}
-                      title={dayFmt(a.startAt)}
-                      sub={a.appointmentType}
-                      right={<Badge tone="teal">{a.status.replace("_", " ")}</Badge>}
-                    />
-                  ))}
-                </ul>
-              )}
-            </Card>
-          </>
-        );
       case "today":
         return (
           <Card title="Today's appointments">
@@ -532,8 +513,8 @@ export function DoctorApp({ data }: { data: DoctorData }) {
                 {todays.map((a) => (
                   <Row
                     key={a.id}
-                    title={dayFmt(a.startAt)}
-                    sub={a.appointmentType}
+                    title={patientName(a.patientId)}
+                    sub={`${dayFmt(a.startAt)} · ${a.appointmentType.replace("_", " ")}`}
                     right={<Badge tone="teal">{a.status.replace("_", " ")}</Badge>}
                   />
                 ))}
@@ -551,8 +532,18 @@ export function DoctorApp({ data }: { data: DoctorData }) {
                 {data.queue.map((q, i) => (
                   <Row
                     key={q.appointmentId ?? i}
-                    title={`Token ${q.queueToken ?? i + 1}`}
-                    sub={q.status ?? "waiting"}
+                    title={q.patientName ?? `Token ${q.queueToken ?? i + 1}`}
+                    sub={`Token ${q.queueToken ?? i + 1} · ${(q.status ?? "waiting").replace("_", " ")}`}
+                    right={
+                      q.encounterId ? (
+                        <a
+                          href={`/encounters/${q.encounterId}`}
+                          className="rounded-full bg-teal-700 px-3 py-1.5 text-sm font-medium tracking-wide text-white hover:bg-teal-800"
+                        >
+                          Open encounter →
+                        </a>
+                      ) : undefined
+                    }
                   />
                 ))}
               </ul>
@@ -591,18 +582,40 @@ export function DoctorApp({ data }: { data: DoctorData }) {
         );
       case "profile":
         return (
-          <Card title="My profile">
-            <dl className="grid grid-cols-2 gap-y-3 text-sm">
-              <div>
-                <dt className="text-xs uppercase text-slate-400">Name</dt>
-                <dd className="text-slate-800">{data.userName}</dd>
-              </div>
-              <div>
-                <dt className="text-xs uppercase text-slate-400">Roles</dt>
-                <dd className="text-slate-800">{data.roles.join(", ")}</dd>
-              </div>
-            </dl>
-          </Card>
+          <div className="grid gap-6 lg:grid-cols-[368px_1fr] lg:items-start">
+            <IDCard
+              kind="staff"
+              name={data.userName}
+              idLabel="REG. NO."
+              idValue={data.profile?.registrationNo ?? "Not on file"}
+              subtitle={data.profile?.specialty ? `Doctor — ${data.profile.specialty}` : "Doctor"}
+              statusLabel={data.profile?.status === "inactive" ? "Inactive" : "Active"}
+              facility="Main Campus — OPD Block"
+              issuedValue={data.profile ? formatDateShort(data.profile.since) : undefined}
+            />
+            <Card title="My profile">
+              <dl className="grid grid-cols-2 gap-y-3 text-sm">
+                <div>
+                  <dt className="text-xs uppercase text-slate-400">Name</dt>
+                  <dd className="text-slate-800">{data.userName}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase text-slate-400">Roles</dt>
+                  <dd className="text-slate-800">{data.roles.join(", ")}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase text-slate-400">Registration</dt>
+                  <dd className="font-mono text-slate-800">
+                    {data.profile?.registrationNo ?? "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase text-slate-400">Specialty</dt>
+                  <dd className="text-slate-800">{data.profile?.specialty ?? "—"}</dd>
+                </div>
+              </dl>
+            </Card>
+          </div>
         );
       default: {
         const label = NAV.find((n) => n.key === key)?.label ?? "Section";
@@ -611,14 +624,290 @@ export function DoctorApp({ data }: { data: DoctorData }) {
     }
   };
 
+  const [active, setActive] = useState<string | null>(null);
+  const activeItem = NAV.find((n) => n.key === active);
+  const groups = [...new Set(NAV.map((n) => n.group))];
+  const nextUp = todays.find((a) => a.status !== "completed" && a.status !== "cancelled");
+
   return (
-    <AppShell
-      appName="AIIMS+"
-      roleLabel="Doctor Workspace"
-      greeting="Doctor"
-      userName={data.userName}
-      nav={NAV}
-      renderSection={render}
-    />
+    <div className="app-bg flex h-screen flex-col overflow-hidden">
+      <Splash greeting="Doctor" />
+
+      {/* Persistent top bar: hospital brand, verified doctor identity, quick actions. */}
+      <header className="z-20 flex shrink-0 items-center gap-4 border-b border-white/40 bg-white/75 px-5 py-2.5 backdrop-blur">
+        <button
+          type="button"
+          onClick={() => setActive(null)}
+          className="flex shrink-0 items-center gap-1.5 text-teal-700"
+        >
+          <svg width={20} height={20} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M10 2h4v8h8v4h-8v8h-4v-8H2v-4h8z" />
+          </svg>
+          <span className="font-display text-base tracking-tight">AIIMS+</span>
+        </button>
+
+        <IDBadgeStrip
+          kind="staff"
+          name={data.userName}
+          idLabel={data.profile ? "REG. NO." : undefined}
+          idValue={data.profile?.registrationNo}
+          subtitle={data.profile?.specialty ? `Doctor — ${data.profile.specialty}` : "Doctor · OPD"}
+          className="cursor-pointer"
+        />
+
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActive("search")}
+            className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3.5 py-1.5 text-sm text-slate-500 hover:border-teal-300 hover:text-teal-700 sm:flex"
+          >
+            <svg
+              width={15}
+              height={15}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              aria-hidden
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
+            Find a patient
+          </button>
+          <button
+            type="button"
+            title="Notifications"
+            className="grid h-9 w-9 place-items-center rounded-full text-slate-500 hover:bg-slate-100"
+          >
+            <svg
+              width={18}
+              height={18}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M6 9a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6M10 21h4" />
+            </svg>
+          </button>
+          <form action="/api/auth/logout" method="post">
+            <button className="rounded-full px-3.5 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+              Log out
+            </button>
+          </form>
+        </div>
+      </header>
+
+      {/* Mobile section picker — the rail below is desktop/tablet-only (lg+); a
+          narrow phone gets a plain dropdown instead of a squeezed sidebar. */}
+      <div className="shrink-0 border-b border-white/40 bg-white/60 px-4 py-2 lg:hidden">
+        <label htmlFor="doctor-mobile-nav" className="sr-only">
+          Section
+        </label>
+        <select
+          id="doctor-mobile-nav"
+          value={active ?? "dashboard"}
+          onChange={(e) => setActive(e.target.value === "dashboard" ? null : e.target.value)}
+          className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm"
+        >
+          {NAV.map((n) => (
+            <option key={n.key} value={n.key}>
+              {n.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Persistent left rail — every section one click away, no home-screen tile hunt. */}
+        <nav className="hidden w-[276px] shrink-0 overflow-y-auto border-r border-white/40 bg-white/45 px-3 py-4 lg:block">
+          {groups.map((g, gi) => (
+            <div key={g} className={gi === 0 ? "mb-5" : "mb-5 mt-1"}>
+              <p className="mb-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                {g}
+              </p>
+              <div className="space-y-0.5">
+                {NAV.filter((n) => n.group === g).map((n) => {
+                  const isDashboard = n.key === "dashboard";
+                  const isActive = isDashboard ? active === null : active === n.key;
+                  return (
+                    <button
+                      type="button"
+                      key={n.key}
+                      onClick={() => setActive(isDashboard ? null : n.key)}
+                      className={`flex w-full items-center gap-3 rounded-full px-2.5 py-2 text-left text-[13px] font-medium transition-colors ${
+                        isActive
+                          ? "bg-teal-700 text-white"
+                          : "text-slate-600 hover:bg-teal-50 hover:text-teal-700"
+                      }`}
+                    >
+                      <span
+                        className={`grid h-7 w-7 shrink-0 place-items-center rounded-full ${
+                          isActive ? "bg-white/15" : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {sectionIcon(n.label, 16)}
+                      </span>
+                      <span className="min-w-0 flex-1 leading-tight">{n.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        {/* Main workspace */}
+        <main className="flex-1 overflow-y-auto p-6">
+          {active === null ? (
+            <div className="flex h-full flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="font-display text-xl font-normal tracking-tight text-slate-900">
+                    Good day, {data.userName}
+                  </h1>
+                  <p className="text-sm text-slate-500">
+                    {formatTodayHeader()} · your clinical workspace at a glance.
+                  </p>
+                </div>
+                {nextUp ? (
+                  <a
+                    href="/appointments"
+                    className="hidden rounded-full bg-teal-700 px-4 py-2 text-sm font-medium tracking-wide text-white hover:bg-teal-800 md:inline-block"
+                  >
+                    Next: {dayFmt(nextUp.startAt)} →
+                  </a>
+                ) : null}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Stat label="Today" value={`${todays.length}`} />
+                <Stat label="In queue" value={`${data.queue.length}`} tone="amber" />
+                <Stat label="Appointments" value={`${data.appointments.length}`} tone="slate" />
+                <Stat label="Patients" value={`${data.patients.length}`} tone="slate" />
+              </div>
+
+              <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-5">
+                <Card
+                  title="Next patients today"
+                  action={<Badge tone="teal">{todays.length} today</Badge>}
+                >
+                  <div className="max-h-[420px] overflow-y-auto">
+                    {todays.length === 0 ? (
+                      <Empty>No appointments today.</Empty>
+                    ) : (
+                      <ul className="divide-y divide-slate-100">
+                        {todays.map((a) => (
+                          <Row
+                            key={a.id}
+                            title={patientName(a.patientId)}
+                            sub={`${dayFmt(a.startAt)} · ${a.appointmentType.replace("_", " ")}`}
+                            right={<Badge tone="teal">{a.status.replace("_", " ")}</Badge>}
+                          />
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </Card>
+
+                <div className="flex flex-col gap-4 lg:col-span-2">
+                  <Card
+                    title="OPD queue"
+                    action={<Badge tone="amber">{data.queue.length} waiting</Badge>}
+                  >
+                    <div className="max-h-[180px] overflow-y-auto">
+                      {data.queue.length === 0 ? (
+                        <Empty>The queue is empty.</Empty>
+                      ) : (
+                        <ul className="divide-y divide-slate-100">
+                          {data.queue.map((q, i) => (
+                            <Row
+                              key={q.appointmentId ?? i}
+                              title={q.patientName ?? `Token ${q.queueToken ?? i + 1}`}
+                              sub={`Token ${q.queueToken ?? i + 1} · ${(q.status ?? "waiting").replace("_", " ")}`}
+                              right={
+                                q.encounterId ? (
+                                  <a
+                                    href={`/encounters/${q.encounterId}`}
+                                    className="text-sm font-medium text-teal-700 hover:underline"
+                                  >
+                                    Open →
+                                  </a>
+                                ) : undefined
+                              }
+                            />
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </Card>
+
+                  <Card title="Quick actions">
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { key: "search", label: "Find patient" },
+                        { key: "prescriptions", label: "Write Rx" },
+                        { key: "encounters", label: "OPD schedule" },
+                        { key: "records", label: "Patient chart" },
+                        { key: "scan", label: "Scan patient ID", href: "/scan" },
+                      ].map((qa) =>
+                        qa.href ? (
+                          <a
+                            key={qa.key}
+                            href={qa.href}
+                            className="qa-tile flex items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700"
+                          >
+                            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-teal-50 text-teal-700">
+                              {sectionIcon(qa.label, 15)}
+                            </span>
+                            {qa.label}
+                          </a>
+                        ) : (
+                          <button
+                            key={qa.key}
+                            type="button"
+                            onClick={() => setActive(qa.key)}
+                            className="qa-tile flex items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700"
+                          >
+                            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-teal-50 text-teal-700">
+                              {sectionIcon(qa.label, 15)}
+                            </span>
+                            {qa.label}
+                          </button>
+                        ),
+                      )}
+                    </div>
+                  </Card>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setActive(null)}
+                className="mb-4 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium text-teal-800 hover:bg-teal-50"
+              >
+                ← Dashboard
+              </button>
+              <div className="mb-4 flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-teal-800 text-white">
+                  {sectionIcon(activeItem?.label ?? "", 22)}
+                </span>
+                <h1 className="font-display text-2xl font-normal tracking-tight text-slate-900">
+                  {activeItem?.label}
+                </h1>
+              </div>
+              <div className="space-y-5 pb-6">{render(active)}</div>
+            </>
+          )}
+        </main>
+      </div>
+    </div>
   );
 }

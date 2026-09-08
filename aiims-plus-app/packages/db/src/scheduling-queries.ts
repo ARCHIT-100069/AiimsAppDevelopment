@@ -522,6 +522,9 @@ export interface QueueEntryRow {
   status: "checked_in" | "in_progress";
   startAt: Date;
   checkedInAt: Date;
+  /** The encounter check-in opened (DDR: 1 checked-in appointment → 1 open
+   *  encounter). Null only if check-in somehow didn't create one. */
+  encounterId: string | null;
 }
 
 /**
@@ -545,6 +548,7 @@ export async function queueEntries(
       status: s.appointment.status,
       startAt: s.appointment.startAt,
       checkedInAt: s.appointment.checkedInAt,
+      encounterId: s.encounter.id,
     })
     .from(s.appointment)
     .leftJoin(
@@ -559,6 +563,14 @@ export async function queueEntries(
       and(
         eq(s.practitioner.tenantId, s.appointment.tenantId),
         eq(s.practitioner.id, s.appointment.practitionerId),
+      ),
+    )
+    .leftJoin(
+      s.encounter,
+      and(
+        eq(s.encounter.tenantId, s.appointment.tenantId),
+        eq(s.encounter.appointmentId, s.appointment.id),
+        isNull(s.encounter.deletedAt),
       ),
     )
     .where(

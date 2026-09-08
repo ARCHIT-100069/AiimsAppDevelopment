@@ -26,10 +26,17 @@ const inr = (n: string | number) =>
 export function ManagementPortal({ userName, greeting }: { userName: string; greeting: string }) {
   const [ov, setOv] = useState<ManagementOverview | null>(null);
   const [loading, setLoading] = useState(true);
+  const [forbidden, setForbidden] = useState(false);
 
   useEffect(() => {
     fetch("/api/bff/management/overview")
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => {
+        if (r.status === 403) {
+          setForbidden(true);
+          return null;
+        }
+        return r.ok ? r.json() : null;
+      })
       .then((d) => {
         setOv(d);
         setLoading(false);
@@ -39,7 +46,14 @@ export function ManagementPortal({ userName, greeting }: { userName: string; gre
 
   const render = (key: string) => {
     if (loading) return <Card>Loading…</Card>;
-    if (!ov) return <Card>Could not load analytics.</Card>;
+    if (forbidden)
+      return (
+        <Card>
+          You don't have permission to view hospital-wide analytics. This dashboard is limited to
+          the Admin role — ask a hospital administrator if you need access.
+        </Card>
+      );
+    if (!ov) return <Card>Could not reach the server. Try refreshing the page.</Card>;
 
     if (key === "opd")
       return (

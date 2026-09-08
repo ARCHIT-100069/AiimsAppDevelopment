@@ -18,10 +18,9 @@ import {
   IconPlus,
   Select,
 } from "@aiims/ui-web";
+import { formatTime } from "../lib/date";
 
-function timeOf(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
+const timeOf = formatTime;
 
 const STATUS_TONE: Record<string, "green" | "sky" | "slate" | "amber"> = {
   booked: "sky",
@@ -36,6 +35,7 @@ export function SchedulingConsole({
   date,
   initialAppointments,
   practitioners,
+  bookablePractitioners,
   facilities,
   patients,
   canManage,
@@ -43,6 +43,11 @@ export function SchedulingConsole({
   date: string;
   initialAppointments: AppointmentResponse[];
   practitioners: PractitionerResponse[];
+  /** Doctors only, alphabetical — the actual booking picker. Keeping this
+   *  separate from `practitioners` (used for name lookups on existing rows)
+   *  means a nurse or front-desk profile can never be offered here, even
+   *  though they still have a practitioner record for other purposes. */
+  bookablePractitioners: PractitionerResponse[];
   facilities: FacilityResponse[];
   patients: PatientResponse[];
   canManage: boolean;
@@ -219,12 +224,17 @@ export function SchedulingConsole({
                   }}
                 >
                   <option value="">Select…</option>
-                  {practitioners.map((p) => (
+                  {bookablePractitioners.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.nameGiven} {p.nameFamily}
+                      Dr. {p.nameGiven} {p.nameFamily} · {p.registrationNo}
                     </option>
                   ))}
                 </Select>
+                {bookablePractitioners.length === 0 ? (
+                  <p className="mt-1 text-xs text-amber-600">
+                    No doctors are set up to be booked yet — add one from Staff Management.
+                  </p>
+                ) : null}
               </Field>
               <Field label="Facility">
                 <Select value={facilityId} onChange={(e) => setFacilityId(e.target.value)}>

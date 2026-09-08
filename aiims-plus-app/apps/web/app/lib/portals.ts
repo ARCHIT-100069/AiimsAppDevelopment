@@ -7,6 +7,26 @@
  */
 import type { MockSectionData } from "./mock";
 
+/** Who's allowed into each portal, mirroring the backend permissions that
+ *  actually gate the data underneath (RBAC in packages/authz). The API
+ *  already blocks unauthorized writes either way — this closes the other
+ *  half: staff shouldn't be able to *navigate into* a workspace that isn't
+ *  theirs and hit a wall of 403s and dead buttons. Every slug not listed
+ *  here (the ten "Preview" example modules) is admin-only: they have no
+ *  real backend, and only Admin's own nav links to the portal hub at all. */
+export const PORTAL_ACCESS: Record<string, readonly string[]> = {
+  billing: ["front_desk", "admin"],
+  pharmacy: ["admin"],
+  laboratory: ["admin", "doctor", "nurse"],
+  radiology: ["admin", "doctor", "nurse"],
+  management: ["admin"],
+};
+
+export function canAccessPortal(slug: string, roles: readonly string[]): boolean {
+  const allowed = PORTAL_ACCESS[slug] ?? ["admin"];
+  return roles.some((r) => allowed.includes(r));
+}
+
 export interface PortalNavItem {
   key: string;
   label: string;

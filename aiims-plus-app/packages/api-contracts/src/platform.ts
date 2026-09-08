@@ -112,6 +112,8 @@ export const userResponseSchema = z.object({
   displayName: z.string(),
   status: z.enum(["active", "disabled"]),
   roles: z.array(z.enum(ROLE_CODES)),
+  /** Optimistic-concurrency token — echo via If-Match on PATCH (APDR-0006). */
+  version: z.number().int(),
   createdAt: isoTimestampSchema,
 });
 export type UserResponse = z.infer<typeof userResponseSchema>;
@@ -122,6 +124,12 @@ export const assignRoleRequestSchema = z.object({
   departmentId: uuidSchema.optional(),
 });
 export type AssignRoleRequest = z.infer<typeof assignRoleRequestSchema>;
+
+/** Deactivate/reactivate a staff login — blocks/restores session resolution. */
+export const updateUserStatusRequestSchema = z.object({
+  status: z.enum(["active", "disabled"]),
+});
+export type UpdateUserStatusRequest = z.infer<typeof updateUserStatusRequestSchema>;
 
 /* -------------------------------- reference ----------------------------- */
 

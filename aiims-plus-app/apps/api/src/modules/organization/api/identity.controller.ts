@@ -1,14 +1,27 @@
 /** User + role-assignment endpoints (Stage 1). HTTP-only (BDR-0001). */
-import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post, Query } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from "@nestjs/common";
 import {
   assignRoleRequestSchema,
   createUserRequestSchema,
   listQuerySchema,
+  updateUserStatusRequestSchema,
   type ListUsersResponse,
   type UserResponse,
 } from "@aiims/api-contracts";
 import type { Principal } from "@aiims/domain-types";
 import { nextCursorFrom, toKeyset } from "../../../common/cursor";
+import { DomainError } from "../../../common/errors";
 import { CurrentPrincipal, RequirePermission } from "../../../platform/decorators";
 import { IdentityService, type UserWithRoles } from "../application/identity.service";
 
@@ -18,6 +31,7 @@ const toUser = (u: UserWithRoles): UserResponse =>
     displayName: u.displayName,
     status: u.status,
     roles: u.roles,
+    version: u.version,
     createdAt: u.createdAt.toISOString(),
   }) as UserResponse;
 
@@ -48,6 +62,24 @@ export class IdentityController {
     const req = assignRoleRequestSchema.parse(rawBody);
     await this.identity.assignRole(principal, userId, req);
     return { assigned: true };
+  }
+
+  /** Deactivate/reactivate a staff login. Stale If-Match ⇒ 409 (APDR-0006). */
+  @Patch(":id/status")
+  @HttpCode(200)
+  @RequirePermission("user:manage")
+  async updateStatus(
+    @CurrentPrincipal() principal: Principal,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() rawBody: unknown,
+    @Headers("if-match") ifMatch: string | undefined,
+  ): Promise<UserResponse> {
+    const expectedVersion = Number(ifMatch);
+    if (!ifMatch || !Number.isInteger(expectedVersion) || expectedVersion < 0) {
+      throw new DomainError("If-Match header with the current version is required (APDR-0006)");
+    }
+    const { status } = updateUserStatusRequestSchema.parse(rawBody);
+    return toUser(await this.identity.updateStatus(principal, id, expectedVersion, status));
   }
 
   @Get()

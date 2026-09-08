@@ -15,6 +15,7 @@ import {
   listUsers,
   newId,
   roleCodesForUsers,
+  updateAppUserStatus,
   type AppUserRow,
   type Keyset,
 } from "@aiims/db";
@@ -125,6 +126,39 @@ export class IdentityService {
       }
       throw err;
     }
+  }
+
+  /** Deactivate/reactivate a staff login (blocks/restores session resolution). */
+  async updateStatus(
+    principal: Principal,
+    userId: string,
+    expectedVersion: number,
+    status: "active" | "disabled",
+  ): Promise<UserWithRoles> {
+    return this.uow.withTenant(
+      { tenantId: principal.tenantId, actorId: principal.actorId },
+      async (db) => {
+        const updated = await updateAppUserStatus(db, userId, expectedVersion, status);
+        if (!updated) {
+          throw new ConflictError(
+            "Staff account was changed since you loaded it — refresh and retry",
+          );
+        }
+        await this.audit.append(
+          db,
+          { tenantId: principal.tenantId, actorId: principal.actorId },
+          {
+            eventId: newId(),
+            action: status === "active" ? "user.reactivate" : "user.deactivate",
+            resourceType: "app_user",
+            resourceId: userId,
+            occurredAt: new Date(),
+          },
+        );
+        const roles = await roleCodesForUsers(db, [userId]);
+        return { ...updated, roles: roles.get(userId) ?? [] };
+      },
+    );
   }
 
   async listUsers(principal: Principal, limit: number, k?: Keyset): Promise<UserWithRoles[]> {

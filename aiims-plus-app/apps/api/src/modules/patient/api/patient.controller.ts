@@ -22,6 +22,7 @@ import {
   searchPatientsQuerySchema,
   updatePatientRequestSchema,
   type ListPatientsResponse,
+  type MySummaryResponse,
   type PatientResponse,
 } from "@aiims/api-contracts";
 import type { Principal } from "@aiims/domain-types";
@@ -78,6 +79,19 @@ export class PatientController {
     @Param("id", ParseUUIDPipe) id: string,
   ): Promise<PatientResponse> {
     return toPatientResponse(await this.patients.getById(principal, id));
+  }
+
+  /** The clinical chart: visits, vitals, diagnoses, medications, lab/imaging
+   *  reports, invoices — one aggregate for the patient workspace. Same shape
+   *  the patient's own portal reads for themselves (self:read); here it's
+   *  patient:read against an explicit id, for authorized staff. */
+  @Get(":id/chart")
+  @RequirePermission("patient:read")
+  async chart(
+    @CurrentPrincipal() principal: Principal,
+    @Param("id", ParseUUIDPipe) id: string,
+  ): Promise<MySummaryResponse> {
+    return this.patients.getChart(principal, id);
   }
 
   /** Stale If-Match ⇒ 409 with reconcile guidance (DDR-0009/APDR-0006). */

@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { readSession } from "../../lib/session";
-import { friendlyRole } from "../../lib/roles";
-import { portalBySlug } from "../../lib/portals";
+import { friendlyRole, homeFor } from "../../lib/roles";
+import { canAccessPortal, portalBySlug } from "../../lib/portals";
+import { canBillEncounter } from "../../patients/shell";
 import { PortalView } from "./portal-view";
 import { PharmacyPortal } from "../pharmacy/pharmacy-portal";
 import { LabPortal } from "../laboratory/lab-portal";
@@ -21,6 +22,7 @@ export default async function DepartmentPortalPage({
   if (!session) redirect("/login");
   // Department portals are staff-only.
   if (session.roles.includes("patient")) redirect("/portal");
+  if (!canAccessPortal(slug, session.roles)) redirect(homeFor(session.roles));
 
   const greeting = friendlyRole(session.roles);
 
@@ -38,7 +40,13 @@ export default async function DepartmentPortalPage({
     return <RadiologyPortal userName={session.displayName} greeting={greeting} />;
   }
   if (slug === "billing") {
-    return <BillingPortal userName={session.displayName} greeting={greeting} />;
+    return (
+      <BillingPortal
+        userName={session.displayName}
+        greeting={greeting}
+        canManage={await canBillEncounter()}
+      />
+    );
   }
 
   const config = portalBySlug(slug);

@@ -38,6 +38,7 @@ describe("EncounterWorkspace (a11y)", () => {
     const { container } = render(
       <EncounterWorkspace
         encounter={encounter}
+        attendingName="Dr Bose"
         initialNotes={[]}
         initialObservations={[]}
         initialConditions={[]}
@@ -48,6 +49,7 @@ describe("EncounterWorkspace (a11y)", () => {
         canSign
         canBill
         canShare
+        canReview
       />,
     );
     expect(screen.getByLabelText("Chief complaint")).toBeInTheDocument();

@@ -30,6 +30,7 @@ export function PortalView({
       greeting={greeting}
       userName={userName}
       nav={nav}
+      previewBanner
       renderSection={(key) => {
         const label = config.nav.find((n) => n.key === key)?.label ?? key;
         return <MockSection title={label} data={config.sections[key]} />;

@@ -24,6 +24,7 @@ import {
   facilityResponseSchema,
   organizationResponseSchema,
   tenantResponseSchema,
+  updateUserStatusRequestSchema,
   userResponseSchema,
 } from "./platform";
 import {
@@ -379,6 +380,11 @@ export const openApiDocument = {
         },
       },
     },
+    "/v1/users/{id}/status": patchById(
+      "user status (deactivate/reactivate a staff login)",
+      updateUserStatusRequestSchema,
+      userResponseSchema,
+    ),
     "/v1/reference/code-systems": {
       get: {
         summary: "List global code systems (DDR-0012)",
@@ -472,6 +478,18 @@ export const openApiDocument = {
     "/v1/patients/{id}": {
       ...readById("patient", patientResponseSchema),
       ...patchById("patient", updatePatientRequestSchema, patientResponseSchema),
+    },
+    "/v1/patients/{id}/chart": {
+      get: {
+        summary:
+          "Staff patient chart — visits, vitals, diagnoses, medications, lab/imaging reports, and invoices for an authorized patient (patient:read). Same aggregate as /v1/me/summary, keyed by an explicit id instead of the caller's own token.",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          "200": jsonOk("The patient's clinical chart", mySummaryResponseSchema),
+          "404": problemResponse("Patient not found in this tenant"),
+          ...standardErrors,
+        },
+      },
     },
     "/fhir/R4/Patient/{id}": fhirRead("Patient", fhirPatientSchema),
 
@@ -765,6 +783,22 @@ export const openApiDocument = {
       "diagnostic reports (results)",
       listResultsResponseSchema,
     ),
+    "/v1/encounters/{id}/results/{resultId}/review": {
+      post: {
+        summary:
+          "The ordering clinician reviews a filed result — the only gate before it reaches the patient portal (result:file; If-Match).",
+        parameters: [
+          uuidPathParam,
+          { name: "resultId", in: "path", required: true, schema: { type: "string" } },
+          ifMatchHeader,
+        ],
+        responses: {
+          "200": jsonOk("Result marked reviewed", resultResponseSchema),
+          "409": problemResponse("Version conflict — reload and retry"),
+          ...standardErrors,
+        },
+      },
+    },
     "/v1/orders/{id}/results": {
       post: {
         summary: "File a diagnostic report against an order (result)",

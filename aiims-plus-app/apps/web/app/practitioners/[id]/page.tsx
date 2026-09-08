@@ -13,7 +13,9 @@ export default async function PractitionerPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ warning?: string }>;
 }) {
-  if (!(await readSession())) redirect("/login");
+  const session = await readSession();
+  if (!session) redirect("/login");
+  if (session.roles.includes("patient")) redirect("/portal");
   const { id } = await params;
   const { warning } = await searchParams;
   const res = await apiFetch(`/v1/practitioners/${id}`);

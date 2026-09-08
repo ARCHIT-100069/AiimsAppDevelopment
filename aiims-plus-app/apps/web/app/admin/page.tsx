@@ -22,12 +22,14 @@ export default async function AdminPage() {
   if (!session) redirect("/login");
   if (!session.roles.includes("admin")) redirect(homeFor(session.roles));
 
-  const [organizations, staff, practitioners, appointments] = await Promise.all([
+  const [organizations, staff, practitioners, appointments, overviewRes] = await Promise.all([
     list("/v1/organizations"),
     list("/v1/users"),
     list("/v1/practitioners"),
     list("/v1/appointments"),
+    apiFetch("/v1/management/overview"),
   ]);
+  const overview = overviewRes.ok ? await overviewRes.json() : null;
 
   return (
     <AdminApp
@@ -38,6 +40,7 @@ export default async function AdminPage() {
         staff: staff as never,
         practitioners: practitioners as never,
         appointments: appointments as never,
+        overview,
       }}
     />
   );

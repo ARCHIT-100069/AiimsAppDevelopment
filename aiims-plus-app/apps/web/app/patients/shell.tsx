@@ -8,6 +8,7 @@ import {
   IconCross,
   IconLogout,
   IconPatients,
+  IconScan,
   IconStethoscope,
 } from "@aiims/ui-web";
 import { readSession } from "../lib/session";
@@ -17,7 +18,8 @@ const NAV = [
   { label: "Practitioners", href: "/practitioners", icon: IconStethoscope },
   { label: "Appointments", href: "/appointments", icon: IconCalendar },
   { label: "Encounters", href: "#", icon: IconClipboard, soon: true },
-  { label: "Billing", href: "#", icon: IconBilling, soon: true },
+  { label: "Scan ID", href: "/scan", icon: IconScan },
+  { label: "Billing", href: "/portals/billing", icon: IconBilling },
 ];
 
 /** Authenticated shell (FEDR-0005): sidebar nav + top bar with user context. */
@@ -29,9 +31,9 @@ export async function AppShell({ active, children }: { active?: string; children
     <div className="app-bg flex min-h-screen">
       {/* Sidebar */}
       <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200/70 bg-white/70 backdrop-blur md:flex">
-        <div className="flex items-center gap-2 px-6 py-5 text-teal-700">
+        <div className="flex items-center gap-2 px-6 py-5 text-teal-800">
           <IconCross width={24} height={24} />
-          <span className="text-lg font-bold tracking-tight">AIIMS+</span>
+          <span className="font-display text-lg tracking-tight">AIIMS+</span>
         </div>
         <nav className="flex-1 space-y-1 px-3 py-2">
           {NAV.map(({ label, href, icon: Icon, soon }) => {
@@ -43,9 +45,9 @@ export async function AppShell({ active, children }: { active?: string; children
                 aria-current={isActive ? "page" : undefined}
                 aria-disabled={soon}
                 className={[
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
+                  "flex items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium",
                   isActive
-                    ? "bg-teal-50 text-teal-700"
+                    ? "bg-teal-50 text-teal-800"
                     : soon
                       ? "cursor-default text-slate-400"
                       : "text-slate-600 hover:bg-slate-100",
@@ -68,9 +70,9 @@ export async function AppShell({ active, children }: { active?: string; children
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/70 bg-white/80 px-6 py-3 backdrop-blur">
-          <div className="flex items-center gap-2 text-teal-700 md:hidden">
+          <div className="flex items-center gap-2 text-teal-800 md:hidden">
             <IconCross width={20} height={20} />
-            <span className="font-bold">AIIMS+</span>
+            <span className="font-display">AIIMS+</span>
           </div>
           <div className="ml-auto flex items-center gap-4">
             <div className="hidden text-right sm:block">
@@ -81,11 +83,11 @@ export async function AppShell({ active, children }: { active?: string; children
             <form action="/api/auth/logout" method="post">
               <button
                 type="submit"
-                title="Sign out"
-                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                title="Log out"
+                className="rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
               >
                 <IconLogout width={18} height={18} />
-                <span className="sr-only">Sign out</span>
+                <span className="sr-only">Log out</span>
               </button>
             </form>
           </div>
@@ -97,7 +99,7 @@ export async function AppShell({ active, children }: { active?: string; children
 }
 
 function prettyRole(role?: string): string {
-  return role ? role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "Staff";
+  return role ? role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "Team";
 }
 
 export { Badge };
@@ -130,6 +132,13 @@ export async function canDocumentEncounter(): Promise<boolean> {
 export async function canSignEncounter(): Promise<boolean> {
   const session = await readSession();
   return session?.roles.some((r) => r === "doctor") ?? false;
+}
+
+/** Releasing a result to the patient is the ordering clinician's call — not
+ *  the lab's, and not a nurse's (mirrors backend `result:file`, ADR-0022). */
+export async function canReviewResult(): Promise<boolean> {
+  const session = await readSession();
+  return session?.roles.some((r) => r === "doctor" || r === "admin") ?? false;
 }
 
 /** Reception is the cashier: invoice + settle payment (decision D-6.5). */

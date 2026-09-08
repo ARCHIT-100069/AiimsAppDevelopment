@@ -3,7 +3,8 @@ export function homeFor(roles: readonly string[]): string {
   if (roles.includes("patient")) return "/portal";
   if (roles.includes("admin")) return "/admin";
   if (roles.includes("doctor")) return "/doctor";
-  return "/patients"; // nurse / front_desk
+  if (roles.includes("nurse")) return "/nurse";
+  return "/patients"; // front_desk
 }
 
 /** Friendly role label for greetings ("Hey Doctor"). */

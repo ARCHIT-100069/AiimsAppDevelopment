@@ -7,20 +7,7 @@
  * request body.
  */
 import { Body, Controller, Get, HttpCode, Post, Query } from "@nestjs/common";
-import {
-  computeFreeSlots,
-  getPatientById,
-  listBookablePractitioners,
-  listDiagnosesByPatient,
-  listInvoicesByPatient,
-  listLabResultLines,
-  listPrescriptionItems,
-  listPrescriptionsByPatient,
-  listReportsByPatient,
-  listVisitsByPatient,
-  listVitalsByPatient,
-  searchAppointments,
-} from "@aiims/db";
+import { computeFreeSlots, listBookablePractitioners } from "@aiims/db";
 import {
   bookMyAppointmentRequestSchema,
   createFeedbackRequestSchema,
@@ -35,6 +22,7 @@ import type { Principal } from "@aiims/domain-types";
 import { NotFoundError } from "../../../common/errors";
 import { UnitOfWork } from "../../../platform/db.provider";
 import { CurrentPrincipal, RequirePermission } from "../../../platform/decorators";
+import { buildPatientChart } from "../../../common/patient-chart";
 import { MeService } from "../application/me.service";
 
 const VISIT_MINUTES = 15;
@@ -54,111 +42,10 @@ export class MeController {
 
     return this.uow.withTenant(
       { tenantId: principal.tenantId, actorId: principal.actorId },
-      async (db): Promise<MySummaryResponse> => {
-        const patient = await getPatientById(db, patientId);
-        if (!patient) throw new NotFoundError("Patient not found");
-
-        const [appointments, diagnoses, invoices, visits, reports, vitals, prescriptions] =
-          await Promise.all([
-            searchAppointments(db, { patientId, limit: 20 }),
-            listDiagnosesByPatient(db, patientId),
-            listInvoicesByPatient(db, patientId),
-            listVisitsByPatient(db, patientId),
-            listReportsByPatient(db, patientId),
-            listVitalsByPatient(db, patientId),
-            listPrescriptionsByPatient(db, patientId),
-          ]);
-        // Flatten prescription items into a medications list.
-        const medications = (
-          await Promise.all(
-            prescriptions.map(async (p) => {
-              const items = await listPrescriptionItems(db, p.id);
-              return items.map((it) => ({
-                id: it.id,
-                name: `${it.drugName} ${it.strength}`,
-                dose: it.dose,
-                frequency: it.frequency,
-                duration: it.duration,
-                status: p.status,
-                prescribedAt: p.createdAt.toISOString(),
-              }));
-            }),
-          )
-        ).flat();
-
-        return {
-          profile: {
-            id: patient.id,
-            mrn: patient.mrn,
-            nameGiven: patient.nameGiven,
-            nameFamily: patient.nameFamily,
-            gender: patient.gender,
-            birthDate: patient.birthDate,
-            // phone/email stay encrypted at rest; the portal shows the ABHA
-            // address (plaintext) and omits the encrypted identifiers.
-            phone: null,
-            email: null,
-            abhaAddress: patient.abhaAddress ?? null,
-          },
-          appointments: appointments.map((a) => ({
-            id: a.id,
-            startAt: a.startAt.toISOString(),
-            endAt: a.endAt.toISOString(),
-            status: a.status,
-            appointmentType: a.appointmentType,
-            reasonText: a.reasonText ?? null,
-          })),
-          diagnoses: diagnoses.map((d) => ({
-            code: d.code,
-            system: d.codeSystem,
-            display: d.display,
-            category: d.category,
-            clinicalStatus: d.clinicalStatus,
-            recordedAt: d.recordedAt.toISOString(),
-          })),
-          invoices: invoices.map((i) => ({
-            invoiceNumber: i.invoiceNumber,
-            status: i.status,
-            currency: i.currency,
-            total: i.total,
-            paymentMethod: i.paymentMethod ?? null,
-            issuedAt: i.issuedAt.toISOString(),
-            paidAt: i.paidAt ? i.paidAt.toISOString() : null,
-          })),
-          visits: visits.map((v) => ({
-            id: v.id,
-            status: v.status,
-            chiefComplaint: v.chiefComplaint ?? null,
-            date: v.periodStart.toISOString(),
-            signed: v.signedAt !== null,
-          })),
-          reports: await Promise.all(
-            reports.map(async (r) => ({
-              id: r.id,
-              status: r.status,
-              conclusion: r.conclusion,
-              issuedAt: r.issuedAt.toISOString(),
-              category: r.category,
-              lines: (await listLabResultLines(db, r.id)).map((l) => ({
-                analyte: l.analyte,
-                value: l.value,
-                unit: l.unit ?? null,
-                referenceRange: l.referenceRange ?? null,
-                flag: l.flag,
-              })),
-            })),
-          ),
-          vitals: vitals.map((v) => ({
-            id: v.id,
-            code: v.code,
-            display: v.display,
-            valueNumeric: v.valueNumeric ?? null,
-            unit: v.unit ?? null,
-            valueText: v.valueText ?? null,
-            effectiveAt: v.effectiveAt.toISOString(),
-          })),
-          medications,
-        };
+      async (db) => {
+        const chart = await buildPatientChart(db, patientId, true);
+        if (!chart) throw new NotFoundError("Patient not found");
+        return chart;
       },
     );
   }

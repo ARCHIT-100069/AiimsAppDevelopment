@@ -136,6 +136,27 @@ export async function listPractitionersByDepartment(
     .limit(limit);
 }
 
+/** Active practitioners whose linked login actually holds `roleCode` —
+ *  e.g. booking a consultation must offer doctors, not nurses or the front
+ *  desk, even though every clinical role gets a practitioner profile.
+ *  Alphabetical, not newest-first: staff picking a name from a list of
+ *  near-duplicates (repeat demo data) need it predictable, not recency-sorted. */
+export async function listPractitionersByRole(
+  db: TenantDb,
+  roleCode: string,
+  limit: number,
+): Promise<PractitionerRow[]> {
+  const rows = await db
+    .select(columns)
+    .from(s.practitioner)
+    .innerJoin(s.userRole, eq(s.userRole.userId, s.practitioner.appUserId))
+    .innerJoin(s.role, and(eq(s.role.id, s.userRole.roleId), eq(s.role.code, roleCode)))
+    .where(and(notDeleted, eq(s.practitioner.status, "active")))
+    .orderBy(s.practitioner.nameFamily, s.practitioner.nameGiven)
+    .limit(limit);
+  return rows;
+}
+
 export async function listPractitioners(
   db: TenantDb,
   limit: number,

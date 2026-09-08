@@ -36,6 +36,7 @@ import {
   type ObservationResponse,
   type OrderResponse,
   type PresignUploadResponse,
+  type ResultResponse,
 } from "@aiims/api-contracts";
 import type { Principal } from "@aiims/domain-types";
 import { DomainError } from "../../../common/errors";
@@ -189,6 +190,21 @@ export class EmrController {
   ): Promise<ListResultsResponse> {
     const rows = await this.emr.listResults(principal, id);
     return { data: rows.map(toResultResponse) };
+  }
+
+  /** The ordering clinician reviews a result — only after this does it reach
+   *  the patient portal (0022). `result:file` (not `result:read`) so a nurse
+   *  can see a result but not be the one releasing it to the patient. */
+  @Post(":id/results/:resultId/review")
+  @HttpCode(200)
+  @RequirePermission("result:file")
+  async reviewResult(
+    @CurrentPrincipal() principal: Principal,
+    @Param("resultId", ParseUUIDPipe) resultId: string,
+    @Headers("if-match") ifMatch: string | undefined,
+  ): Promise<ResultResponse> {
+    const expectedVersion = requireIfMatch(ifMatch);
+    return toResultResponse(await this.emr.reviewResult(principal, resultId, expectedVersion));
   }
 
   @Post(":id/attachments/presign-upload")

@@ -10,7 +10,11 @@
  * DDR-0007 events describe state), using the same hash chain.
  */
 import { Inject, Injectable } from "@nestjs/common";
-import type { CreatePatientRequest, UpdatePatientRequest } from "@aiims/api-contracts";
+import type {
+  CreatePatientRequest,
+  MySummaryResponse,
+  UpdatePatientRequest,
+} from "@aiims/api-contracts";
 import {
   findIdempotentResource,
   insertOutboxEvent,
@@ -30,6 +34,7 @@ import { ConflictError, DomainError, NotFoundError } from "../../../common/error
 import { AuditService } from "../../../platform/audit.service";
 import { UnitOfWork } from "../../../platform/db.provider";
 import { InvalidPatientError, Patient } from "../domain/patient";
+import { buildPatientChart } from "../../../common/patient-chart";
 import {
   PATIENT_REPOSITORY,
   type IdentifierKind,
@@ -167,6 +172,27 @@ export class PatientService {
         occurredAt: new Date(),
       });
       return patient;
+    });
+  }
+
+  /** The clinical chart — visits, vitals, diagnoses, medications, reports,
+   *  invoices — for staff authorized to read this patient (doctor, nurse,
+   *  front desk). Same aggregate the patient's own portal reads (self:read);
+   *  here gated on patient:read against an explicit id, not the caller's own
+   *  token. */
+  async getChart(principal: Principal, id: string): Promise<MySummaryResponse> {
+    const actor = { tenantId: principal.tenantId, actorId: principal.actorId };
+    return this.uow.withTenant(actor, async (db) => {
+      const chart = await buildPatientChart(db, id, false);
+      if (!chart) throw new NotFoundError("Patient not found");
+      await this.audit.append(db, actor, {
+        eventId: newId(),
+        action: "patient.chart.read",
+        resourceType: "patient",
+        resourceId: id,
+        occurredAt: new Date(),
+      });
+      return chart;
     });
   }
 

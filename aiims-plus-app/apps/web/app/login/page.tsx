@@ -23,6 +23,8 @@ const ERRORS: Record<string, string> = {
   credentials: "Incorrect username or password. Please try again.",
   auth: "Sign-in was interrupted. Please try again.",
   token: "Could not complete sign-in. Please try again.",
+  disabled: "This account has been deactivated. Contact your hospital administrator.",
+  service: "Sign-in is temporarily unavailable. Please try again in a moment.",
 };
 
 /** Login — split-panel brand story + native sign-in (password grant) with a
@@ -40,34 +42,34 @@ export default async function LoginPage({
       {/* Brand panel */}
       <aside className="auth-panel relative hidden flex-col justify-between overflow-hidden p-12 text-white lg:flex">
         <Ripple mainCircleSize={280} numCircles={8} />
-        <div className="relative z-10 flex items-center gap-2 text-lg font-semibold">
+        <div className="font-display relative z-10 flex items-center gap-2 text-lg tracking-tight">
           <IconCross width={26} height={26} />
           AIIMS+
         </div>
 
         <div className="relative z-10 max-w-lg">
-          <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/80 ring-1 ring-white/20">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+          <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/25 px-3 py-1 text-xs font-medium uppercase tracking-wider text-white/80">
+            <span className="h-1.5 w-1.5 rounded-full bg-white/70" />
             India-first Hospital OS
           </p>
-          <h1 className="text-4xl font-bold leading-[1.1] xl:text-5xl">
+          <h1 className="font-display text-4xl font-normal leading-[1.15] tracking-tight xl:text-5xl">
             One secure login for your whole hospital.
           </h1>
-          <p className="mt-4 max-w-md text-white/80">
+          <p className="mt-4 max-w-md text-white/75">
             Patients, doctors, pharmacy, lab, radiology, billing and management — one platform,
             tenant-isolated, with a complete audit trail built in.
           </p>
-          <ul className="mt-8 space-y-3 text-sm text-white/90">
+          <ul className="mt-8 space-y-3 text-sm text-white/85">
             {TRUST.map((f) => (
               <li key={f} className="flex items-center gap-2.5">
-                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/15">
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-white/25">
                   <IconShield width={14} height={14} />
                 </span>
                 {f}
               </li>
             ))}
           </ul>
-          <div className="mt-8 overflow-hidden rounded-2xl border border-white/20 shadow-2xl">
+          <div className="mt-8 overflow-hidden rounded-2xl border border-white/20">
             <img
               src="/images/care-hero.jpg"
               alt="A doctor consulting with a patient"
@@ -76,7 +78,7 @@ export default async function LoginPage({
           </div>
         </div>
 
-        <div className="relative z-10 flex items-center gap-4 text-xs text-white/60">
+        <div className="relative z-10 flex items-center gap-4 text-xs uppercase tracking-wider text-white/55">
           <span>ABDM aligned</span>
           <span className="h-1 w-1 rounded-full bg-white/40" />
           <span>DPDP compliant</span>
@@ -88,18 +90,20 @@ export default async function LoginPage({
       {/* Sign-in side */}
       <main className="app-bg relative flex flex-col items-center justify-center gap-5 overflow-hidden p-6">
         <div className="card relative z-10 w-full max-w-sm p-8">
-          <div className="mb-6 flex items-center gap-2 text-teal-700">
+          <div className="mb-6 flex items-center gap-2 text-teal-800">
             <IconCross width={24} height={24} />
-            <span className="text-lg font-semibold">AIIMS+</span>
+            <span className="font-display text-lg tracking-tight">AIIMS+</span>
           </div>
 
-          <h2 className="text-xl font-semibold text-slate-900">Sign in</h2>
+          <h2 className="font-display text-xl font-normal tracking-tight text-slate-900">
+            Sign in
+          </h2>
           <p className="mt-1 text-sm text-slate-500">
             Use your hospital account — staff or patient.
           </p>
 
           {errorMsg ? (
-            <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p role="alert" className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
               {errorMsg}
             </p>
           ) : null}
@@ -107,8 +111,10 @@ export default async function LoginPage({
           {/* Native username/password sign-in */}
           <form action="/api/auth/password-login" method="post" className="mt-5 space-y-3">
             <label className="block text-sm">
-              <span className="font-medium text-slate-600">Username</span>
-              <div className="mt-1 flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-100">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                Username
+              </span>
+              <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 focus-within:border-teal-600">
                 <UserIcon />
                 <input
                   name="username"
@@ -120,8 +126,10 @@ export default async function LoginPage({
               </div>
             </label>
             <label className="block text-sm">
-              <span className="font-medium text-slate-600">Password</span>
-              <div className="mt-1 flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-100">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                Password
+              </span>
+              <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 focus-within:border-teal-600">
                 <LockIcon />
                 <input
                   name="password"
@@ -135,7 +143,7 @@ export default async function LoginPage({
             </label>
             <button
               type="submit"
-              className="flex w-full items-center justify-center rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-700"
+              className="flex w-full items-center justify-center rounded-full bg-teal-700 px-4 py-2.5 text-sm font-medium tracking-wide text-white transition-colors hover:bg-teal-800"
             >
               Sign in
             </button>
@@ -157,7 +165,7 @@ export default async function LoginPage({
                     <input type="hidden" name="password" value={d.p} />
                     <button
                       type="submit"
-                      className={`w-full rounded-lg border px-3 py-2 text-left transition-colors ${
+                      className={`w-full rounded-xl border px-3 py-2 text-left transition-colors ${
                         d.tone === "teal"
                           ? "border-teal-200 bg-teal-50 hover:bg-teal-100"
                           : "border-slate-200 bg-white hover:bg-slate-50"
@@ -175,7 +183,7 @@ export default async function LoginPage({
           {/* New patient */}
           <p className="mt-5 border-t border-slate-100 pt-4 text-center text-sm text-slate-500">
             New patient?{" "}
-            <a href="/register" className="font-medium text-teal-700 hover:underline">
+            <a href="/register" className="font-medium text-teal-800 hover:underline">
               Create an account
             </a>
           </p>
@@ -183,7 +191,7 @@ export default async function LoginPage({
           {/* SSO fallback */}
           <a
             href="/api/auth/login"
-            className="mt-3 block text-center text-xs font-medium text-slate-500 hover:text-teal-700"
+            className="mt-3 block text-center text-xs font-medium text-slate-500 hover:text-teal-800"
           >
             Or use hospital single sign-on (SSO) →
           </a>

@@ -92,6 +92,13 @@ export const IconEdit = (p: IconProps) => (
   </svg>
 );
 
+export const IconScan = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+    <path d="M7 12h10" />
+  </svg>
+);
+
 export const IconStethoscope = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M4 3v6a5 5 0 0 0 10 0V3M4 3H2m2 0h2m8 0h-2m2 0h2M9 14v3a5 5 0 0 0 10 0v-2" />

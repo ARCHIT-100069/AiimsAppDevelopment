@@ -19,6 +19,31 @@ export function base64url(buf: Buffer): string {
   return buf.toString("base64url");
 }
 
+const STAFF_ROLES = ["admin", "doctor", "nurse", "front_desk"];
+
+/** Keycloak only knows the password is right — it has no idea whether an
+ *  admin deactivated this account's app_user row afterwards. `org:read` is
+ *  the one permission every staff role holds, so a cheap authenticated call
+ *  to it is a reliable way to confirm the account still resolves to an
+ *  active principal before a session is ever written for it. Patients skip
+ *  this check entirely — their principal resolves from the JWT directly and
+ *  holds no `org:read` permission. */
+export async function isDisabledStaffAccount(
+  accessToken: string,
+  roles: readonly string[],
+): Promise<boolean> {
+  if (!roles.some((r) => STAFF_ROLES.includes(r))) return false;
+  const apiBase = process.env.API_BASE_URL ?? "http://localhost:3000";
+  try {
+    const res = await fetch(`${apiBase}/v1/organizations?limit=1`, {
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+    return res.status === 401;
+  } catch {
+    return false;
+  }
+}
+
 export function createPkce(): { verifier: string; challenge: string } {
   const verifier = base64url(randomBytes(32));
   const challenge = base64url(createHash("sha256").update(verifier).digest());

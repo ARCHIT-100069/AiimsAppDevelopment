@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppShell, Badge, Card, Empty, Row, Stat, type NavItem } from "../../lib/app-shell";
+import { formatDateShort, formatDayMonthTime } from "../../lib/date";
 import type { DrugResponse, PrescriptionResponse } from "@aiims/api-contracts";
 
 const NAV: NavItem[] = [
@@ -90,8 +91,8 @@ export function PharmacyPortal({ userName, greeting }: { userName: string; greet
                 {dispensed.map((p) => (
                   <Row
                     key={p.id}
-                    title={p.items.map((i) => `${i.drugName} ${i.dose}`).join(", ")}
-                    sub={`${p.items.length} item(s) · ${new Date(p.createdAt).toLocaleDateString("en-IN")}`}
+                    title={p.patientName}
+                    sub={`${p.items.map((i) => `${i.drugName} ${i.dose}`).join(", ")} · ${formatDateShort(p.createdAt)}`}
                     right={<Badge tone="green">dispensed</Badge>}
                   />
                 ))}
@@ -216,7 +217,7 @@ function AddStock({ drugId, onAdded }: { drugId: string; onAdded: () => void }) 
       />
       <button
         disabled={busy}
-        className="rounded-lg bg-teal-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+        className="rounded-full bg-teal-700 px-3 py-1.5 text-sm font-medium tracking-wide text-white hover:bg-teal-800 disabled:opacity-50"
       >
         {busy ? "…" : "Add"}
       </button>
@@ -320,7 +321,7 @@ function AddDrug({ onAdded }: { onAdded: () => void }) {
         <div className="flex items-end">
           <button
             disabled={busy}
-            className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+            className="rounded-full bg-teal-700 px-4 py-2 text-sm font-medium tracking-wide text-white hover:bg-teal-800 disabled:opacity-50"
           >
             {busy ? "Adding…" : "Add drug"}
           </button>
@@ -377,19 +378,19 @@ function DispenseRow({ p, onDispensed }: { p: PrescriptionResponse; onDispensed:
     <li className="py-3">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate font-medium text-slate-800">
+          <p className="truncate font-medium text-slate-800">{p.patientName}</p>
+          <p className="truncate text-sm text-slate-500">
             {p.items.map((i) => `${i.drugName} ${i.dose} × ${i.quantity}`).join(", ")}
           </p>
-          <p className="truncate text-sm text-slate-500">
-            {p.items.map((i) => i.frequency).join(", ")} ·{" "}
-            {new Date(p.createdAt).toLocaleString("en-IN")}
+          <p className="truncate text-xs text-slate-400">
+            {p.items.map((i) => i.frequency).join(", ")} · {formatDayMonthTime(p.createdAt)}
           </p>
         </div>
         <button
           type="button"
           onClick={dispense}
           disabled={busy}
-          className="shrink-0 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+          className="shrink-0 rounded-full bg-teal-700 px-4 py-2 text-sm font-medium tracking-wide text-white hover:bg-teal-800 disabled:opacity-50"
         >
           {busy ? "…" : "Dispense"}
         </button>

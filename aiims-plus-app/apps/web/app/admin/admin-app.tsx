@@ -2,16 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  AppShell,
-  Badge,
-  Card,
-  Empty,
-  MockSection,
-  Row,
-  Stat,
-  type NavItem,
-} from "../lib/app-shell";
+import { Badge, Card, Empty, MockSection, Row, Splash, Stat, sectionIcon } from "../lib/app-shell";
+import { formatDayMonthTime, formatTodayHeader } from "../lib/date";
 import { adminMock } from "../lib/mock";
 
 interface Org {
@@ -23,6 +15,7 @@ interface StaffUser {
   id: string;
   displayName: string;
   status: string;
+  version: number;
   roles: string[];
 }
 interface Practitioner {
@@ -31,12 +24,27 @@ interface Practitioner {
   nameFamily: string;
   registrationNo: string;
   status: string;
+  version: number;
 }
 interface Appt {
   id: string;
   startAt: string;
   status: string;
   appointmentType: string;
+}
+interface ManagementOverview {
+  opd: {
+    total: number;
+    booked: number;
+    waiting: number;
+    inProgress: number;
+    completed: number;
+    cancelled: number;
+  };
+  revenue: { paidTotal: string; outstandingTotal: string; paidCount: number };
+  lab: { pending: number; resulted: number };
+  pharmacy: { activeRx: number; dispensedRx: number; lowStock: number };
+  satisfaction: { avgRating: number; count: number };
 }
 
 export interface AdminData {
@@ -46,9 +54,20 @@ export interface AdminData {
   staff: StaffUser[];
   practitioners: Practitioner[];
   appointments: Appt[];
+  overview: ManagementOverview | null;
 }
 
-const NAV: NavItem[] = [
+interface AdminNavItem {
+  key: string;
+  label: string;
+  group: string;
+  /** When set, this is a plain link to a REAL working page (e.g. the actual
+   *  Pharmacy Portal) instead of a section rendered in-app — used so a fake
+   *  MockSection is never offered where a real one already exists. */
+  href?: string;
+}
+
+const NAV: AdminNavItem[] = [
   { key: "dashboard", label: "Dashboard", group: "Overview" },
   { key: "patients", label: "Patient Management", group: "People" },
   { key: "staff", label: "Staff Management", group: "People" },
@@ -57,14 +76,29 @@ const NAV: NavItem[] = [
   { key: "appointments", label: "Appointment Management", group: "Operations" },
   { key: "beds", label: "Bed & Ward Management", group: "Operations" },
   { key: "records", label: "Medical Records Management", group: "Operations" },
-  { key: "pharmacy", label: "Pharmacy Management", group: "Clinical Services" },
-  { key: "lab", label: "Laboratory Management", group: "Clinical Services" },
-  { key: "radiology", label: "Radiology Management", group: "Clinical Services" },
-  { key: "billing", label: "Billing & Payments", group: "Finance" },
+  {
+    key: "pharmacy",
+    label: "Pharmacy Management",
+    group: "Clinical Services",
+    href: "/portals/pharmacy",
+  },
+  {
+    key: "lab",
+    label: "Laboratory Management",
+    group: "Clinical Services",
+    href: "/portals/laboratory",
+  },
+  {
+    key: "radiology",
+    label: "Radiology Management",
+    group: "Clinical Services",
+    href: "/portals/radiology",
+  },
+  { key: "billing", label: "Billing & Payments", group: "Finance", href: "/portals/billing" },
   { key: "insurance", label: "Insurance Management", group: "Finance" },
   { key: "inventory", label: "Inventory & Supplies", group: "Resources" },
   { key: "ambulance", label: "Ambulance Management", group: "Resources" },
-  { key: "reports", label: "Reports & Analytics", group: "System" },
+  { key: "reports", label: "Reports & Analytics", group: "System", href: "/portals/management" },
   { key: "notifications", label: "Notifications & Announcements", group: "System" },
   { key: "audit", label: "Audit Logs", group: "System" },
   { key: "integrations", label: "Integrations", group: "System" },
@@ -72,6 +106,9 @@ const NAV: NavItem[] = [
   { key: "portals", label: "Department Portals", group: "System" },
   { key: "profile", label: "My Profile", group: "Account" },
 ];
+
+const inr = (n: string | number) =>
+  "₹" + Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
 const DEPT_PORTALS: [string, string][] = [
   ["billing", "Billing & Accounts"],
@@ -91,14 +128,7 @@ const DEPT_PORTALS: [string, string][] = [
   ["superadmin", "Super Admin"],
 ];
 
-const fmt = (iso: string) =>
-  new Date(iso).toLocaleString("en-IN", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Kolkata",
-  });
+const fmt = formatDayMonthTime;
 
 const ROLE_SUMMARY: [string, string][] = [
   [
@@ -130,6 +160,7 @@ function AddStaff() {
   });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) =>
     setF((s) => ({ ...s, [k]: e.target.value }));
   const field = "mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm";
@@ -198,15 +229,24 @@ function AddStaff() {
         </label>
         <label className="text-sm sm:col-span-2">
           <span className="text-slate-500">Temporary password</span>
-          <input
-            required
-            type="text"
-            minLength={4}
-            value={f.password}
-            onChange={set("password")}
-            placeholder="Share securely; staff can change it later"
-            className={field}
-          />
+          <div className="relative mt-1">
+            <input
+              required
+              type={showPassword ? "text" : "password"}
+              minLength={4}
+              value={f.password}
+              onChange={set("password")}
+              placeholder="Share securely; staff can change it later"
+              className={`${field} mt-0 pr-16`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute inset-y-0 right-2 text-xs font-medium text-teal-700 hover:text-teal-800"
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
         </label>
         {msg ? (
           <p
@@ -218,7 +258,7 @@ function AddStaff() {
         <div className="sm:col-span-2">
           <button
             disabled={busy}
-            className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+            className="rounded-full bg-teal-700 px-4 py-2 text-sm font-medium tracking-wide text-white hover:bg-teal-800 disabled:opacity-50"
           >
             {busy ? "Creating…" : "Create staff account"}
           </button>
@@ -232,39 +272,78 @@ function AddStaff() {
   );
 }
 
+/** Deactivate/reactivate a staff login or practitioner profile — a real
+ *  write against the actual backend (blocks/restores session resolution for
+ *  staff logins; RBAC-gated to admin). Self-contained: no self-deactivation. */
+function StatusToggle({
+  kind,
+  id,
+  status,
+  version,
+  isSelf,
+}: {
+  kind: "staff" | "practitioner";
+  id: string;
+  status: string;
+  version: number;
+  isSelf?: boolean;
+}) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const active = status === "active";
+  const nextStatus = active ? (kind === "staff" ? "disabled" : "inactive") : "active";
+  const url = kind === "staff" ? `/api/bff/staff/${id}/status` : `/api/bff/practitioners/${id}`;
+
+  async function toggle() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch(url, {
+        method: "PATCH",
+        headers: { "content-type": "application/json", "if-match": String(version) },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (res.ok) {
+        router.refresh();
+      } else if (res.status === 409) {
+        setErr("Changed elsewhere — refresh and retry.");
+      } else {
+        setErr("Couldn't update status.");
+      }
+    } catch {
+      setErr("Network error — try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (isSelf) {
+    return <span className="text-xs text-slate-400">This is you</span>;
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {err ? <span className="text-xs text-red-600">{err}</span> : null}
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={busy}
+        className={`text-xs font-medium hover:underline disabled:opacity-50 ${
+          active ? "text-red-600" : "text-teal-700"
+        }`}
+      >
+        {busy ? "…" : active ? "Deactivate" : "Reactivate"}
+      </button>
+    </div>
+  );
+}
+
 export function AdminApp({ data }: { data: AdminData }) {
   const doctors = data.practitioners.length;
 
   const render = (key: string) => {
     switch (key) {
-      case "dashboard":
-        return (
-          <>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Hospital overview</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Administrative snapshot for your hospital.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Stat label="Organisations" value={`${data.organizations.length}`} />
-              <Stat label="Staff" value={`${data.staff.length}`} tone="slate" />
-              <Stat label="Practitioners" value={`${doctors}`} tone="slate" />
-              <Stat label="Appointments" value={`${data.appointments.length}`} tone="slate" />
-            </div>
-            <Card title="Facilities">
-              {data.organizations.length === 0 ? (
-                <Empty>No organisations configured.</Empty>
-              ) : (
-                <ul className="divide-y divide-slate-100">
-                  {data.organizations.map((o) => (
-                    <Row key={o.id} title={o.name} sub={o.type} />
-                  ))}
-                </ul>
-              )}
-            </Card>
-          </>
-        );
       case "staff":
         return (
           <>
@@ -280,7 +359,16 @@ export function AdminApp({ data }: { data: AdminData }) {
                       title={u.displayName}
                       sub={u.roles.join(", ") || "no role"}
                       right={
-                        <Badge tone={u.status === "active" ? "green" : "slate"}>{u.status}</Badge>
+                        <div className="flex items-center gap-3">
+                          <Badge tone={u.status === "active" ? "green" : "slate"}>{u.status}</Badge>
+                          <StatusToggle
+                            kind="staff"
+                            id={u.id}
+                            status={u.status}
+                            version={u.version}
+                            isSelf={u.displayName === data.userName}
+                          />
+                        </div>
                       }
                     />
                   ))}
@@ -298,7 +386,15 @@ export function AdminApp({ data }: { data: AdminData }) {
                       title={`${p.nameGiven} ${p.nameFamily}`}
                       sub={`Reg. ${p.registrationNo}`}
                       right={
-                        <Badge tone={p.status === "active" ? "green" : "slate"}>{p.status}</Badge>
+                        <div className="flex items-center gap-3">
+                          <Badge tone={p.status === "active" ? "green" : "slate"}>{p.status}</Badge>
+                          <StatusToggle
+                            kind="practitioner"
+                            id={p.id}
+                            status={p.status}
+                            version={p.version}
+                          />
+                        </div>
                       }
                     />
                   ))}
@@ -350,7 +446,7 @@ export function AdminApp({ data }: { data: AdminData }) {
                   <Row
                     key={a.id}
                     title={fmt(a.startAt)}
-                    sub={a.appointmentType}
+                    sub={a.appointmentType.replace("_", " ")}
                     right={<Badge tone="teal">{a.status.replace("_", " ")}</Badge>}
                   />
                 ))}
@@ -403,14 +499,276 @@ export function AdminApp({ data }: { data: AdminData }) {
     }
   };
 
+  const [active, setActive] = useState<string | null>(null);
+  const activeItem = NAV.find((n) => n.key === active);
+  const groups = [...new Set(NAV.map((n) => n.group))];
+  const ov = data.overview;
+
   return (
-    <AppShell
-      appName="AIIMS+"
-      roleLabel="Admin Console"
-      greeting="Admin"
-      userName={data.userName}
-      nav={NAV}
-      renderSection={render}
-    />
+    <div className="app-bg flex h-screen flex-col overflow-hidden">
+      <Splash greeting="Admin" />
+
+      {/* Persistent top bar */}
+      <header className="z-20 flex shrink-0 items-center gap-4 border-b border-white/40 bg-white/75 px-5 py-2.5 backdrop-blur">
+        <button
+          type="button"
+          onClick={() => setActive(null)}
+          className="flex shrink-0 items-center gap-1.5 text-teal-700"
+        >
+          <svg width={20} height={20} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M10 2h4v8h8v4h-8v8h-4v-8H2v-4h8z" />
+          </svg>
+          <span className="font-display text-base tracking-tight">AIIMS+</span>
+        </button>
+        <div className="hidden text-sm text-slate-500 sm:block">Admin Console</div>
+
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActive("staff")}
+            className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3.5 py-1.5 text-sm font-medium text-teal-700 hover:border-teal-300 sm:flex"
+          >
+            <svg
+              width={15}
+              height={15}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Add staff
+          </button>
+          <button
+            type="button"
+            title="Notifications"
+            className="grid h-9 w-9 place-items-center rounded-full text-slate-500 hover:bg-slate-100"
+          >
+            <svg
+              width={18}
+              height={18}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M6 9a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6M10 21h4" />
+            </svg>
+          </button>
+          <span className="hidden text-sm text-slate-600 sm:block">{data.userName}</span>
+          <form action="/api/auth/logout" method="post">
+            <button className="rounded-full px-3.5 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+              Log out
+            </button>
+          </form>
+        </div>
+      </header>
+
+      {/* Mobile section picker — the rail below is desktop/tablet-only (lg+); a
+          narrow phone gets a plain dropdown instead of a squeezed sidebar. */}
+      <div className="shrink-0 border-b border-white/40 bg-white/60 px-4 py-2 lg:hidden">
+        <label htmlFor="admin-mobile-nav" className="sr-only">
+          Section
+        </label>
+        <select
+          id="admin-mobile-nav"
+          value={active ?? "dashboard"}
+          onChange={(e) => {
+            const target = NAV.find((n) => n.key === e.target.value);
+            if (target?.href) window.location.href = target.href;
+            else setActive(e.target.value === "dashboard" ? null : e.target.value);
+          }}
+          className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm"
+        >
+          {NAV.map((n) => (
+            <option key={n.key} value={n.key}>
+              {n.label}
+              {n.href ? " (live)" : ""}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Persistent left rail — same pattern as the doctor workspace, for a
+            consistent navigation feel across roles. */}
+        <nav className="hidden w-[276px] shrink-0 overflow-y-auto border-r border-white/40 bg-white/45 px-3 py-4 lg:block">
+          {groups.map((g, gi) => (
+            <div key={g} className={gi === 0 ? "mb-5" : "mb-5 mt-1"}>
+              <p className="mb-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                {g}
+              </p>
+              <div className="space-y-0.5">
+                {NAV.filter((n) => n.group === g).map((n) => {
+                  const isDashboard = n.key === "dashboard";
+                  const isActive = isDashboard ? active === null : active === n.key;
+                  const content = (
+                    <>
+                      <span
+                        className={`grid h-7 w-7 shrink-0 place-items-center rounded-full ${
+                          isActive ? "bg-white/15" : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {sectionIcon(n.label, 16)}
+                      </span>
+                      <span className="min-w-0 flex-1 leading-tight">{n.label}</span>
+                      {n.href ? <Badge tone="green">Live</Badge> : null}
+                    </>
+                  );
+                  const cls = `flex w-full items-center gap-3 rounded-full px-2.5 py-2 text-left text-[13px] font-medium transition-colors ${
+                    isActive
+                      ? "bg-teal-700 text-white"
+                      : "text-slate-600 hover:bg-teal-50 hover:text-teal-700"
+                  }`;
+                  return n.href ? (
+                    <a key={n.key} href={n.href} className={cls}>
+                      {content}
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      key={n.key}
+                      onClick={() => setActive(isDashboard ? null : n.key)}
+                      className={cls}
+                    >
+                      {content}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        {/* Main workspace */}
+        <main className="flex-1 overflow-y-auto p-6">
+          {active === null ? (
+            <div className="flex h-full flex-col gap-4">
+              <div>
+                <h1 className="font-display text-xl font-normal tracking-tight text-slate-900">
+                  Hey Admin
+                </h1>
+                <p className="text-sm text-slate-500">
+                  {formatTodayHeader()} · hospital-wide snapshot.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Stat label="Organisations" value={`${data.organizations.length}`} />
+                <Stat label="Staff" value={`${data.staff.length}`} tone="slate" />
+                <Stat label="Practitioners" value={`${doctors}`} tone="slate" />
+                <Stat label="Appointments" value={`${data.appointments.length}`} tone="slate" />
+              </div>
+
+              {ov ? (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <Stat label="OPD waiting now" value={`${ov.opd.waiting}`} tone="amber" />
+                  <Stat label="Revenue collected" value={inr(ov.revenue.paidTotal)} />
+                  <Stat label="Outstanding" value={inr(ov.revenue.outstandingTotal)} tone="amber" />
+                  <Stat label="Lab pending" value={`${ov.lab.pending}`} tone="slate" />
+                </div>
+              ) : (
+                <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  Hospital operations data (revenue, OPD activity, lab) is unavailable right now.
+                </p>
+              )}
+
+              <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-5">
+                <Card
+                  title="Facilities"
+                  action={<Badge tone="teal">{data.organizations.length}</Badge>}
+                >
+                  <div className="max-h-[360px] overflow-y-auto">
+                    {data.organizations.length === 0 ? (
+                      <Empty>No organisations configured.</Empty>
+                    ) : (
+                      <ul className="divide-y divide-slate-100">
+                        {data.organizations.map((o) => (
+                          <Row key={o.id} title={o.name} sub={o.type} />
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </Card>
+
+                <div className="flex flex-col gap-4 lg:col-span-2">
+                  {ov ? (
+                    <Card title="Today's OPD activity">
+                      <dl className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <dt className="text-xs uppercase text-slate-400">Booked</dt>
+                          <dd className="font-semibold text-slate-800">{ov.opd.booked}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs uppercase text-slate-400">In consult</dt>
+                          <dd className="font-semibold text-slate-800">{ov.opd.inProgress}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs uppercase text-slate-400">Completed</dt>
+                          <dd className="font-semibold text-slate-800">{ov.opd.completed}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs uppercase text-slate-400">Cancelled / no-show</dt>
+                          <dd className="font-semibold text-slate-800">{ov.opd.cancelled}</dd>
+                        </div>
+                      </dl>
+                    </Card>
+                  ) : null}
+
+                  <Card title="Quick actions">
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { key: "staff", label: "Add staff" },
+                        { key: "departments", label: "Departments" },
+                        { key: "roles", label: "Roles" },
+                        { key: "portals", label: "All portals" },
+                      ].map((qa) => (
+                        <button
+                          key={qa.key}
+                          type="button"
+                          onClick={() => setActive(qa.key)}
+                          className="qa-tile flex items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-slate-700"
+                        >
+                          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-teal-50 text-teal-700">
+                            {sectionIcon(qa.label, 15)}
+                          </span>
+                          {qa.label}
+                        </button>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setActive(null)}
+                className="mb-4 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium text-teal-800 hover:bg-teal-50"
+              >
+                ← Dashboard
+              </button>
+              <div className="mb-4 flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-teal-800 text-white">
+                  {sectionIcon(activeItem?.label ?? "", 22)}
+                </span>
+                <h1 className="font-display text-2xl font-normal tracking-tight text-slate-900">
+                  {activeItem?.label}
+                </h1>
+              </div>
+              <div className="space-y-5 pb-6">{render(active)}</div>
+            </>
+          )}
+        </main>
+      </div>
+    </div>
   );
 }

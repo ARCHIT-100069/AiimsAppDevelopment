@@ -292,7 +292,16 @@
       "Bash(sed -n '/listInvoicesByPatient/,/^}/p' packages/db/src/me-queries.ts)",
       "Bash(node cdp.mjs frontdesk.a frontdesk \"/portals/billing::Collect Payment\" billing-unpaid.png)",
       "Bash(node billing-pay.mjs)",
-      "Bash(node cdp.mjs admin.a admin \"/portals\" portals-hub.png)"
+      "Bash(node cdp.mjs admin.a admin \"/portals\" portals-hub.png)",
+      "Bash(node logout-repro.mjs)",
+      "Bash(curl -si -X POST http://localhost:3001/api/auth/logout)",
+      "Bash(sed -n '/^function Profile/,/^}/p' apps/web/app/portal/portal-app.tsx)",
+      "Bash(sed -n '/myProfileSchema = /,/}\\);/p' packages/api-contracts/src/me.ts)",
+      "Bash(node cdp.mjs anaya patient \"/portal::My Profile\" profile-en.png \"/portal::हिं\" _x.png)",
+      "Bash(node cdp.mjs anaya patient \"/portal::My Profile\" profile-hi.png)",
+      "Bash(node cdp.mjs anaya patient \"/portal::प्रोफ़ाइल\" profile-hi.png)",
+      "Bash(node switch-test.mjs)",
+      "Bash(python3 -c 'import sys,json;c=json.load\\(sys.stdin\\);print\\(\"  count:\",len\\(c\\),\"types:\",[x.get\\(\"type\"\\) for x in c]\\)')"
     ],
     "additionalDirectories": [
       "/Users/architgosain/Projects/AIIMS-APP-DEV/aiims-plus-app/src/schema",
